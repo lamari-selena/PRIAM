@@ -17,8 +17,8 @@
 
  ## The used technologies
   ### To develop our DSL, we used: 
-    - MPS JetBrains.
+    - MPS JetBrains
   ### To test the solution, you need: 
-    - IntelliJ Idea
-    - MySQL
+    - IntelliJ IDEA
+    - MySQL DBMS
 
