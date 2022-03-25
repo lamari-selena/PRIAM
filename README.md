@@ -23,11 +23,11 @@
     - MySQL DBMS
 ## Deployment
 -
-  ### Create database:
+  ### Create database
     1.	In MySQL create a new database “nutritionalCoaching”.
     2.	Import the nutritionalCoachingDB.sql file.
 -
-  ### Integration of PRIAM_GDPR:
+  ### Integration of PRIAM_GDPR
     1.Open the “PRIAM_GDPR.zip” in Intellij idea.
     
     2.Add link to data source “nutritionalCoaching” in Intellij:
@@ -40,20 +40,18 @@
           “PRIAM_GDPR/languages/GDPR_V1/sandbox/source_gen/PRIAM_LANGUAGE/sandbox”.
     
     5.Execute sql files in this order: 
-          -“PRIAM_GDPR.sql” (Integrate confidentiality).
-          
-          -“Data type.sql” and “Definition of personal data categories.sql” (Add data type and personal data categories). 
-          
-          -“PersonalDataAnnotation” and “NonPersonalDataAnnotation” (Personal and non personal data annotation).
-          
-          -“Morphological Profiling.sql”, “Prospection.sql” and “Registration.sql” (Processing annotation).
-          
-          -“Anais.sql”, “Liliane.sql” (Add data subjects).
-          
-          -“ContractAnais.sql” (Generate digital contract).
-          
-          -“Anaisdata_of_birthrectification.sql” (Add rectification request).
-          
-          -“Answer0.sql” (Provider response).
+    
+          - “PRIAM_GDPR.sql” (Integrate confidentiality).
+          - “Data type.sql” and “Definition of personal data categories.sql” (Add data type and personal data categories). 
+          - “PersonalDataAnnotation” and “NonPersonalDataAnnotation” (Personal and non personal data annotation).
+          - “Morphological Profiling.sql”, “Prospection.sql” and “Registration.sql” (Processing annotation).
+          - “Anais.sql”, “Liliane.sql” (Add data subjects).
+          - “ContractAnais.sql” (Generate digital contract).
+          - “Anaisdata_of_birthrectification.sql” (Add rectification request).
+          - “Answer0.sql” (Provider response).
 
-
+  ## Note
+    you can integrate PRIAM_GDPR in any  application, for that:
+    
+          - Import PRIAM_GDPR into MPS JetBrains.
+          - Adapt "sandbox" to your application.
