@@ -17,15 +17,16 @@
 
  ## The used technologies
   ### To develop our DSL, we used: 
-    - MPS JetBrains
+    - MPS JetBrains.
   ### To test the solution, you need: 
-    - IntelliJ IDEA
-    - MySQL DBMS
+    - IntelliJ IDEA.
+    - MySQL DBMS.
 ## Deployment
 -
   ### Create database
-    1.	In MySQL create a new database “nutritionalCoaching”.
-    2.	Import the nutritionalCoachingDB.sql file.
+     1.In MySQL create a new database “nutritionalCoaching”.
+    
+     2.Import the nutritionalCoachingDB.sql file.
 -
   ### Integration of PRIAM_GDPR
     1.Open the “PRIAM_GDPR.zip” in Intellij idea.
