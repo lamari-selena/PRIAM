@@ -1,24 +1,3 @@
--- phpMyAdmin SQL Dump
--- version 3.5.1
--- http://www.phpmyadmin.net
--- 
--- Costumer: localhost
--- Generated: Sam 12 Mars 2022 à 22:45
--- Server version: 5.5.24-log
--- PHP version: 5.4.3
-
-SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "+00:00";
-
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
-
---
--- Database: `nutritioncoachingdb`
---
 
 DELIMITER $$
 --
@@ -63,9 +42,8 @@ CREATE TABLE IF NOT EXISTS `nutrition_account` (
   `password` varchar(30) NOT NULL,
   `stat_account` varchar(255) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`username`),
-  KEY `FKqeqbft17ojmddumyd99fkyehg` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  PRIMARY KEY (`username`)
+) ;
 
 -- --------------------------------------------------------
 
@@ -78,11 +56,8 @@ CREATE TABLE IF NOT EXISTS `nutrition_mealContent` (
   `recommended_qty_eat` int(11) NOT NULL,
   `food_id` int(11) DEFAULT NULL,
   `healthy_meal_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `FKhecprtixsx54yvh4t9m2qlaj9` (`food_id`),
-  KEY `FK681k5t8c3mslrnag2wnt4x1n3` (`healthy_meal_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
+  PRIMARY KEY (`id`)
+) ;
 -- --------------------------------------------------------
 
 --
@@ -94,10 +69,8 @@ CREATE TABLE IF NOT EXISTS `nutrition_daily_meal` (
   `date` datetime NOT NULL,
   `meal_type` varchar(255) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `FKj5u5ctcc3bdcg6jnm4fi9tv2d` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1 ;
-
+  PRIMARY KEY (`id`)
+) ;
 -- --------------------------------------------------------
 
 --
@@ -109,7 +82,7 @@ CREATE TABLE IF NOT EXISTS `nutrition_diet` (
   `diet_type` varchar(255) NOT NULL,
   `duration` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1 ;
+) ;
 
 -- --------------------------------------------------------
 
@@ -123,10 +96,8 @@ CREATE TABLE IF NOT EXISTS `nutrition_eat` (
   `quantity_eaten` int(11) NOT NULL,
   `daily_meal_id` int(11) DEFAULT NULL,
   `food_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `FKhja7hwdtj26w40ql9aqpyrrbd` (`daily_meal_id`),
-  KEY `FKet61bbovq7x1xo4owx94p0x55` (`food_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1 ;
+  PRIMARY KEY (`id`)
+) ;
 
 -- --------------------------------------------------------
 
@@ -141,7 +112,268 @@ CREATE TABLE IF NOT EXISTS `nutrition_exercise` (
   `description` varchar(250) COLLATE utf8_bin NOT NULL,
   `metabolic_equivalent` double NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+) ;
+
+
+-- --------------------------------------------------------
+
+--
+-- Creation of table `nutrition_stickToDiet`
+--
+
+CREATE TABLE IF NOT EXISTS `nutrition_stickToDiet` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `end_date` date NOT NULL,
+  `start_date` date NOT NULL,
+  `diets_id` int(11) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ;
+
+-- --------------------------------------------------------
+
+--
+-- Creation of table `nutrition_food`
+--
+
+CREATE TABLE IF NOT EXISTS `nutrition_food` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `calories` int(11) NOT NULL,
+  `carbs` double NOT NULL,
+  `created_time` datetime NOT NULL,
+  `default_serving_type` varchar(10) COLLATE utf8_bin NOT NULL,
+  `fat` double NOT NULL,
+  `fiber` double NOT NULL,
+  `last_updated_time` datetime NOT NULL,
+  `name` varchar(50) COLLATE utf8_bin NOT NULL,
+  `protein` double NOT NULL,
+  `saturated_fat` double NOT NULL,
+  `serving_type_qty` double NOT NULL,
+  `sodium` double NOT NULL,
+  `sugar` double NOT NULL,
+  `owner_id` binary(16) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ;
+
+
+
+-- --------------------------------------------------------
+
+--
+-- Creation of table `nutrition_food_diets`
+--
+
+CREATE TABLE IF NOT EXISTS `nutrition_food_diets` (
+  `foods_id` int(11) NOT NULL,
+  `diets_id` int(11) NOT NULL
+) ;
+
+-- --------------------------------------------------------
+
+--
+-- Creation of table `nutrition_food_habit`
+--
+
+CREATE TABLE IF NOT EXISTS `nutrition_food_habit` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+
+) ; 
+
+-- --------------------------------------------------------
+
+--
+-- Creation of table `nutrition_food_habit_food`
+--
+
+CREATE TABLE IF NOT EXISTS `nutrition_food_habit_food` (
+  `food_habits_id` int(11) NOT NULL,
+  `food_id` int(11) NOT NULL
+) ;
+
+-- --------------------------------------------------------
+
+--
+-- Creation of table `nutrition_healthy_meal`
+--
+
+CREATE TABLE IF NOT EXISTS `nutrition_healthy_meal` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `date` datetime NOT NULL,
+  `health_meal_type` varchar(255) NOT NULL,
+  `diets_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ;
+
+-- --------------------------------------------------------
+
+--
+-- Creation of table `nutrition_healthy_meal_mealContents`
+--
+
+CREATE TABLE IF NOT EXISTS `nutrition_healthy_meal_mealContents` (
+  `healthy_meal_id` int(11) NOT NULL,
+  `mealContents_id` int(11) NOT NULL,
+  PRIMARY KEY (`healthy_meal_id`, `mealContents_id`)
+) ;
+
+-- --------------------------------------------------------
+
+--
+-- Creation of table `nutrition_mensuration`
+--
+
+CREATE TABLE IF NOT EXISTS `nutrition_mensuration` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `date` date NOT NULL,
+  `fat_mass` float NOT NULL,
+  `waist_size` float NOT NULL,
+  `weight` float NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ;
+
+-- --------------------------------------------------------
+
+--
+-- Creation of table `nutrition_patient_food_habits`
+--
+
+CREATE TABLE IF NOT EXISTS `nutrition_patient_food_habits` (
+  `user_id` int(11) NOT NULL,
+  `food_habits_id` int(11) NOT NULL,
+  PRIMARY KEY (`food_habits_id`)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Creation of table `nutrition_sport_activity`
+--
+
+CREATE TABLE IF NOT EXISTS `nutrition_sport_activity` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `calorie` int(11) NOT NULL,
+  `duration` float NOT NULL,
+  `objectid` int(11) DEFAULT NULL,
+  `sportdate` datetime NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `exercise_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+); 
+
+-- --------------------------------------------------------
+
+--
+-- Creation of table `nutrition_user`
+--
+
+CREATE TABLE IF NOT EXISTS `nutrition_user` (
+  `user_id` int(11) NOT NULL AUTO_INCREMENT,
+  `date_of_birth` date NOT NULL,
+  `fat_mass` float DEFAULT NULL,
+  `first_name` varchar(25) NOT NULL,
+  `morpholigical_profil` varchar(255) DEFAULT NULL,
+  `name` varchar(25) NOT NULL,
+  `profession` varchar(255) NOT NULL,
+  `psycological_profil` varchar(255) DEFAULT NULL,
+  `registration_date` date NOT NULL,
+  `waist_size` int(11) DEFAULT NULL,
+  `weight` int(11) DEFAULT NULL,
+  PRIMARY KEY (`user_id`)
+); 
+
+--
+-- Tables constraints declarations
+--
+
+--
+-- constraints declaration for table `nutrition_account`
+--
+ALTER TABLE `nutrition_account`
+  ADD CONSTRAINT `FKqeqbft17ojmddumyd99fkyehg` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
+
+--
+-- constraints declaration for table `nutrition_mealContent`
+--
+ALTER TABLE `nutrition_mealContent`
+  ADD CONSTRAINT `FK681k5t8c3mslrnag2wnt4x1n3` FOREIGN KEY (`healthy_meal_id`) REFERENCES `nutrition_healthy_meal` (`id`),
+  ADD CONSTRAINT `FKhecprtixsx54yvh4t9m2qlaj9` FOREIGN KEY (`food_id`) REFERENCES `nutrition_food` (`id`);
+
+--
+-- constraints declaration for table `nutrition_daily_meal`
+--
+ALTER TABLE `nutrition_daily_meal`
+  ADD CONSTRAINT `FKj5u5ctcc3bdcg6jnm4fi9tv2d` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
+
+--
+-- constraints declaration for table `nutrition_eat`
+--
+ALTER TABLE `nutrition_eat`
+  ADD CONSTRAINT `FKet61bbovq7x1xo4owx94p0x55` FOREIGN KEY (`food_id`) REFERENCES `nutrition_food` (`id`),
+  ADD CONSTRAINT `FKhja7hwdtj26w40ql9aqpyrrbd` FOREIGN KEY (`daily_meal_id`) REFERENCES `nutrition_daily_meal` (`id`);
+
+--
+-- constraints declaration for table `nutrition_stickToDiet`
+--
+ALTER TABLE `nutrition_stickToDiet`
+  ADD CONSTRAINT `FK6l5sm5jx3i3w29gsyrmf4hado` FOREIGN KEY (`diets_id`) REFERENCES `nutrition_diet` (`id`),
+  ADD CONSTRAINT `FKdu54qn44hggnog7itd6d88hkv` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
+
+--
+-- constraints declaration for table `nutrition_food_diets`
+--
+ALTER TABLE `nutrition_food_diets`
+  ADD CONSTRAINT `FK4rietiwuanikkqvd7fdwsalc9` FOREIGN KEY (`diets_id`) REFERENCES `nutrition_diet` (`id`),
+  ADD CONSTRAINT `FKd9h4curq64qnw7bb636c1ybnn` FOREIGN KEY (`foods_id`) REFERENCES `nutrition_food` (`id`);
+
+--
+-- constraints declaration for table `nutrition_food_habit`
+--
+ALTER TABLE `nutrition_food_habit`
+  ADD CONSTRAINT `FK21cnok6qfqusue49iodyaded2` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
+
+--
+-- constraints declaration for table `nutrition_food_habit_food`
+--
+ALTER TABLE `nutrition_food_habit_food`
+  ADD CONSTRAINT `FK7tawrs4gv9htjf4l6d97ng82i` FOREIGN KEY (`food_id`) REFERENCES `nutrition_food` (`id`),
+  ADD CONSTRAINT `FKg5xnybys3c25l6l19uxekulkx` FOREIGN KEY (`food_habits_id`) REFERENCES `nutrition_food_habit` (`id`);
+
+--
+-- constraints declaration for table `nutrition_healthy_meal`
+--
+ALTER TABLE `nutrition_healthy_meal`
+  ADD CONSTRAINT `FKbii6fdfyv6c3mnyi2faqfb7fu` FOREIGN KEY (`diets_id`) REFERENCES `nutrition_diet` (`id`);
+
+--
+-- constraints declaration for table `nutrition_healthy_meal_mealContents`
+--
+ALTER TABLE `nutrition_healthy_meal_mealContents`
+  ADD CONSTRAINT `FKsxbdwpb7ka7okqrkyypy15ihv` FOREIGN KEY (`mealContents_id`) REFERENCES `nutrition_mealContent` (`id`),
+  ADD CONSTRAINT `FKtg7wyvqjcwl7q2hl01snyxfhl` FOREIGN KEY (`healthy_meal_id`) REFERENCES `nutrition_healthy_meal` (`id`);
+
+--
+-- constraints declaration for table `nutrition_mensuration`
+--
+ALTER TABLE `nutrition_mensuration`
+  ADD CONSTRAINT `FKkpbvmjrju50r3j8xywd3rfxqq` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
+
+--
+-- constraints declaration for table `nutrition_patient_food_habits`
+--
+ALTER TABLE `nutrition_patient_food_habits`
+  ADD CONSTRAINT `FKk7c0bgk9lviqfeagq3vepuxp6` FOREIGN KEY (`food_habits_id`) REFERENCES `nutrition_food_habit` (`id`),
+  ADD CONSTRAINT `FKsmir3jc05i2r6cx6fm1a1hbj8` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
+
+--
+-- constraints declaration for table `nutrition_sport_activity`
+--
+ALTER TABLE `nutrition_sport_activity`
+  ADD CONSTRAINT `FKja0nqgdr9t14utpdm0t95p83e` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`),
+  ADD CONSTRAINT `FKja10qgdr9t15utp289295p84o` FOREIGN KEY (`exercise_id`) REFERENCES `nutrition_exercise` (`id`);
+
 
 --
 -- Contents of the table `nutrition_exercise`
@@ -970,49 +1202,6 @@ INSERT INTO `nutrition_exercise` (`id`, `category`, `code`, `description`, `meta
 (819, 'home repair', '06180', 'roofing', 6),
 (820, 'transportation', '16016', 'riding in a bus or train', 1.3),
 (821, 'running', '12132', 'running, 12 mph (5 min/mile) ', 19);
-
--- --------------------------------------------------------
-
---
--- Creation of table `nutrition_stickToDiet`
---
-
-CREATE TABLE IF NOT EXISTS `nutrition_stickToDiet` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `end_date` date NOT NULL,
-  `start_date` date NOT NULL,
-  `diets_id` int(11) DEFAULT NULL,
-  `user_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `FK6l5sm5jx3i3w29gsyrmf4hado` (`diets_id`),
-  KEY `FKdu54qn44hggnog7itd6d88hkv` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1 ;
-
--- --------------------------------------------------------
-
---
--- Creation of table `nutrition_food`
---
-
-CREATE TABLE IF NOT EXISTS `nutrition_food` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `calories` int(11) NOT NULL,
-  `carbs` double NOT NULL,
-  `created_time` datetime NOT NULL,
-  `default_serving_type` varchar(10) COLLATE utf8_bin NOT NULL,
-  `fat` double NOT NULL,
-  `fiber` double NOT NULL,
-  `last_updated_time` datetime NOT NULL,
-  `name` varchar(50) COLLATE utf8_bin NOT NULL,
-  `protein` double NOT NULL,
-  `saturated_fat` double NOT NULL,
-  `serving_type_qty` double NOT NULL,
-  `sodium` double NOT NULL,
-  `sugar` double NOT NULL,
-  `owner_id` binary(16) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_bin AUTO_INCREMENT=429 ;
-
 --
 -- Contents of the table `nutrition_food`
 --
@@ -1448,143 +1637,6 @@ INSERT INTO `nutrition_food` (`id`, `calories`, `carbs`, `created_time`, `defaul
 (427, 170, 40, '2008-03-06 00:00:00', 'CUP', 1, 6, '2008-03-06 00:00:00', 'Shredded Wheat', 6, 0, 1.25, 0, 0, NULL),
 (428, 100, 26, '2008-02-09 00:00:00', 'CUSTOM', 0, 3, '2008-02-09 00:00:00', 'Baked Potato (5.2 \r\n\r\noz)', 4, 0, 1, 0, 3, NULL);
 
--- --------------------------------------------------------
-
---
--- Creation of table `nutrition_food_diets`
---
-
-CREATE TABLE IF NOT EXISTS `nutrition_food_diets` (
-  `foods_id` int(11) NOT NULL,
-  `diets_id` int(11) NOT NULL,
-  KEY `FK4rietiwuanikkqvd7fdwsalc9` (`diets_id`),
-  KEY `FKd9h4curq64qnw7bb636c1ybnn` (`foods_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- --------------------------------------------------------
-
---
--- Creation of table `nutrition_food_habit`
---
-
-CREATE TABLE IF NOT EXISTS `nutrition_food_habit` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `FK21cnok6qfqusue49iodyaded2` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1 ;
-
--- --------------------------------------------------------
-
---
--- Creation of table `nutrition_food_habit_food`
---
-
-CREATE TABLE IF NOT EXISTS `nutrition_food_habit_food` (
-  `food_habits_id` int(11) NOT NULL,
-  `food_id` int(11) NOT NULL,
-  KEY `FK7tawrs4gv9htjf4l6d97ng82i` (`food_id`),
-  KEY `FKg5xnybys3c25l6l19uxekulkx` (`food_habits_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- --------------------------------------------------------
-
---
--- Creation of table `nutrition_healthy_meal`
---
-
-CREATE TABLE IF NOT EXISTS `nutrition_healthy_meal` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `date` datetime NOT NULL,
-  `health_meal_type` varchar(255) NOT NULL,
-  `diets_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `FKbii6fdfyv6c3mnyi2faqfb7fu` (`diets_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1 ;
-
--- --------------------------------------------------------
-
---
--- Creation of table `nutrition_healthy_meal_mealContents`
---
-
-CREATE TABLE IF NOT EXISTS `nutrition_healthy_meal_mealContents` (
-  `healthy_meal_id` int(11) NOT NULL,
-  `mealContents_id` int(11) NOT NULL,
-  UNIQUE KEY `UK_pllt6kn1gawl8cvh9w1gh47kl` (`mealContents_id`),
-  KEY `FKtg7wyvqjcwl7q2hl01snyxfhl` (`healthy_meal_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- --------------------------------------------------------
-
---
--- Creation of table `nutrition_mensuration`
---
-
-CREATE TABLE IF NOT EXISTS `nutrition_mensuration` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `date` date NOT NULL,
-  `fat_mass` float NOT NULL,
-  `waist_size` float NOT NULL,
-  `weight` float NOT NULL,
-  `user_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `FKkpbvmjrju50r3j8xywd3rfxqq` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1 ;
-
--- --------------------------------------------------------
-
---
--- Creation of table `nutrition_patient_food_habits`
---
-
-CREATE TABLE IF NOT EXISTS `nutrition_patient_food_habits` (
-  `user_id` int(11) NOT NULL,
-  `food_habits_id` int(11) NOT NULL,
-  UNIQUE KEY `UK_cvsc1uc0okp3mm7tu3jhpckg1` (`food_habits_id`),
-  KEY `FKsmir3jc05i2r6cx6fm1a1hbj8` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- --------------------------------------------------------
-
---
--- Creation of table `nutrition_sport_activity`
---
-
-CREATE TABLE IF NOT EXISTS `nutrition_sport_activity` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `calorie` int(11) NOT NULL,
-  `duration` float NOT NULL,
-  `objectid` int(11) DEFAULT NULL,
-  `sportdate` datetime NOT NULL,
-  `user_id` int(11) DEFAULT NULL,
-  `exercise_id` int(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `FKja0nqgdr9t14utpdm0t95p83e` (`user_id`),
-  KEY `FKja10qgdr9t15utp289295p84o` (`exercise_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1 ;
-
--- --------------------------------------------------------
-
---
--- Creation of table `nutrition_user`
---
-
-CREATE TABLE IF NOT EXISTS `nutrition_user` (
-  `user_id` int(11) NOT NULL AUTO_INCREMENT,
-  `date_of_birth` date NOT NULL,
-  `fat_mass` float DEFAULT NULL,
-  `first_name` varchar(25) NOT NULL,
-  `morpholigical_profil` varchar(255) DEFAULT NULL,
-  `name` varchar(25) NOT NULL,
-  `profession` varchar(255) NOT NULL,
-  `psycological_profil` varchar(255) DEFAULT NULL,
-  `registration_date` date NOT NULL,
-  `waist_size` int(11) DEFAULT NULL,
-  `weight` int(11) DEFAULT NULL,
-  PRIMARY KEY (`user_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=589216 ;
-
 --
 -- Contents of the table `nutrition_user`
 --
@@ -1594,96 +1646,3 @@ INSERT INTO `nutrition_user` (`user_id`, `date_of_birth`, `fat_mass`, `first_nam
 (497598, '0000-00-00', NULL, 'Benjamin', NULL, 'Dover', 'retired', NULL, '2017-01-23', NULL, 74),
 (589215, '1970-09-18', NULL, 'Mike', NULL, 'Lock', 'photographer', NULL, '0000-00-00', NULL, 89);
 
---
--- Tables constraints declarations
---
-
---
--- constraints declaration for table `nutrition_account`
---
-ALTER TABLE `nutrition_account`
-  ADD CONSTRAINT `FKqeqbft17ojmddumyd99fkyehg` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
-
---
--- constraints declaration for table `nutrition_mealContent`
---
-ALTER TABLE `nutrition_mealContent`
-  ADD CONSTRAINT `FK681k5t8c3mslrnag2wnt4x1n3` FOREIGN KEY (`healthy_meal_id`) REFERENCES `nutrition_healthy_meal` (`id`),
-  ADD CONSTRAINT `FKhecprtixsx54yvh4t9m2qlaj9` FOREIGN KEY (`food_id`) REFERENCES `nutrition_food` (`id`);
-
---
--- constraints declaration for table `nutrition_daily_meal`
---
-ALTER TABLE `nutrition_daily_meal`
-  ADD CONSTRAINT `FKj5u5ctcc3bdcg6jnm4fi9tv2d` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
-
---
--- constraints declaration for table `nutrition_eat`
---
-ALTER TABLE `nutrition_eat`
-  ADD CONSTRAINT `FKet61bbovq7x1xo4owx94p0x55` FOREIGN KEY (`food_id`) REFERENCES `nutrition_food` (`id`),
-  ADD CONSTRAINT `FKhja7hwdtj26w40ql9aqpyrrbd` FOREIGN KEY (`daily_meal_id`) REFERENCES `nutrition_daily_meal` (`id`);
-
---
--- constraints declaration for table `nutrition_stickToDiet`
---
-ALTER TABLE `nutrition_stickToDiet`
-  ADD CONSTRAINT `FK6l5sm5jx3i3w29gsyrmf4hado` FOREIGN KEY (`diets_id`) REFERENCES `nutrition_diet` (`id`),
-  ADD CONSTRAINT `FKdu54qn44hggnog7itd6d88hkv` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
-
---
--- constraints declaration for table `nutrition_food_diets`
---
-ALTER TABLE `nutrition_food_diets`
-  ADD CONSTRAINT `FK4rietiwuanikkqvd7fdwsalc9` FOREIGN KEY (`diets_id`) REFERENCES `nutrition_diet` (`id`),
-  ADD CONSTRAINT `FKd9h4curq64qnw7bb636c1ybnn` FOREIGN KEY (`foods_id`) REFERENCES `nutrition_food` (`id`);
-
---
--- constraints declaration for table `nutrition_food_habit`
---
-ALTER TABLE `nutrition_food_habit`
-  ADD CONSTRAINT `FK21cnok6qfqusue49iodyaded2` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
-
---
--- constraints declaration for table `nutrition_food_habit_food`
---
-ALTER TABLE `nutrition_food_habit_food`
-  ADD CONSTRAINT `FK7tawrs4gv9htjf4l6d97ng82i` FOREIGN KEY (`food_id`) REFERENCES `nutrition_food` (`id`),
-  ADD CONSTRAINT `FKg5xnybys3c25l6l19uxekulkx` FOREIGN KEY (`food_habits_id`) REFERENCES `nutrition_food_habit` (`id`);
-
---
--- constraints declaration for table `nutrition_healthy_meal`
---
-ALTER TABLE `nutrition_healthy_meal`
-  ADD CONSTRAINT `FKbii6fdfyv6c3mnyi2faqfb7fu` FOREIGN KEY (`diets_id`) REFERENCES `nutrition_diet` (`id`);
-
---
--- constraints declaration for table `nutrition_healthy_meal_mealContents`
---
-ALTER TABLE `nutrition_healthy_meal_mealContents`
-  ADD CONSTRAINT `FKsxbdwpb7ka7okqrkyypy15ihv` FOREIGN KEY (`mealContents_id`) REFERENCES `nutrition_mealContent` (`id`),
-  ADD CONSTRAINT `FKtg7wyvqjcwl7q2hl01snyxfhl` FOREIGN KEY (`healthy_meal_id`) REFERENCES `nutrition_healthy_meal` (`id`);
-
---
--- constraints declaration for table `nutrition_mensuration`
---
-ALTER TABLE `nutrition_mensuration`
-  ADD CONSTRAINT `FKkpbvmjrju50r3j8xywd3rfxqq` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
-
---
--- constraints declaration for table `nutrition_patient_food_habits`
---
-ALTER TABLE `nutrition_patient_food_habits`
-  ADD CONSTRAINT `FKk7c0bgk9lviqfeagq3vepuxp6` FOREIGN KEY (`food_habits_id`) REFERENCES `nutrition_food_habit` (`id`),
-  ADD CONSTRAINT `FKsmir3jc05i2r6cx6fm1a1hbj8` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`);
-
---
--- constraints declaration for table `nutrition_sport_activity`
---
-ALTER TABLE `nutrition_sport_activity`
-  ADD CONSTRAINT `FKja0nqgdr9t14utpdm0t95p83e` FOREIGN KEY (`user_id`) REFERENCES `nutrition_user` (`user_id`),
-  ADD CONSTRAINT `FKja10qgdr9t15utp289295p84o` FOREIGN KEY (`exercise_id`) REFERENCES `nutrition_exercise` (`id`);
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
