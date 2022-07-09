@@ -1,0 +1,196 @@
+                                  USERS STORIES                                   
+
+******************* Data Rights ******************
+**************************************************
+****************** ACCESS RIGHT ******************
+
+
+-------------- user -------------------     
+AS A nutrition_user
+I WANT to acces to all my personal data witch:  
+     name,      firstName,      dateOfBirth,      weight, 
+     waistSize,      fatMass,      profession,      psychoProfil, 
+     morphoProfil, 
+SO THAT I exercise my right of access to all my personal data
+
+-------------- Mensuration -------------------     
+AS A nutrition_user
+I WANT to acces to all my personal data witch:  
+     newWeight,      newWaistSize,      newFatMass, 
+
+SO THAT I exercise my right of access to all my personal data
+
+-------------- FoodHabit -------------------     
+AS A nutrition_user
+I WANT to acces to all my personal data witch:  
+     id, 
+SO THAT I exercise my right of access to all my personal data
+
+-------------- Account -------------------     
+AS A nutrition_user
+I WANT to acces to all my personal data witch:  
+     userName,      passWord,      state, 
+
+SO THAT I exercise my right of access to all my personal data
+
+-------------- SportActivity -------------------     
+AS A nutrition_user
+I WANT to acces to all my personal data witch:  
+     sportActivityname,      duration,      calorie,      date, 
+
+SO THAT I exercise my right of access to all my personal data
+
+**************************************************
+*************** RECTIFICATION RIGHT **************
+
+
+-------------- user -------------------     
+AS A nutrition_user
+I want to rectify any of my personal data 
+     name,       firstName,       dateOfBirth,       weight,  
+     waistSize,       fatMass,       profession,       psychoProfil,  
+     morphoProfil,  
+SO THAT I exercise my right to rectify personal data 
+
+-------------- Mensuration -------------------     
+AS A nutrition_user
+I want to rectify any of my personal data 
+     newWeight,       newWaistSize,       newFatMass,  
+
+SO THAT I exercise my right to rectify personal data 
+
+-------------- FoodHabit -------------------     
+AS A nutrition_user
+I want to rectify any of my personal data 
+     id,  
+SO THAT I exercise my right to rectify personal data 
+
+-------------- Account -------------------     
+AS A nutrition_user
+I want to rectify any of my personal data 
+     userName,       passWord,       state,  
+
+SO THAT I exercise my right to rectify personal data 
+
+-------------- SportActivity -------------------     
+AS A nutrition_user
+I want to rectify any of my personal data 
+     sportActivityname,       duration,       calorie,       date,  
+
+SO THAT I exercise my right to rectify personal data 
+
+**************************************************
+************** RIGHT TO BE FORGOTTEN *************
+
+
+-------------user-------------------     
+AS A nutrition_user
+I want to erase any of my personal data 
+     name,       firstName,       dateOfBirth,       weight,  
+     waistSize,       fatMass,       profession,       psychoProfil,  
+     morphoProfil,  
+SO THAT I exercise my right to be forgotten 
+
+-------------Mensuration-------------------     
+AS A nutrition_user
+I want to erase any of my personal data 
+     newWeight,       newWaistSize,       newFatMass,  
+
+SO THAT I exercise my right to be forgotten 
+
+-------------FoodHabit-------------------     
+AS A nutrition_user
+I want to erase any of my personal data 
+     id,  
+SO THAT I exercise my right to be forgotten 
+
+-------------Account-------------------     
+AS A nutrition_user
+I want to erase any of my personal data 
+     userName,       passWord,       state,  
+
+SO THAT I exercise my right to be forgotten 
+
+-------------SportActivity-------------------     
+AS A nutrition_user
+I want to erase any of my personal data 
+     sportActivityname,       duration,       calorie,       date,  
+
+SO THAT I exercise my right to be forgotten 
+
+**************************************************
+************* DATA PORTABILITY RIGHT *************
+
+-------------user-------------------     
+AS A nutrition_user
+I want to obtain any of my personal data 
+     name,       firstName,       dateOfBirth,       weight,  
+     waistSize,       fatMass,       profession,       psychoProfil,  
+     morphoProfil,  
+SO THAT I exercise my right to personal data portability
+-------------Mensuration-------------------     
+AS A nutrition_user
+I want to obtain any of my personal data 
+     newWeight,       newWaistSize,       newFatMass,  
+
+SO THAT I exercise my right to personal data portability
+-------------FoodHabit-------------------     
+AS A nutrition_user
+I want to obtain any of my personal data 
+     id,  
+SO THAT I exercise my right to personal data portability
+-------------Account-------------------     
+AS A nutrition_user
+I want to obtain any of my personal data 
+     userName,       passWord,       state,  
+
+SO THAT I exercise my right to personal data portability
+-------------SportActivity-------------------     
+AS A nutrition_user
+I want to obtain any of my personal data 
+     sportActivityname,       duration,       calorie,       date,  
+
+SO THAT I exercise my right to personal data portability
+
+
+**************** Processing Rights ***************
+**************************************************
+*************** KNOWLEDGE RIGHT ******************
+
+as a nutrition_user
+     I want to know all information about "Mensuration Management"
+     such as : Purposes, personal data used, provider and datareceivers information
+SO THAT I exercise my right to knowledge
+
+as a nutrition_user
+     I want to know all information about "Monitoring of sport activities"
+     such as : Purposes, personal data used, provider and datareceivers information
+SO THAT I exercise my right to knowledge
+
+as a nutrition_user
+     I want to know all information about "Personal Prospection"
+     such as : Purposes, personal data used, provider and datareceivers information
+SO THAT I exercise my right to knowledge
+**************************************************
+
+
+***** RIGHT TO GIVE AND WITHDRAW CONSENT *****
+
+as a nutrition_user
+     I want to give or not and withdraw my consent anytime for "Mensuration Management"
+SO THAT I exercise my right to consent
+
+as a nutrition_user
+     I want to give or not and withdraw my consent anytime for "Monitoring of sport activities"
+SO THAT I exercise my right to consent
+
+**************************************************
+
+
+************ OPPOSITION RIGHT **************
+
+
+
+as a nutrition_user
+     I want oppose to "Personal Prospection"
+SO THAT I exercise my right of opposition
