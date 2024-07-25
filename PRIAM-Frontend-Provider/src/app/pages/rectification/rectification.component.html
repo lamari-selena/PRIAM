@@ -1,0 +1,49 @@
+<table>
+  <tr>
+    <th>Request ID</th>
+    <th>Issued At</th>
+<!--    <th *ngIf="response">Completed At</th>-->
+    <th>Data Subject Reference ID</th>
+    <th>Categories</th>
+  </tr>
+  <tr>
+    <td>{{ rectificationRequest.dataRequestId }}</td>
+    <td>{{ rectificationRequest.dataRequestIssuedAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+<!--    <td *ngIf="response">{{ rectificationRequestAnswer.issuedAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>-->
+    <td>{{ rectificationRequest.dataSubject.idRef }}</td>
+    <td>{{ rectificationRequest.dataSubject.dataSubjectCategoryName }}</td>
+  </tr>
+</table>
+
+<p>User Claim: {{ rectificationRequest.dataRequestClaim }}</p>
+<p *ngIf="response">Provider Claim: {{ rectificationRequestAnswer.dataRequestClaim }}</p>
+
+<h1 *ngIf="response" [style.color]="rectificationRequestAnswer.answer === 'Accepted' ? 'green' : (rectificationRequestAnswer.answer === 'Partial' ? 'yellow' : 'red')">Answer Type: {{ rectificationRequestAnswer.answer }}</h1>
+
+<table>
+  <tr>
+    <th *ngIf=!response>Current Value</th>
+    <th>New Value</th>
+  </tr>
+  <tr>
+    <td *ngIf=!response>{{ currentValue }}</td>
+    <td>{{ rectificationRequest.newValue }}</td>
+  </tr>
+</table>
+
+<mat-button-toggle-group [(ngModel)]="providerAnswer" *ngIf=!response>
+  <mat-button-toggle value=true><i class="material-icons">check_circle</i></mat-button-toggle>
+  <mat-button-toggle value=false><i class="material-icons">cancel</i></mat-button-toggle>
+</mat-button-toggle-group>
+
+<div>
+  <mat-form-field *ngIf=!response>
+    <input matInput [(ngModel)]="providerClaim">
+  </mat-form-field>
+</div>
+
+<button mat-flat-button *ngIf="!response; else noDataButton" color="primary" [disabled]="!providerAnswer || providerClaim === ''" (click)="response ? null : postCompletedRectificationRequest()" routerLink="/dashboard"><i class="material-icons">check_circle</i></button>
+<ng-template #noDataButton>
+  <button mat-flat-button color="primary" routerLink="/dashboard"><i class="material-icons">check_circle</i></button>
+</ng-template>
+<button mat-flat-button *ngIf="!response" color="accent" routerLink="/dashboard"><i class="material-icons">cancel</i></button>

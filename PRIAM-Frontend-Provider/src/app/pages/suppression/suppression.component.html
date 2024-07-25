@@ -1,0 +1,47 @@
+<table>
+  <tr>
+    <th>Request ID</th>
+    <th>Issued At</th>
+    <th *ngIf="response">Completed At</th>
+    <th>Data Subject Reference ID</th>
+    <th>Categories</th>
+  </tr>
+  <tr>
+    <td>{{ suppressionRequest.dataRequestId }}</td>
+    <td>{{ suppressionRequest.dataRequestIssuedAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+<!--    <td *ngIf="response">{{ suppressionRequestAnswer.issuedAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>-->
+    <td>{{ suppressionRequest.dataSubject.idRef }}</td>
+    <td>{{ suppressionRequest.dataSubject.dataSubjectCategoryName }}</td>
+  </tr>
+</table>
+
+<p>User Claim: {{ suppressionRequest.dataRequestClaim }}</p>
+<p *ngIf="response">Provider Claim: {{ suppressionRequestAnswer.dataRequestClaim }}</p>
+
+<h1 *ngIf="response" [style.color]="suppressionRequestAnswer.answer === 'Accepted' ? 'green' : (suppressionRequestAnswer.answer === 'Partial' ? 'yellow' : 'red')">Answer Type: {{ suppressionRequestAnswer.answer }}</h1>
+
+<table>
+  <tr>
+    <th>Current Value</th>
+  </tr>
+  <tr>
+    <td>{{ currentValue }}</td>
+  </tr>
+</table>
+
+<mat-button-toggle-group [(ngModel)]="providerAnswer" *ngIf=!response>
+  <mat-button-toggle value=true><i class="material-icons">check_circle</i></mat-button-toggle>
+  <mat-button-toggle value=false><i class="material-icons">cancel</i></mat-button-toggle>
+</mat-button-toggle-group>
+
+<div>
+  <mat-form-field *ngIf=!response>
+    <input matInput [(ngModel)]="providerClaim">
+  </mat-form-field>
+</div>
+
+<button mat-flat-button *ngIf="!response; else noDataButton" color="primary" [disabled]="providerAnswer === undefined || providerClaim === ''" (click)="response ? null : postCompletedSuppressionRequest()" routerLink="/dashboard"><i class="material-icons">check_circle</i></button>
+<ng-template #noDataButton>
+  <button mat-flat-button color="primary" routerLink="/dashboard"><i class="material-icons">check_circle</i></button>
+</ng-template>
+<button mat-flat-button *ngIf="!response" color="accent" routerLink="/dashboard"><i class="material-icons">cancel</i></button>

@@ -1,0 +1,10 @@
+# Pas besoin des dossiers de build
+.gradle
+bin
+build
+
+# Inutile dans le cas présent vu qu'on se base sur gradle
+gradlew*
+
+# Pas besoin de git
+.git*

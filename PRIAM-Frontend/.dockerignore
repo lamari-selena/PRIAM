@@ -1,0 +1,3 @@
+# Pas besoin des dossiers de build
+.angular
+dist

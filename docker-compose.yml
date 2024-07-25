@@ -1,0 +1,246 @@
+name: priam
+services:
+  actor:
+    build:
+      context: ./PRIAM-Actor-service
+      args:
+        APP_VERSION: "0.0.1-SNAPSHOT"
+        GRADLE_VERSION: "8.0"
+        JRE_VERSION: "17"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-actor?useSSL=false
+    env_file:
+      - ".config.env" # Configuration
+    # ports:
+    #   - 8082:8082
+    depends_on:
+      gateway:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - m-actor
+      - e-actor
+      - g-actor
+    healthcheck:
+      test: ["CMD", "/bin/curl", "actor:8082"]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  data:
+    build:
+      context: ./PRIAM-Data-service
+      args:
+        APP_VERSION: "0.0.1-SNAPSHOT"
+        GRADLE_VERSION: "8.0"
+        JRE_VERSION: "17"
+        RIGHT_SERVICE_URL: http://gateway:8090/right
+        ACTOR_SERVICE_URL: http://gateway:8090/actor
+        PROVIDER_SERVICE_URL: http://gateway:8090/provider
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-data?useSSL=false
+    env_file:
+      - ".config.env" # Configuration
+    depends_on:
+      actor:
+        condition: service_healthy
+    networks:
+      - m-data
+      - e-data
+      - g-data
+    ports:
+      - 8081:8081
+
+  eureka:
+    build:
+      context: ./PRIAM-Eureka
+      args:
+        APP_VERSION: "0.0.1-SNAPSHOT"
+        GRADLE_VERSION: "8.7"
+        JRE_VERSION: "17"
+    env_file:
+      - ".config.env" # Configuration
+    depends_on:
+      gateway:
+        condition: service_healthy
+    ports:
+      - 8761:8761
+    networks:
+      - e-actor
+      - e-data
+      - e-right
+      - e-provider
+    healthcheck:
+      test: ["CMD", "/bin/curl", "eureka:8761"]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  right:
+    build:
+      context: ./PRIAM-Right-service
+      args:
+        APP_VERSION: "0.0.1-SNAPSHOT"
+        GRADLE_VERSION: "7.0"
+        JRE_VERSION: "17"
+        DATA_SERVICE_URL: http://gateway:8090/data
+        ACTOR_SERVICE_URL: http://gateway:8090/actor
+        PROVIDER_SERVICE_URL: http://gateway:8090/provider
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-right?useSSL=false
+    env_file:
+      - ".config.env" # Configuration
+    ports:
+      - 8083:8083
+    depends_on:
+      gateway:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - m-right
+      - e-right
+      - g-right
+     
+
+  provider:
+    build:
+      context: ./Provider-microservice
+      args:
+        APP_VERSION: "0.0.1-SNAPSHOT"
+        GRADLE_VERSION: "8.0"
+        JRE_VERSION: "17"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/teadb?useSSL=false
+    env_file:
+      - ".config.env" # Configuration
+    ports:
+      - 8086:8086
+    depends_on:
+      gateway:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - m-provider
+      - e-provider
+      - g-provider
+     
+  
+  gateway:
+    build:
+      context: ./PRIAM-Gateway
+      args:
+        APP_VERSION: "0.0.1-SNAPSHOT"
+        GRADLE_VERSION: "8.0"
+        JRE_VERSION: "17"
+    
+    healthcheck:
+      test: curl http://gateway:8090/health
+      retries: 10
+      interval: 3s
+      timeout: 30s
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+    env_file:
+      - ".config.env" # Configuration
+    ports:
+      - 8090:8090
+    networks:
+      - g-actor
+      - g-data
+      - g-provider
+      - g-frontend
+      - g-f-provider
+      - g-keycloak
+
+  frontuser:
+    build:
+      context: ./PRIAM-Frontend
+      args:
+        API_DATA: localhost:8090/data
+        API_RIGHT: localhost:8090/right
+        API_ACTOR: localhost:8090/actor
+        API_PROVIDER: localhost:8090/provider
+        KEYCLOAK: localhost:8080
+    ports:
+      - 4200:4200
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - g-frontend
+
+  frontprovider:
+    build:
+      context: ./PRIAM-Frontend-Provider
+    ports:
+      - 4000:4000
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - g-f-provider
+
+  mysqldb:
+    image: mysql
+    volumes:
+      - ./config-mysql:/docker-entrypoint-initdb.d
+    networks:
+      - m-actor
+      - m-data
+      - m-right
+      - m-provider
+    env_file:
+      - ".env" # Secrets
+    ports:
+      - 3307:3306
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "mysqldb"]
+      retries: 20
+      interval: 3s
+      timeout: 60s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.0
+    command: start-dev
+    networks:
+      - g-keycloak
+    env_file:
+      - ".env" # Secrets
+    ports:
+      - 8080:8080
+    volumes:
+      - ./keycloak-conf:/opt/keycloak/data/
+
+networks:
+  # MYSQL connexions:
+  m-actor:
+  m-data:
+  m-right:
+  m-provider:
+
+  # Eureka connexions:
+  e-actor:
+  e-data:
+  e-right:
+  e-provider:
+
+  # Gateway connexions:
+  g-actor:
+  g-data:
+  g-right:
+  g-provider:
+  g-frontend:
+  g-f-provider:
+  g-keycloak:
+
+  services:
+
+  # intra_net:

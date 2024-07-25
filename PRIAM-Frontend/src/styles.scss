@@ -1,0 +1,51 @@
+/* You can add global styles to this file, and also import other style files */
+
+html, body {
+  height: 100dvh;
+}
+
+body {
+  margin: 0;
+}
+
+.content-container {
+  height: calc(88dvh - 30px * 2);
+  padding: 30px;
+}
+
+a {
+  text-decoration: none;
+  outline: none;
+  font-weight: bold;
+}
+
+button[mat-flat-button]{
+  margin: 0.5vh;
+  padding: 3vh;
+
+  &.button-large {
+    height: 80%;
+    width: 90vh;
+    margin: 3vh;
+  }
+}
+
+table {
+  margin: 40px;
+  border-collapse: collapse;
+  border: 0.1vh solid;
+}
+
+table th, table td {
+  padding: 20px;
+  border-bottom: 0.1vh solid;
+}
+
+table th {
+  background-color: lightgrey;
+}
+
+table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  transition: 0.3s ease;
+}

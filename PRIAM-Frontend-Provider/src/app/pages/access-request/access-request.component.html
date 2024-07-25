@@ -1,0 +1,70 @@
+<table>
+  <tr>
+    <th>Request ID</th>
+    <th>Issued At</th>
+    <th *ngIf="response">Completed At</th>
+    <th>Data Subject Reference ID</th>
+    <th>Categories</th>
+  </tr>
+  <tr>
+    <td>{{ accessRequest.dataRequestId }}</td>
+    <td>{{ accessRequest.dataRequestIssuedAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+<!--    <td *ngIf="response">{{ accessRequestAnswer.issuedAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>-->
+    <td>{{ accessRequest.dataSubject.idRef }}</td>
+    <td>{{ accessRequest.dataSubject.dataSubjectCategoryName }}</td>
+  </tr>
+</table>
+
+<p>User Claim: {{ accessRequest.dataRequestClaim }}</p>
+<p *ngIf="response">Provider Claim: {{ accessRequestAnswer.dataRequestClaim }}</p>
+
+<h1 *ngIf="response" [style.color]="accessRequestAnswer.answer === 'Accepted' ? 'green' : (accessRequestAnswer.answer === 'Partial' ? 'yellow' : 'red')">Answer Type: {{ accessRequestAnswer.answer }}</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Data Type</th>
+      <th>Data</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let dataType of accessRequest.dataTypeList">
+      <td>
+        <mat-slide-toggle *ngIf="!response; else noDataTypeToggle" [checked]="dataType.answerByData" (change)="onChange($event, 'dataType', dataType, '')">
+          {{ dataType.dataTypeName }}
+        </mat-slide-toggle>
+        <ng-template #noDataTypeToggle>
+          <span>{{ dataType.dataTypeName }}</span>
+        </ng-template>
+      </td>
+      <td>
+        <div *ngFor="let data of dataType.data">
+          <mat-slide-toggle *ngIf="!response; else noDataToggle" [checked]="data.answerByData" (change)="onChange($event, 'data', dataType, data)">
+            {{ data.dataName }}
+          </mat-slide-toggle>
+          <ng-template #noDataToggle>
+            <span [style.color]="data.answerByData ? 'green' : 'red'">{{ data.dataName }}</span>
+          </ng-template>
+          <mat-form-field *ngIf="!data.answerByData && !response">
+            <mat-label>Select Claim</mat-label>
+            <mat-select [(ngModel)]="selectedProviderClaims[data.dataId]" name="providerDataClaims">
+              <mat-option *ngFor="let dataClaim of providerDataClaims" [value]="dataClaim">{{ dataClaim }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div>
+  <mat-form-field *ngIf=!response>
+    <input matInput [(ngModel)]="providerClaim">
+  </mat-form-field>
+</div>
+
+<button mat-flat-button *ngIf="!response; else noDataButton" color="primary" (click)="response ? null : postCompletedAccessRequest()" routerLink="/dashboard" [disabled]="isConfirmButtonDisabled()"><i class="material-icons">check_circle</i></button>
+<ng-template #noDataButton>
+  <button mat-flat-button color="primary" routerLink="/dashboard"><i class="material-icons">check_circle</i></button>
+</ng-template>
+<button mat-flat-button *ngIf="!response" color="accent" routerLink="/dashboard"><i class="material-icons">cancel</i></button>

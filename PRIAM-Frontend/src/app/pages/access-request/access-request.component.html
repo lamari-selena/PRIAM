@@ -1,0 +1,126 @@
+<h1>Access Request</h1>
+<button mat-flat-button color="primary" class="btn" routerLink="/ar-selection">Do an access Request</button>
+<h1>Data List</h1>
+<div *ngIf="dataList && dataList.length > 0; else noDataList">
+  <div *ngFor="let dataType of dataList">
+    <h2>{{ dataType.dataTypeName }}</h2>
+    <table>
+      <thead>
+      <tr>
+        <th *ngFor="let data of dataType.data">
+          {{ data.dataName }}
+          <button mat-flat-button color="primary" (click)="openDialogAdditionalData(data)"><i class="material-icons">question_mark</i>
+          </button>
+        </th>
+        <th></th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let row of dataType.data[0].dataValue; let i = index">
+        <td *ngFor="let data of dataType.data">
+          {{ data.dataValue[i] }}
+        </td>
+        <td>
+          <button mat-flat-button color="primary"
+                  (click)="getPrimaryKeys(dataType, i); getNonPrimaryKeysData(dataType, i)" routerLink="/rectification">
+            <i class="material-icons" style="font-size: 4vh;">create</i></button>
+          <button mat-flat-button color="accent"
+                  (click)="getPrimaryKeys(dataType, i); getNonPrimaryKeysData(dataType, i)" routerLink="/suppression"><i
+            class="material-icons" style="font-size: 4vh;">delete</i></button>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<ng-template #noDataList>
+  <p>No data available.</p>
+</ng-template>
+
+<h1>Data List By Purpose</h1>
+<div *ngIf="dataListByPurpose && dataListByPurpose.length > 0; else noDataListByPurpose">
+  <table>
+    <thead>
+    <tr>
+      <th>Processing Name</th>
+      <th>Purpose</th>
+      <th>Attribute</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr *ngFor="let item of dataListByPurpose">
+      <td>{{ item.processingName }}</td>
+      <td>
+        <div *ngFor="let purpose of item.purposes">{{ purpose.purposeDescription }}</div>
+      </td>
+      <td>
+        <div *ngFor="let data of item.data">{{ data.dataName }}</div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+
+<ng-template #noDataListByPurpose>
+  <p>No data available.</p>
+</ng-template>
+
+<h1>Data List Transfer</h1>
+<div *ngIf="dataListTransfer && dataListTransfer.length > 0; else noDataListTransfer">
+  <h3>EU countries</h3>
+  <table>
+    <thead>
+    <tr>
+      <th>Name</th>
+      <th>Secondary Actor Category</th>
+      <th>Country</th>
+      <th>Processed Data List</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr *ngFor="let actor of euActors">
+      <td>{{ actor.secondaryActorName }}</td>
+      <td>{{ actor.secondaryActorCategory.secondaryActorCategoryName }}</td>
+      <td>{{ actor.country.countryName }}</td>
+      <td>
+        <div *ngFor="let data of actor.dataTransfers.data">
+          {{ data.dataName }}<br>
+        </div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+
+  <h3>Non EU countries</h3>
+  <table *ngIf="hasActorOutsideEu(dataListTransfer)">
+    <thead>
+    <tr>
+      <th>Name</th>
+      <th>Secondary Actor Category</th>
+      <th>Country</th>
+      <th>Processed Data List</th>
+      <th>Safeguard Type</th>
+      <th>Safeguard</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr *ngFor="let actor of nonEuActors">
+      <td>{{ actor.secondaryActorName }}</td>
+      <td>{{ actor.secondaryActorCategory.secondaryActorCategoryName }}</td>
+      <td>{{ actor.country.countryName }}</td>
+      <td>
+        <div *ngFor="let data of actor.dataTransfers.data">
+          {{ data.dataName }}<br>
+        </div>
+      </td>
+      <td>{{ actor.safeguardType }}</td>
+      <td>{{ actor.safeguard }}</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+
+<ng-template #noDataListTransfer>
+  <p>No data available.</p>
+</ng-template>

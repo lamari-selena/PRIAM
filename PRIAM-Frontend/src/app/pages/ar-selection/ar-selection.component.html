@@ -1,0 +1,33 @@
+<div *ngIf="indirectGeneratedDataList && indirectGeneratedDataList.length > 0; else noIndirectGeneratedDataList">
+  <mat-slide-toggle [checked]="selectAll" (change)="onChange($event, 'all','', '')">Select All</mat-slide-toggle>
+  <table border="1">
+    <thead>
+      <tr>
+        <th>Data Type Name</th>
+        <th>Data</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let dataType of indirectGeneratedDataList">
+        <td><mat-slide-toggle [checked]="dataType.selected" (change)="onChange($event, 'dataType', dataType, '')">{{ dataType.dataTypeName }}</mat-slide-toggle></td>
+        <td>
+          <div *ngFor="let data of dataType.data">
+            <mat-slide-toggle [checked]="data.selected" (change)="onChange($event, 'data', dataType, data)">{{ data.dataName }}</mat-slide-toggle>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <mat-form-field>
+    <input matInput [(ngModel)]="dataRequestClaim">
+  </mat-form-field>
+</div>
+
+<!-- https://jossef.github.io/material-design-icons-iconfont/ -->
+<button mat-flat-button color="primary" (click)="postAccessRequest()" routerLink="/access-request" [disabled]="!isAtLeastOneSelected() || !dataRequestClaim"><i class="material-icons" style="font-size: 4vh;">check_circle</i></button>
+<button mat-flat-button color="accent" routerLink="/access-request"><i class="material-icons" style="font-size: 4vh;">cancel</i></button>
+
+<ng-template #noIndirectGeneratedDataList>
+  <p>No data available.</p>
+</ng-template>
