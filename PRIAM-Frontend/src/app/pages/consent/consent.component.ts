@@ -10,6 +10,8 @@ import {
   PurposeType,
   TypeMesure,
 } from 'src/app/interfaces/processing';
+import { Consent } from 'src/app/interfaces/consent';
+
 import { SecurityService } from 'src/app/shared/services/security.service';
 import { DialogAdditionalData } from '../access-request/access-request.component';
 import { MatDialog } from '@angular/material/dialog';
@@ -32,24 +34,47 @@ export class ConsentComponent implements OnInit {
   dataList: Processing[] = [];
   optionalList: Processing[] = [];
   necessaryList: Processing[] = [];
+  consents: { [id: Processing['processingId']]: boolean } = {};
   devs: any = {};
+  loaded: Promise<unknown> = this.getProcessings();
 
-  ngOnInit() {
-    this.getProcessings();
-  }
+  ngOnInit() {}
 
   getProcessings() {
-    this.getConsentsService
-      .getProcessings()
-      .subscribe((response: Processing[]) => {
-        this.dataList = response;
-        this.optionalList = this.dataList.filter(
-          (a) => a.processingType === ProcessingType.OPTIONAL
-        );
-        this.necessaryList = this.dataList.filter(
-          (a) => a.processingType === ProcessingType.NECESSARY
-        );
-      });
+    return new Promise((res, rej) => {
+      this.getConsentsService
+        .getProcessings()
+        .subscribe((response: Processing[]) => {
+          this.dataList = response;
+          this.optionalList = this.dataList.filter(
+            (a) => a.processingType === ProcessingType.OPTIONAL
+          );
+          this.necessaryList = this.dataList.filter(
+            (a) => a.processingType === ProcessingType.NECESSARY
+          );
+          if (this.referenceId)
+            for (const pro of response) {
+              this.getConsentsService
+                .getConsents(this.referenceId, pro.processingId)
+                .subscribe((res: Consent[]) => {
+                  if (res.length)
+                    this.consents[pro.processingId] =
+                      !res[res.length - 1].endDate;
+                });
+            }
+          res(1);
+        });
+    });
+  }
+
+  post(processing: Processing) {
+    if (this.referenceId)
+      this.getConsentsService.postConsent(
+        this.referenceId,
+        processing.processingId
+      ).subscribe((rep) => {
+      })
+    
   }
 
   openDialogAdditionalData(dataItem: any) {
@@ -61,11 +86,14 @@ export class ConsentComponent implements OnInit {
   }
 
   isDisable(data: Processing) {
-    console.log(data.processingType);
     return data.processingType === ProcessingType.MANDATORY ||
       data.processingType === ProcessingType.NECESSARY
       ? true
       : null;
+  }
+
+  isActivate(data: Processing) {
+    return this.consents[data.processingId];
   }
 
   open(data: Processing) {

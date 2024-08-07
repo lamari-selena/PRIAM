@@ -3,7 +3,7 @@
 <div class="container" *ngIf="dataList && dataList.length > 0; else noData">
   
   <div class="title"><h2>Optional processing</h2></div>
-  <table>
+  <table *ngIf="loaded | async">
     <tbody *ngFor="let data of optionalList">
         <tr>
           <td class="td">
@@ -16,7 +16,7 @@
           <td>
             
             <span class="consent">Give/Withraw Consent</span>
-            <mat-slide-toggle [disabled]="isDisable(data)"> </mat-slide-toggle>
+            <mat-slide-toggle (change)="post(data)" [checked]="isDisable(data) || isActivate(data)" [disabled]="isDisable(data)"> </mat-slide-toggle>
             
             <button class="btn" mat-flat-button (click)="open(data)">
               <i class="material-icons">more_vert</i>

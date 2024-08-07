@@ -1,24 +1,25 @@
-# Avant propos
+# Preface
 
-Ce tuto sera principalement orienté pour une installation linux. Bash sera utilisé tout au long mais des équivalents existe sur windows (`mingw-w64` (installé directment grâce à git sous le nom de `git-bash`)) et mac.
+This tutorial will be primarily oriented towards a Linux installation. Bash will be used throughout, but equivalents exist for Windows (`mingw-w64` (installed directly via Git as `git-bash`)) and Mac.
 
-# Installation du projet.
+# Project Installation
 
-Il y a deux façons d'installer le projet, soit manuellement soit par docker. Dans tous les cas il faut d'abord télécharger le projet.
+There are two ways to install the project: either manually or via Docker. In any case, the project must first be downloaded.
 
-## Télécharger le projet
+## Download the Project
 
-3 façons possible de le télécharger 
-- Soit avec [git](https://git-scm.com/downloads) par HTTPS (pas besoin de configuration)
-- Soit avec [git](https://git-scm.com/downloads) par SSH (besoin de configurer git et github)
-- Soit par [gh-cli](https://cli.github.com/).
+There are three possible ways to download the project:
 
-Selon votre version choisissez la version qui vous convient.
+- With [git](https://git-scm.com/downloads) via HTTPS (no configuration needed).
+- With [git](https://git-scm.com/downloads) via SSH (requires Git and GitHub configuration).
+- With [gh-cli](https://cli.github.com/).
+
+Choose the version that suits you according to your setup.
 
 <details>
   <summary>Git HTTPS</summary>
   
-  Pour pouvoir télécharger le projet et ses sous-modules, vous devez taper cette commande:
+  To download the project and its submodules, you need to run this command:
   
   ```bash
     git clone --recurse-submodules -j8 https://github.com/PRIAM-solution/PRIAM.git
@@ -29,7 +30,7 @@ Selon votre version choisissez la version qui vous convient.
 <details>
   <summary>Git SSH</summary>
   
-  Pour pouvoir télécharger le projet et ses sous-modules, vous devez taper cette commande:
+  To download the project and its submodules, you need to run this command:
   
   ```bash
     git clone --recurse-submodules -j8 git@github.com:PRIAM-solution/PRIAM.git
@@ -40,7 +41,7 @@ Selon votre version choisissez la version qui vous convient.
 <details>
   <summary>GH-cli</summary>
   
-  Pour pouvoir télécharger le projet et ses sous-modules, vous devez taper cette commande:
+  To download the project and its submodules, you need to run this command:
   
   ```bash
     gh repo clone PRIAM-solution/PRIAM -- --recurse-submodules -j8
@@ -48,8 +49,7 @@ Selon votre version choisissez la version qui vous convient.
   
 </details>
 
-Une fois fait, vous pouvez passer à l'étape suivante.
+Once done, you can proceed to the next step.
 
-- [Installation par docker](./INSTALL_DOCKER.md)
-- [Installation native](./INSTALL_NATIVE.md)
-
+- [Docker Installation](./INSTALL_DOCKER.md)
+- [Native Installation](./INSTALL_NATIVE.md)

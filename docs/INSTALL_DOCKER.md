@@ -1,30 +1,31 @@
-# Installation par docker
 
-Vous aurez besoin de :
+# Docker Installation
+
+You will need:
 
 - [Docker](https://docs.docker.com/desktop/)
-- [Docker compose](https://docs.docker.com/compose/install/) (si il n'est pas préinstallé dans votre installation de docker)
-- [Docker buildx](https://github.com/docker/buildx?tab=readme-ov-file#installing) (si il n'est pas préinstallé dans votre installation de docker)
+- [Docker Compose](https://docs.docker.com/compose/install/) (if it is not pre-installed in your Docker installation)
+- [Docker Buildx](https://github.com/docker/buildx?tab=readme-ov-file#installing) (if it is not pre-installed in your Docker installation)
 
 > [!IMPORTANT]  
-> Ce tuto est réalisé avec ces versions de logiciel :
+> This tutorial was created using these software versions:
 >
 > - Docker: `26.1.0, build 9714adc6c7`
-> - Docker compose: `2.26.1`
-> - Docker buildx: `github.com/docker/buildx 0.14.0 171fcbeb69d67c90ba7f44f41a9e418f6a6ec1da`
+> - Docker Compose: `2.26.1`
+> - Docker Buildx: `github.com/docker/buildx 0.14.0 171fcbeb69d67c90ba7f44f41a9e418f6a6ec1da`
 
 > [!WARNING]  
-> À noter que selon la version de votre docker les commandes peuvent légèrement changer (ex: `docker compose` -> `docker-compose` pour le mode d'installation standalone de docker compose).
+> Note that depending on your Docker version, the commands may slightly change (e.g., `docker compose` -> `docker-compose` for the standalone installation mode of Docker Compose).
 
 ---
 
-Le fichier `docker-compose.yml` est pré-configuré pour une utilisation locale. Il manque principalement la configuration de keycloak.
+The `docker-compose.yml` file is pre-configured for local use. The main missing configuration is for Keycloak.
 
-Dans un premier temps, créer un fichier `.env` dans le dossier root du projet.
+First, create a `.env` file in the root directory of the project.
 
-Cette config est partagée entre le docker de `mysql` et de `keycloak`.
+This configuration is shared between the `mysql` and `keycloak` Docker containers.
 
-Une configuation locale simple ressemble à ceci :
+A simple local configuration looks like this:
 
 ```env
 MYSQL_ALLOW_EMPTY_PASSWORD=true
@@ -33,75 +34,75 @@ KEYCLOAK_ADMIN_PASSWORD=admin
 ```
 
 > [!TIP]  
-> Pour toute configuration avancée, je vous recommande de suivre la documentation de [mysql](https://hub.docker.com/_/mysql) et de [keycloak](https://www.keycloak.org/getting-started/getting-started-docker).
+> For any advanced configuration, I recommend following the documentation for [MySQL](https://hub.docker.com/_/mysql) and [Keycloak](https://www.keycloak.org/getting-started/getting-started-docker).
 
-## Configuration de keycloak
+## Keycloak Configuration
 
-Lancez une première fois les services à l'aide cette commande :
+Start the services for the first time using this command:
 
 ```bash
 docker compose up -d
 ```
 
-Nous allons donc ensuite accéder à Keycloak.
+Next, we will access Keycloak.
 
-Allez sur la page `http://localhost:8080`. Vous devriez tomber sur une page comme ceci : 
+Go to the page `http://localhost:8080`. You should see a page like this:
 
 ![image](./images/1-frt.png)
 
-Maintenant appuyer sur "create realm" et vous allez tomber sur cette page :
+Now click on "create realm" and you will see this page:
 
 ![image](./images/2-create-realm.png)
 
-Copié exactement ce qu'il y a sur la page puis ensuite allez sur `realm settings` en bas à droite :
+Copy exactly what is on the page, then go to `realm settings` at the bottom right:
 
 ![image](./images/3-create-attr.png)
 
-Voici à quoi doit ressembler la page. Appuyez sur `Create attribute` :
+The page should look like this. Click on `Create attribute`:
 
 ![image](./images/4-cr-attr2.png)
 
-Vous tomberez sur cette page. Remplissez exactement ce qu'il y a sur la page, puis allez sur la page `Clients`. À la fin de cette partie, il ressemblera à ça :
+You will see this page. Fill it out exactly as shown, then go to the `Clients` page. By the end of this section, it should look like this:
 
 ![image](./images/5-clients.png)
 
-Appuyez sur `Create client` et remplissez exactement la page comme ceci :
+Click on `Create client` and fill out the page exactly as shown:
 
 ![image](./images/6-dataclient.png)
 ![image](./images/7-dataclient2.png)
 ![image](./images/8-dataclient3.png)
 
-Maintenant nous allons nous occuper de la création des utilisateurs. Pour commencer allez sur la page `Users` sur la gauche. À la fin de cette partie vous aurez ces deux utilisateurs qui apparaitrons :  
+Now we will create the users. Start by going to the `Users` page on the left. By the end of this section, you will have these two users appearing:
 
 ![image](./images/9-users.png)
 
-Cliquez donc sur `Add user` puis copiez à l'identique les valeurs dans la catégorie.
+Click on `Add user` and copy the values exactly as shown.
 
 ![image](./images/10-user0.png)
 
-Maintenant vous devez refaire exactement la même chose avec `user1` :
+Now you need to do exactly the same for `user1`:
 
 ![image](./images/11-user1.png)
 
-À partir de là il ne manque plus qu'à faire les identifiants de connexion pour l'utilisateur 0. Revenez sur `user0` et allez sur `Credentials` : 
+Next, we need to create login credentials for user 0. Go back to `user0` and go to `Credentials`:
 
 ![image](./images/12-creds.png)
 
-Appuyez sur `Set password` et remplissez la page comme sur les captures d'écrans : 
+Click on `Set password` and fill out the page as shown:
 
 ![image](./images/13-creds2.png)
 ![image](./images/14-creds3.png)
 
-Choissisez un mot de passe que vous vous souviendrez !
+Choose a password that you will remember!
 
-## Lancement 
+## Launch
 
-Il ne manque plus qu'à relancer les services ! Pour ça, utilisez la commande ci-dessous : 
+Finally, restart the services using the command below:
 
 ```bash
 docker compose up -d --force-recreate
 ```
 
-Cela va relancer tous les services et les connecter entre eux pour de bon !
+This will restart all services and connect them together properly!
 
-Maintenant PRIAM est entièrement configuré.
+Now PRIAM is fully configured.

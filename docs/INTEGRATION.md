@@ -33,25 +33,25 @@ You will find everything on [the installation page](./INSTALL.md).
 
 1. **Add Keycloak Dependencies**: Add the Keycloak dependencies to your project. For example, for a Java project using Maven, add the following dependency to your `pom.xml`:
 
-    ```xml
-    <dependency>
-        <groupId>org.keycloak</groupId>
-        <artifactId>keycloak-spring-boot-starter</artifactId>
-        <version>${keycloak.version}</version>
-    </dependency>
-    ```
+   ```xml
+   <dependency>
+       <groupId>org.keycloak</groupId>
+       <artifactId>keycloak-spring-boot-starter</artifactId>
+       <version>${keycloak.version}</version>
+   </dependency>
+   ```
 
 2. **Configure Keycloak in Your Application**: Add the Keycloak configuration to your configuration file (for example, `application.yml` for a Spring Boot application):
 
-    ```yaml
-    keycloak:
-      realm: priam-realm
-      auth-server-url: http://localhost:8080/auth
-      resource: your-client-id
-      credentials:
-        secret: your-client-secret
-      use-resource-role-mappings: true
-    ```
+   ```yaml
+   keycloak:
+     realm: priam-realm
+     auth-server-url: http://localhost:8080/auth
+     resource: your-client-id
+     credentials:
+       secret: your-client-secret
+     use-resource-role-mappings: true
+   ```
 
 You then need to link your users and `idReference` so that PRIAM recognizes your users.
 
@@ -61,24 +61,50 @@ To enable your application to interact with PRIAM, you need to be able to send H
 
 #### Example in Java with `HttpClient`:
 
+##### With only one user per request
+
 ```java
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.URI;
+    private HttpClient client = HttpClient.newHttpClient();
 
-public class PRIAMClient {
-
-    private static final String CEP = "http://localhost:8089/api/decision/1";
-
-    public static void main(String[] args) {
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(CEP + "?idRefList=" + "123")) // 123 is an id, replace it with your actual user
-            .build();
-
-        JSONObject myObject = new JSONObject(client.send(request, HttpResponse.BodyHandlers.ofString()).body());
-        boolean consent = myObject.getBoolean("123"); 
-        System.out.println("123 has consent? " + (consent ? "yes" : "no"));  
+    // Build the URL request.
+    private HttpRequest builderHttp(Long userID, int processID) {
+        return HttpRequest.newBuilder().uri(URI.create("http://localhost:8089/api/decision/" + processID + "?idRefList=" + userID.toString())).build();
     }
-}
+
+    // Send the request to the CEP
+    private HttpResponse sendReq(Long userID, int processID) throws InterruptedException, IOException {
+        return client.send(builderHttp(userID, processID), HttpResponse.BodyHandlers.ofString());
+    }
+
+
+    // Return a boolean base of the response of the CEP
+    private boolean getConsent(Long userID, int processID) throws InterruptedException, IOException {
+        JSONObject myObject = new JSONObject(sendReq(userID, processID).body());
+        return myObject.getBoolean(userID.toString());
+    }
+
+
+```
+
+##### With multiple users per request
+
+```java
+    private HttpClient client = HttpClient.newHttpClient();
+    // Build the URL request.
+    private HttpRequest builderHttpList(ArrayList<Long> userID, int processID) {
+        return HttpRequest.newBuilder().uri(URI.create("http://localhost:8089/api/decision/" + processID + "?" + userID.stream().map(id -> "idRefList=" + id).collect(StringBuilder::new, (x, y) -> x.append(y),
+                (a, b) -> a.append(",").append(b)).toString())).build();
+    }
+
+        // Send the request to the CEP
+    private HttpResponse sendReqList(ArrayList<Long> userID, int processID) throws InterruptedException, IOException {
+        return client.send(builderHttpList(userID, processID), HttpResponse.BodyHandlers.ofString());
+    }
+
+    // Return a boolean base of the response of the CEP
+    private ArrayList<Long> getConsentList(ArrayList<Long> userID, int processID) throws InterruptedException, IOException {
+        JSONObject myObject = new JSONObject(sendReqList(userID, processID).body());
+        return (ArrayList<Long>) userID.stream().filter(obj -> myObject.getBoolean(obj.toString())).collect(Collectors.toList());
+    }
+
+```
