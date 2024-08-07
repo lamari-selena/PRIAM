@@ -10,7 +10,7 @@ import priam.consent.priamconsentservice.entities.DataSubject;
 public interface ActorRestClient {
 
     @GetMapping(path = "/api/DataSubject/{id}")
-    DataSubject getDataSubject(@PathVariable(name = "id") int idDataSubject);
+    DataSubject getDataSubjectId(@PathVariable(name = "id") int idDataSubject);
 
     @GetMapping(path = "/api/DataSubject/ref/{idRef}")
     DataSubject getDataSubjectByRef(@PathVariable (name = "idRef")String idRef);

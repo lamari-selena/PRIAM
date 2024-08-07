@@ -38,6 +38,6 @@ public class ContractRestController {
     //Consent Information Point (CDP)
     @GetMapping("/decision/{processingId}")
     public Map<String, Boolean>  getDecisionByDataSubject (@RequestParam List<String> idRefList, @PathVariable int processingId) {
-        return contractService.ConsentDecesionPoint(idRefList, processingId);
+        return contractService.getConsentByDataSubject(idRefList, processingId);
     }
 }

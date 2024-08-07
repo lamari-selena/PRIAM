@@ -14,6 +14,7 @@ import java.util.Date;
 @Entity
 public class Consent {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int consentId;
     private Date startDate;
     private Date endDate;

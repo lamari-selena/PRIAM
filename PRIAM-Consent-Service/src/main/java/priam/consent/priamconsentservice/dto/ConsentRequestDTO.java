@@ -14,10 +14,11 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ConsentRequestDTO {
-    private int consentId;
-    private Date startDate;
-    private Date endDate;
-    private Contract contract;
+    //private int consentId;
+    //private Date startDate;
+    //private Date endDate;
+    //private int contractId;
+
     private int processingId;
     //private Processing processing;
 }

@@ -24,9 +24,9 @@ public class ConsentRestController {
         return consentService.getConsent(id);
     }
 
-    @PostMapping("/create")
-    public ConsentResponseDTO newConsent(ConsentRequestDTO consentRequestDTO) {
-        return consentService.create(consentRequestDTO);
+    @PostMapping("/create/{idRef}")
+    public ConsentResponseDTO newConsent(@RequestBody ConsentRequestDTO consentRequestDTO, @PathVariable String idRef) {
+        return consentService.create(consentRequestDTO, idRef);
     }
 
     @GetMapping("/listProcessings/{dsc}")
