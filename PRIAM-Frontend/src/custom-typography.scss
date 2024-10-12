@@ -1,0 +1,20 @@
+@use '@angular/material' as mat;
+
+$priam-typography: mat.define-typography-config(
+  $font-family: '"Gabarito", sans-serif',
+  $headline-1: mat.define-typography-level(9vh, 1.167, 300),
+  $headline-2: mat.define-typography-level(8vh, 1.2, 300),
+  $headline-3: mat.define-typography-level(7vh, 1.167, 300),
+  $headline-4: mat.define-typography-level(6vh, 1.235, 300),
+  $headline-5: mat.define-typography-level(5vh, 1.334, 300),
+  $headline-6: mat.define-typography-level(4vh, 1.6, 500),
+  $subtitle-1: mat.define-typography-level(3vh, 1.75, 400),
+  $subtitle-2: mat.define-typography-level(3vh, 1.57, 500),
+  $body-1: mat.define-typography-level(3vh, 1.5, 400),
+  $body-2: mat.define-typography-level(3vh, 1.43, 400),
+  $button: mat.define-typography-level(3vh, 1.75, 500),
+  $caption: mat.define-typography-level(2.5vh, 1.66, 400),
+  $overline: mat.define-typography-level(2.5vh, 2.2, 500)
+);
+
+@include mat.typography-hierarchy($priam-typography);

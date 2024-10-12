@@ -1,0 +1,19 @@
+<mat-toolbar class="mat-elevation-z4 base">
+  <a mat-button routerLink="/home" routerLinkActive="active-link"><i class="material-icons" style="font-size: 3.5vh;">home</i>PRIAM</a>
+  <a mat-button routerLink="/rights" routerLinkActive="active-link">My Rights</a>
+  <a mat-button routerLink="/requests" routerLinkActive="active-link">Requests</a>
+  <a mat-button routerLink="/consent" routerLinkActive="active-link">Consent</a>
+  <span style="flex: 1 1 auto;"></span>
+  <button mat-button [matMenuTriggerFor]="beforeMenu" [ngClass]="{'active-link': currentUrl === '/login'}">
+    <a class="nav-link" *ngIf="securityService.profile">
+      <a *ngIf="securityService.profile">{{securityService.profile.firstName}} <706></a>
+      <i class="material-icons" style="font-size: 4vh;">person</i>
+    </a>
+  </button>
+
+  <mat-menu #beforeMenu="matMenu" xPosition="before" >
+    <a mat-menu-item routerLink="/login">Profile</a>
+    <a mat-menu-item routerLink="/login" (click)="onLogout()">Logout</a>
+  </mat-menu>
+
+</mat-toolbar>

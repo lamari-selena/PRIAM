@@ -1,0 +1,47 @@
+<mat-drawer-container autosize style="height: 89.2vh;">
+  <mat-drawer #drawer mode="side" opened>
+    <mat-list>
+      <mat-selection-list [(ngModel)]="selectedRequestResponses" (selectionChange)="onRequestResponseChange()">
+        <h3 matListItemTitle>Request Responses</h3>
+        <mat-list-option [value]="'In Progress'">In Progress</mat-list-option>
+        <mat-list-option [value]="'COMPLETED'">Completed</mat-list-option>
+      </mat-selection-list>
+
+      <mat-selection-list [(ngModel)]="selectedRequestTypes" (selectionChange)="onRequestTypeChange()">
+        <h3 matListItemTitle>Request Types</h3>
+        <mat-list-option [value]="'ACCESS'">Access</mat-list-option>
+        <mat-list-option [value]="'RECTIFICATION'">Rectification</mat-list-option>
+        <mat-list-option [value]="'ERASURE'">Suppression</mat-list-option>
+      </mat-selection-list>
+
+      <mat-selection-list [(ngModel)]="selectedDataSubjectCategories" (selectionChange)="onDataSubjectCategoryChange()">
+        <h3 matListItemTitle>Data Subject Categories</h3>
+        <div *ngFor="let category of dataSubjectCategories">
+          <mat-list-option [value]="category">
+            {{ category.dataSubjectCategoryName }}
+          </mat-list-option>
+        </div>
+      </mat-selection-list>
+    </mat-list>
+  </mat-drawer>
+
+  <mat-drawer-content style="overflow-y: auto;">
+    <div *ngIf="requests && requests.length > 0; else noRequests">
+      <div *ngFor="let request of requests">
+        <button mat-flat-button class="request-button" [color]="isDateThreeWeeksOlder(request.dataRequestIssuedAt) ? 'accent' : 'primary'" (click)="getSelectedRequest(request.dataRequestId, request.dataRequestType, request.response)">
+          <span style="display: flex; align-items: center;">
+            {{ request.dataRequestId }}
+            {{ request.dataRequestType }}
+            {{ request.dataSubjectCategory.dataSubjectCategoryName }}
+            {{ request.dataRequestIssuedAt | date:'dd/MM/yyyy HH:mm:ss' }}
+            <i class="material-icons" style="font-size: 6vh;">{{ request.response ? 'check_circle' : 'cancel' }}</i>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <ng-template #noRequests>
+      <p>No requests available.</p>
+    </ng-template>
+  </mat-drawer-content>
+</mat-drawer-container>
