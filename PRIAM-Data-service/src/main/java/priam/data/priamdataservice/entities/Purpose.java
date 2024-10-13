@@ -3,6 +3,7 @@ package priam.data.priamdataservice.entities;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.minidev.json.annotate.JsonIgnore;
 import priam.data.priamdataservice.enums.PurposeType;
 
 import javax.persistence.*;
@@ -20,7 +21,12 @@ public class Purpose {
     private String purposeDescription;
     @Enumerated(EnumType.STRING)
     private PurposeType purposeType;
-//	@JsonIgnore
-//	@ManyToOne(cascade = CascadeType.ALL,fetch = FetchType.EAGER)
-//	private Processing processing;
+/*	@JsonIgnore
+    @JoinColumn(name = "processing_id", nullable = false)
+	@ManyToOne(cascade = CascadeType.ALL,fetch = FetchType.EAGER)
+	private Processing processing;*/
+
+    @ManyToOne
+    @JoinColumn(name = "processing_id", nullable = false)  // Ceci crée la clé étrangère
+    private Processing processing;
 }

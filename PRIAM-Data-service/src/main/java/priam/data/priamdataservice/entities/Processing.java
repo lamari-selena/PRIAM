@@ -27,9 +27,11 @@ public class Processing {
 
     private String processingName;
 
+    @Column(name = "processing_type")
     @Enumerated(EnumType.STRING)
     private ProcessingType processingType;
 
+    @Column(name = "processing_category")
     @Enumerated(EnumType.STRING)
     private ProcessingCategory processingCategory;
 
@@ -51,9 +53,12 @@ public class Processing {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "processing",fetch = FetchType.LAZY)
     private List<DataUsage> dataUsages = new ArrayList<>();
 
+    @OneToMany(mappedBy = "processing", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Purpose> purposes = new ArrayList<>();
+    /*
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Purpose> purposes = new ArrayList<>();
-
+*/
     @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinTable(name = "Processing_Measure", joinColumns = @JoinColumn(name = "processingId", referencedColumnName = "processingId"), inverseJoinColumns = @JoinColumn(name = "measureId", referencedColumnName = "measureId"))
     private List<Measure> measures = new ArrayList<>();

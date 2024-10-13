@@ -129,10 +129,13 @@ public class ConsentServiceImpl implements ConsentService{
             }
         } else {
             // Case 2: No consent exist --> creat new consent
+            System.out.println(" -------No existing consent found--------------");
             consent = new Consent();
             consent.setStartDate(new Date());
             consent.setEndDate(null);
+
             consent.setContract(contract);
+            System.out.println(" -------Create new consent --------------" + consent);
             try {
                 Consent newConsent = consentRepository.save(consent);
                 return consentMapper.fromConsentRequest(newConsent);

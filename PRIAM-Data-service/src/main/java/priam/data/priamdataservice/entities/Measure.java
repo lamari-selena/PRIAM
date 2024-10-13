@@ -3,8 +3,10 @@ package priam.data.priamdataservice.entities;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import priam.data.priamdataservice.enums.CategoryMesure;
-import priam.data.priamdataservice.enums.TypeMesure;
+import priam.data.priamdataservice.enums.CategoryMeasure;
+
+import priam.data.priamdataservice.enums.TypeMeasure;
+
 
 import javax.persistence.*;
 
@@ -18,6 +20,8 @@ public class Measure {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int measureId;
     private String measureDescription;
-    private TypeMesure measureType;
-    private CategoryMesure measureCategory;
+    @Enumerated(EnumType.STRING)
+    private TypeMeasure measureType;
+    @Enumerated(EnumType.STRING)
+    private CategoryMeasure measureCategory;
 }

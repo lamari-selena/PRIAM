@@ -1,6 +1,6 @@
 package priam.data.priamdataservice.enums;
 
-public enum TypeMesure {
+public enum TypeMeasure {
     ORGANISATIONAL,
     TECHNICAL
 }

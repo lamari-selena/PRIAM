@@ -22,6 +22,7 @@ public class Data {
     @Column
     private String dataName;
     @Column
+    @Enumerated(EnumType.STRING)
     private Source source;
     @Column
     private String sourceDetails;
