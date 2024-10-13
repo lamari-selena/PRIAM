@@ -1,5 +1,6 @@
 package priam.data.priamdataservice.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,6 +28,7 @@ public class Purpose {
 	private Processing processing;*/
 
     @ManyToOne
+    @JsonBackReference
     @JoinColumn(name = "processing_id", nullable = false)  // Ceci crée la clé étrangère
     private Processing processing;
 }

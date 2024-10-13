@@ -1,5 +1,6 @@
 package priam.data.priamdataservice.entities;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -54,6 +55,7 @@ public class Processing {
     private List<DataUsage> dataUsages = new ArrayList<>();
 
     @OneToMany(mappedBy = "processing", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
     private List<Purpose> purposes = new ArrayList<>();
     /*
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
