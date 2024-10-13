@@ -53,7 +53,7 @@ public class ConsentServiceImpl implements ConsentService{
     public ConsentResponseDTO create(ConsentRequestDTO consentRequestDTO, String idRef) {
         // Retrieve data subject ID based on idRef
         int dataSubjectId = dataSubjectRestClient.getDataSubjectIdByIdRef(idRef);
-
+        System.out.println(" -------Create new consent --------------" + consentRequestDTO.getProcessingId());
         // Check if a contract already exists for the dataSubjectId
         Contract contract = contractRepository.findByDataSubjectId(dataSubjectId);
 
@@ -133,9 +133,10 @@ public class ConsentServiceImpl implements ConsentService{
             consent = new Consent();
             consent.setStartDate(new Date());
             consent.setEndDate(null);
-
+            //brouillon
+            consent.setProcessingId(processingId);
             consent.setContract(contract);
-            System.out.println(" -------Create new consent --------------" + consent);
+            System.out.println(" -------Create new consent --------------" + consent.getProcessingId());
             try {
                 Consent newConsent = consentRepository.save(consent);
                 return consentMapper.fromConsentRequest(newConsent);

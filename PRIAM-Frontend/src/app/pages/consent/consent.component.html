@@ -1,7 +1,7 @@
 <!-- <div class="title"><h1>Consent</h1></div>
 <hr> -->
 <div class="container" *ngIf="dataList && dataList.length > 0; else noData">
-  
+
   <div class="title"><h2>Optional processing</h2></div>
   <table *ngIf="loaded | async">
     <tbody *ngFor="let data of optionalList">
@@ -14,10 +14,10 @@
             {{ data.processingName }}
           </td>
           <td>
-            
-            <span class="consent">Give/Withraw Consent</span>
+
+            <span class="consent">Give/Withdraw Consent</span>
             <mat-slide-toggle (change)="post(data)" [checked]="isDisable(data) || isActivate(data)" [disabled]="isDisable(data)"> </mat-slide-toggle>
-            
+
             <button class="btn" mat-flat-button (click)="open(data)">
               <i class="material-icons">more_vert</i>
             </button>
@@ -79,7 +79,7 @@
           <td>
             <span class="consent">Give/Withraw Consent</span>
             <mat-slide-toggle [disabled]="isDisable(data)"> </mat-slide-toggle>
-            
+
             <button class="btn" mat-flat-button (click)="open(data)">
               <i class="material-icons">more_vert</i>
             </button>
