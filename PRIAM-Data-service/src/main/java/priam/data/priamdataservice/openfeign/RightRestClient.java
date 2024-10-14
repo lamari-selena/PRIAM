@@ -7,7 +7,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(name = "RIGHT-SERVICE")
 public interface RightRestClient {
+    //getIfDataAccessAccepted
     @GetMapping(path = "api/isAccepted")
-    public boolean getIfDataAccessAccepted(@RequestParam int dataSubjectId, @RequestParam int dataId);
+    public boolean isDataRequestAcceptedForDataId(@RequestParam int dataSubjectId, @RequestParam int dataId);
 }
 

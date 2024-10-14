@@ -10,11 +10,15 @@ import javax.persistence.*;
 @NoArgsConstructor
 @Entity
 @IdClass(DataRequestDataKey.class)
-@Table(name = "DataRequest_Data")
+@Table(name = "dataRequestData")
 public class DataRequestData {
     @Id
     private int dataRequestId;
     @Id
     private int dataId;
+
     private boolean answerByData = false;
+
+
+
 }

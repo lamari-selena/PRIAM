@@ -190,8 +190,9 @@ public class DataService implements DataServiceInterface {
         ArrayList<Data> nondirectDatas = new ArrayList<>(dataList.stream().filter(d -> d.getSource().equals(Source.INDIRECT) || d.getSource().equals(Source.PRODUCED)).collect(Collectors.toList()));
         nondirectDatas.forEach(data -> {
             // We have to verify if provider accepted to give this data
-            boolean isAccepted = rightRestClient.getIfDataAccessAccepted(dataSubjectId, data.getDataId());
+            boolean isAccepted = rightRestClient.isDataRequestAcceptedForDataId(dataSubjectId, data.getDataId());
             if(isAccepted) {
+
                 // Construct each dataType
                 Optional<ProcessedPersonalDataDTO> processedPersonalDataDTO = response.stream().filter(p -> p.getDataTypeName().equals(data.getDataType().getDataTypeName())).findFirst();
                 ProcessedPersonalDataDTO dataType = null;
