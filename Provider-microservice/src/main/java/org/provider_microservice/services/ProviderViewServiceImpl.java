@@ -50,13 +50,16 @@ public class ProviderViewServiceImpl implements ProviderViewService {
 
         // Because when size == 1, the result is not a object list but a String list
         if (attributes.size() == 1) {
-            List<String> results = sqlQuery.getResultList();
+
+            List<Object> results = sqlQuery.getResultList();
+            System.out.println("error " +  results.get(0));
             for (int i = 0; i < results.size(); i++) {
                 if (results.get(i) == null) value = "no data available";
-                else value = results.get(i);
+                else value = results.get(i).toString();
                 addData(values, createDataMap(attributes.get(0), value));
             }
         } else {
+
             List<Object[]> results = sqlQuery.getResultList();
             for (Object[] result : results) {
                 for (int i = 0; i < result.length; i++) {

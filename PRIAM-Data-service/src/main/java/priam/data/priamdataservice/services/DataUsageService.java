@@ -11,7 +11,9 @@ import priam.data.priamdataservice.repositories.DataUsageRepository;
 
 import javax.annotation.Generated;
 import javax.transaction.Transactional;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 @Generated(
         value = "org.mapstruct.ap.MappingProcessor",
@@ -34,9 +36,9 @@ public class DataUsageService implements DataUsageServiceInterface {
     }
     @Override
     public DataUsage createDataUsage(DataUsage dataUsage) {
-        //log.info("CreateDataUsage start Process !");
+
         DataUsage res = dataUsageRepository.save(dataUsage);
-        //log.info("CreateDataUsage end Process !");
+
         return res;
     }
 
@@ -71,5 +73,18 @@ public class DataUsageService implements DataUsageServiceInterface {
             d.setData(data);
         }
         return datausages;
+    }
+
+    @Override
+    public List<Integer> getDataIdsByProcessingId(int processingId) {
+        //Collection<DataUsage> datausages = dataUsageRepository.findAll();
+        List<Integer>  ids = new ArrayList<>();
+        Collection<DataUsage> datausages = getDataUsages(processingId);
+        for (DataUsage d: datausages){
+            int id = d.getDataId();
+            System.out.print(id);
+            ids.add(id);
+        }
+        return ids;
     }
 }

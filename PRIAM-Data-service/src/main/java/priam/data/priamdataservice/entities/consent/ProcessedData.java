@@ -1,3 +1,5 @@
+/*
+
 package priam.data.priamdataservice.entities.consent;
 
 import lombok.AllArgsConstructor;
@@ -17,3 +19,5 @@ public class ProcessedData {
     @Id
     private int dataId;
 }
+
+*/

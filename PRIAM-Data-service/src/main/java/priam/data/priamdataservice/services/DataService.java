@@ -77,9 +77,14 @@ public class DataService implements DataServiceInterface {
     @Override
     public List<DataResponseDTO> findAllPersonalData() {
         List<Data> dataList = dataRepository.findAllByIsPersonal(true);
+        DataSubjectCategory dataSubjectCategory;
         for (Data datum : dataList) {
-            DataSubjectCategory dataSubjectCategory = actorRestClient.getDataSubjectCategoryById(datum.getDataSubjectCategory().getDataSubjectCategoryId());
-            datum.setDataSubjectCategory(dataSubjectCategory);
+            try{
+                dataSubjectCategory = actorRestClient.getDataSubjectCategoryById(datum.getDataSubjectCategory().getDataSubjectCategoryId());
+                datum.setDataSubjectCategory(dataSubjectCategory);
+            }catch (Exception e) {
+                System.out.println("Error : recup data subject category !");
+            }
         }
         List<DataResponseDTO> dataResponseDTOS = dataList
                 .stream().map(datum -> dataMapper.DataToDataResponseDTO(datum))
@@ -91,8 +96,12 @@ public class DataService implements DataServiceInterface {
     public List<DataResponseDTO> findAllData() {
         List<Data> dataList = dataRepository.findAll();
         for (Data datum : dataList) {
-            DataSubjectCategory dataSubjectCategory = actorRestClient.getDataSubjectCategoryById(datum.getDataSubjectCategory().getDataSubjectCategoryId());
-            datum.setDataSubjectCategory(dataSubjectCategory);
+            try {
+                DataSubjectCategory dataSubjectCategory = actorRestClient.getDataSubjectCategoryById(datum.getDataSubjectCategory().getDataSubjectCategoryId());
+            }catch (Exception e) {
+                System.out.println("Error : recup data subject category !");
+            }
+
         }
         List<DataResponseDTO> dataResponseDTOS = dataList
                 .stream().map(datum -> dataMapper.DataToDataResponseDTO(datum))
@@ -158,22 +167,27 @@ public class DataService implements DataServiceInterface {
 
         // First, get all direct datas
         ArrayList<Data> directDatas = new ArrayList<>(dataList.stream().filter(d -> d.getSource().equals(Source.DIRECT)).collect(Collectors.toList()));
-
         directDatas.forEach(data -> {
             // Construct each dataType
+
             Optional<ProcessedPersonalDataDTO> processedPersonalDataDTO = response.stream().filter(p -> p.getDataTypeName().equals(data.getDataType().getDataTypeName())).findFirst();
+
             ProcessedPersonalDataDTO dataType = null;
             if (processedPersonalDataDTO.isPresent()) {
                 dataType = processedPersonalDataDTO.get();
             } else {
                 dataType = new ProcessedPersonalDataDTO(data.getDataType().getDataTypeName());
                 response.add(dataType);
+
             }
             // Get data values
             ArrayList<String> datasNames = new ArrayList<>();
+
             datasNames.add(data.getDataName());
+
             ArrayList<Map<String, String>> valuesResponse = new ArrayList<>(providerRestClient.getPersonalDataValues(idRef, dataType.getDataTypeName(), datasNames));
             ArrayList<String> values = new ArrayList<>();
+            System.out.println("erreurrrrr  " +valuesResponse.get(0));
             valuesResponse.forEach(valueMap -> {
                 if (valueMap.get("attribute").equals(data.getDataName()))
                     values.add(valueMap.get("value"));
@@ -219,6 +233,7 @@ public class DataService implements DataServiceInterface {
                 }
             }
         });
+
         return response;
     }
 

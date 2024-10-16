@@ -1,10 +1,11 @@
 package priam.consent.priamconsentservice.openfeign;
 
 import java.util.Collection;
+import java.util.List;
 
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import priam.consent.priamconsentservice.entities.Processing;
 
@@ -16,4 +17,15 @@ public interface DataRestClient {
 
     @GetMapping("/api/processing/{id}")
     Processing getProcessing(@PathVariable int id);
+
+    @PostMapping("/api/processed-data/add")
+    public ResponseEntity<String> addProcessedData(
+            @RequestParam int subjectId, @RequestBody List<Integer> dataIds);
+
+    @DeleteMapping("/api/processed-data/remove")
+    public ResponseEntity<String> removeProcessedData(
+            @RequestParam int subjectId, @RequestBody List<Integer> dataIds);
+
+    @GetMapping("/processing/data-usage/DataIds/{processingId}")
+    public List<Integer> getDataIds(@PathVariable int processingId);
 }

@@ -82,7 +82,6 @@ public class ConsentServiceImpl implements ConsentService{
             // Sauvegarder le contrat
             contract = contractRepository.save(contract);
             System.out.println("New contract created for data subject: " + dataSubject.getIdRef());
-
         }
 
         // Mapper ConsentRequestDTO To Consent object
@@ -108,6 +107,7 @@ public class ConsentServiceImpl implements ConsentService{
                 // update an other attributes
                 try {
                     Consent updatedConsent = consentRepository.save(existingConsent); // Mettre à jour le consentement
+                    processingRestClient.removeProcessedData(dataSubjectId, processingRestClient.getDataIds(processingId));
                     return consentMapper.fromConsentRequest(updatedConsent); // Retourner le consentement mis à jour
                 } catch (Exception e) {
                     // Log et gestion de l'exception
@@ -121,6 +121,8 @@ public class ConsentServiceImpl implements ConsentService{
                 consent.setContract(contract);
                 try {
                     Consent newConsent = consentRepository.save(consent);
+                    //******
+                    processingRestClient.addProcessedData(dataSubjectId, processingRestClient.getDataIds(processingId));
                     return consentMapper.fromConsentRequest(newConsent);
                 } catch (Exception e) {
                     // Log et gestion de l'exception
@@ -133,11 +135,13 @@ public class ConsentServiceImpl implements ConsentService{
             consent = new Consent();
             consent.setStartDate(new Date());
             consent.setEndDate(null);
-            //brouillon
+
             consent.setProcessingId(processingId);
             consent.setContract(contract);
-            System.out.println(" -------Create new consent --------------" + consent.getProcessingId());
+
             try {
+                //add list of consented data used into processedData table
+                processingRestClient.addProcessedData(dataSubjectId, processingRestClient.getDataIds(processingId));
                 Consent newConsent = consentRepository.save(consent);
                 return consentMapper.fromConsentRequest(newConsent);
             } catch (Exception e) {

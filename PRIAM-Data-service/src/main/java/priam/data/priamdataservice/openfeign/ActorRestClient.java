@@ -13,4 +13,6 @@ public interface ActorRestClient {
     public DataSubjectResponseDTO getDataSubjectByRef(@PathVariable String idRef);
     @GetMapping(path = "api/actor/DataSubjectCategory/{dataSubjectCategoryId}")
     public DataSubjectCategory getDataSubjectCategoryById(@PathVariable int dataSubjectCategoryId);
+    @GetMapping(path = "api/DataSubject/{dataSubjectId}")
+    public DataSubjectResponseDTO getDataSubjectId(@PathVariable int dataSubjectId);
 }

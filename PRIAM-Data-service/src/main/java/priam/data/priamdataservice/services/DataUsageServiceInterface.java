@@ -5,6 +5,7 @@ import priam.data.priamdataservice.dto.DataUsageResponseDTO;
 import priam.data.priamdataservice.entities.DataUsage;
 
 import java.util.Collection;
+import java.util.List;
 
 public interface DataUsageServiceInterface {
     /**
@@ -38,4 +39,6 @@ public interface DataUsageServiceInterface {
      * @return A DataUsage object List
      */
     Collection<DataUsage> getDataUsages(int processingId);
+
+    public List<Integer> getDataIdsByProcessingId(int processingId);
 }

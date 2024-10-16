@@ -6,6 +6,7 @@ import priam.data.priamdataservice.dto.ProcessingResponseDTO;
 import priam.data.priamdataservice.entities.Processing;
 
 import java.util.Collection;
+import java.util.List;
 
 public interface ProcessingServiceInterface {
     /**

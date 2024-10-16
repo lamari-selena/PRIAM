@@ -5,7 +5,7 @@ import priam.data.priamdataservice.dto.consent.ConsentRequestDTO;
 import priam.data.priamdataservice.dto.consent.ConsentResponseDTO;
 import priam.data.priamdataservice.entities.consent.Consent;
 import priam.data.priamdataservice.entities.DataUsage;
-import priam.data.priamdataservice.entities.consent.ProcessedData;
+import priam.data.priamdataservice.entities.ProcessedData;
 import priam.data.priamdataservice.mappers.ConsentMapper;
 import priam.data.priamdataservice.repositories.ConsentRepository;
 import priam.data.priamdataservice.repositories.ProcessedDataRepository;
@@ -30,6 +30,11 @@ public class ConsentService implements ConsentServiceInterface{
 
     @Override
     public ConsentResponseDTO save(ConsentRequestDTO consentRequestDTO) {
+        return null;
+    }
+
+   /* @Override
+    public ConsentResponseDTO save(ConsentRequestDTO consentRequestDTO) {
         Consent consent = consentMapper.ConsentRequestDTOToConsent(consentRequestDTO);
         Consent result = consentRepository.save(consent);
 
@@ -40,5 +45,5 @@ public class ConsentService implements ConsentServiceInterface{
         });
 
         return consentMapper.ConsentToConsentResponseDTO(result);
-    }
+    }*/
 }

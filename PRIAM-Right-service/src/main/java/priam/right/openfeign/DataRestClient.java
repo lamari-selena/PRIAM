@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import priam.right.entities.Data;
 
 @FeignClient(name = "DATA-SERVICE")
-//@FeignClient(name ="DATA-SERVICE")
 public interface DataRestClient {
 
     @GetMapping(path = "/api/dataId/{dataName}")

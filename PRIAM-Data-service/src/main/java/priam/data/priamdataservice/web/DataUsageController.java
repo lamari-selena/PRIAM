@@ -8,6 +8,7 @@ import priam.data.priamdataservice.services.DataUsageServiceInterface;
 import priam.data.priamdataservice.dto.DataUsageResponseDTO;
 
 import java.util.Collection;
+import java.util.List;
 
 @RestController
 @RequestMapping("processing/data-usage")
@@ -54,6 +55,11 @@ public class DataUsageController {
     @GetMapping("/{dataUsageId}")
     public DataUsageResponseDTO getDataUsage(@PathVariable Integer dataUsageId) {
         return dataUsageService.getDataUsage(dataUsageId);
+    }
+
+    @GetMapping("/DataIds/{processingId}")
+    public List<Integer> getDataIds(@PathVariable int processingId) {
+        return dataUsageService.getDataIdsByProcessingId(processingId);
     }
 
 }
