@@ -2,6 +2,7 @@ package priam.data.priamdataservice.entities;
 
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
+import priam.data.priamdataservice.entities.model.SecondaryActor;
 
 import javax.persistence.*;
 import java.util.List;
@@ -27,10 +28,10 @@ public class PersonalDataTransfer {
             inverseJoinColumns = @JoinColumn(name = "data_id"))
     private List<Data> data;
 
-    @ManyToMany
+    /*@ManyToMany
     @JoinTable(name = "personal_data_transfer_secondary_actor",
             joinColumns = @JoinColumn(name = "personal_data_transfer_id"),
-            inverseJoinColumns = @JoinColumn(name = "secondary_actor_id"))
-
+            inverseJoinColumns = @JoinColumn(name = "secondary_actor_id"))*/
+    @Transient
     private List<SecondaryActor> secondaryActors;
 }

@@ -3,7 +3,7 @@ package priam.data.priamdataservice.dto.transfer;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import priam.data.priamdataservice.dto.ProcessedPersonalDataDTO;
-import priam.data.priamdataservice.entities.Country;
+import priam.data.priamdataservice.entities.model.Country;
 import priam.data.priamdataservice.enums.SafeguardType;
 import priam.data.priamdataservice.enums.SecondaryActorType;
 

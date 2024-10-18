@@ -1,11 +1,10 @@
 package priam.data.priamdataservice.mappers;
 
 import org.mapstruct.Mapper;
-import priam.data.priamdataservice.dto.ProcessedPersonalDataDTO;
 import priam.data.priamdataservice.dto.transfer.*;
 import priam.data.priamdataservice.entities.PersonalDataTransfer;
-import priam.data.priamdataservice.entities.SecondaryActor;
-import priam.data.priamdataservice.entities.SecondaryActorCategory;
+import priam.data.priamdataservice.entities.model.SecondaryActor;
+import priam.data.priamdataservice.entities.model.SecondaryActorCategory;
 
 @Mapper(componentModel = "spring")
 public interface PersonalDataTransferMapper {

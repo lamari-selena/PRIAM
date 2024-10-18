@@ -1,4 +1,4 @@
-package priam.data.priamdataservice.entities;
+package priam.data.priamdataservice.entities.model;
 
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -8,8 +8,6 @@ import javax.persistence.*;
 @lombok.Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "country")
 public class Country {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

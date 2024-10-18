@@ -2,7 +2,7 @@ package priam.data.priamdataservice.dto.transfer;
 
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
-import priam.data.priamdataservice.entities.Country;
+import priam.data.priamdataservice.entities.model.Country;
 import priam.data.priamdataservice.enums.SafeguardType;
 import priam.data.priamdataservice.enums.SecondaryActorType;
 
@@ -18,8 +18,8 @@ public class SecondaryActorDTO { //TODO: refactor usage
     private String secondaryActorAddress;
     private String safeguard;
     private SafeguardType safeguardType;
-    private String username;
-    private String password;
+    //private String username;
+    //private String password;
     private Country country;
     private SecondaryActorCategoryDTO secondaryActorCategory;
 }

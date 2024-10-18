@@ -1,4 +1,4 @@
-package priam.data.priamdataservice.entities;
+package priam.data.priamdataservice.entities.model;
 
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -9,9 +9,7 @@ import javax.persistence.*;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Entity
 @lombok.Data
-//@Table(name = "secondary_actor")
 public class SecondaryActor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,4 +1,4 @@
-package priam.data.priamdataservice.entities.consent;
+package priam.data.priamdataservice.entities;
 
 import java.io.Serializable;
 

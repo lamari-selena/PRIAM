@@ -3,7 +3,7 @@ package priam.data.priamdataservice.dto.transfer;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import priam.data.priamdataservice.entities.SecondaryActor;
+import priam.data.priamdataservice.entities.model.SecondaryActor;
 
 @Data
 @AllArgsConstructor

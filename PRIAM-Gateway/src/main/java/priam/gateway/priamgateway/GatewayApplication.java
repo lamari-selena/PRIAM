@@ -46,7 +46,6 @@ public class GatewayApplication {
 
     @Bean
     public RouteLocator myRoutes(RouteLocatorBuilder builder) {
-
         return builder.routes()
                 .route(p -> p
                 .path("/health")

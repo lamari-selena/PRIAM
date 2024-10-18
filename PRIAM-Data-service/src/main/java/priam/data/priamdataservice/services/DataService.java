@@ -7,7 +7,7 @@ import priam.data.priamdataservice.dto.transfer.DataListTransferDTO;
 import priam.data.priamdataservice.dto.transfer.SecondaryActorCategoryDTO;
 import priam.data.priamdataservice.entities.DataSubjectCategory;
 import priam.data.priamdataservice.entities.Data;
-import priam.data.priamdataservice.entities.SecondaryActor;
+import priam.data.priamdataservice.entities.model.SecondaryActor;
 import priam.data.priamdataservice.enums.Source;
 import priam.data.priamdataservice.mappers.DataMapper;
 import priam.data.priamdataservice.mappers.DataTypeMapper;
@@ -19,7 +19,6 @@ import priam.data.priamdataservice.repositories.DataRepository;
 import priam.data.priamdataservice.repositories.DataTypeRepository;
 import priam.data.priamdataservice.repositories.ProcessedDataRepository;
 import priam.data.priamdataservice.repositories.transfer.PersonalDataTransferRepository;
-import priam.data.priamdataservice.repositories.transfer.SecondaryActorRepository;
 
 import javax.annotation.Generated;
 import javax.transaction.Transactional;
@@ -45,7 +44,6 @@ public class DataService implements DataServiceInterface {
 
     final DataTypeRepository dataTypeRepository;
     final ProcessedDataRepository processedDataRepository;
-    final SecondaryActorRepository secondaryActorRepository;
     private final PersonalDataTransferRepository personalDataTransferRepository;
 
     @Override
@@ -277,7 +275,7 @@ public class DataService implements DataServiceInterface {
             // Fetch secondary actors for each data item in processed data
             for (ProcessedPersonalDataDTO.DataListItem dataListItem : processedPersonalDataDTO.getData()) {
                 int dataId = dataListItem.getDataId();
-                List<SecondaryActor> secondaryActors = secondaryActorRepository.findSecondaryActorsByDataId(dataId);
+                List<SecondaryActor> secondaryActors = actorRestClient.getSecondaryActorsByDataId(dataId);
                 secondaryActorMap.put(dataId, secondaryActors);
             }
         }
@@ -317,4 +315,6 @@ public class DataService implements DataServiceInterface {
         }
         return dataListTransferDTOList;
     }
+
+
 }

@@ -4,7 +4,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import priam.data.priamdataservice.dto.DataSubjectResponseDTO;
+import priam.data.priamdataservice.dto.SecondaryActorResponseDTO;
 import priam.data.priamdataservice.entities.DataSubjectCategory;
+import priam.data.priamdataservice.entities.model.SecondaryActor;
+
+import java.util.List;
 
 @FeignClient(name = "ACTOR-SERVICE")
 public interface ActorRestClient {
@@ -15,4 +19,8 @@ public interface ActorRestClient {
     public DataSubjectCategory getDataSubjectCategoryById(@PathVariable int dataSubjectCategoryId);
     @GetMapping(path = "api/DataSubject/{dataSubjectId}")
     public DataSubjectResponseDTO getDataSubjectId(@PathVariable int dataSubjectId);
+    @GetMapping(path = "api/secondaryActor/{secondaryActorId}")
+    public SecondaryActorResponseDTO getSecondaryActorId(@PathVariable int secondaryActorId);
+    @GetMapping(path = "api/secondaryActors/dataId={dataId}")
+    public List<SecondaryActor> getSecondaryActorsByDataId (@PathVariable int dataId);
 }

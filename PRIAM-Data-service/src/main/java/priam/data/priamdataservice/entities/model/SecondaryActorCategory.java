@@ -1,15 +1,12 @@
-package priam.data.priamdataservice.entities;
+package priam.data.priamdataservice.entities.model;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
-import java.util.Collection;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Entity
 @lombok.Data
 public class SecondaryActorCategory {
     @Id

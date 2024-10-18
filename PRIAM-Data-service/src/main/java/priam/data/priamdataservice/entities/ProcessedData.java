@@ -1,11 +1,9 @@
 
-package priam. data. priamdataservice. entities;
+package priam. data. priamdataservice.entities;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import priam.data.priamdataservice.entities.consent.ProcessedDataKey;
 
-import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
 import javax.persistence.Table;

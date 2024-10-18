@@ -4,5 +4,6 @@ public enum SafeguardType {
     ADEQUACY_DECISION,
     CONTRACTUAL_CLAUSE,
     DEROGATION,
-    BCR
+    BCR,
+    NO
 }
