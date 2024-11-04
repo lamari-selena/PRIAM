@@ -9,6 +9,7 @@ import { Data } from '../../interfaces/rectification';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
+
   selector: 'app-rectification',
   templateUrl: './rectification.component.html',
   styleUrls: ['./rectification.component.css']

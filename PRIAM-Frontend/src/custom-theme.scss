@@ -22,7 +22,17 @@ $priam-warn: mat.define-palette(mat.$red-palette);
 
 // Create the theme object. A theme consists of configurations for individual
 // theming systems such as "color" or "typography".
-$priam-theme: mat.define-dark-theme((
+
+/*$priam-theme: mat.define-dark-theme((
+  color: (
+    primary: $priam-primary,
+    accent: $priam-accent,
+    warn: $priam-warn,
+  ),
+  typography: $priam-typography,
+));*/
+
+$priam-theme: mat.define-light-theme((
   color: (
     primary: $priam-primary,
     accent: $priam-accent,

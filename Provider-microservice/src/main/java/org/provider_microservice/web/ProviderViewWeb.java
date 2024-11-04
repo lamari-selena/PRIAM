@@ -4,6 +4,7 @@ import org.provider_microservice.dto.ErasureRequestDTO;
 import org.provider_microservice.dto.GetDataValueDTO;
 import org.provider_microservice.dto.RectificationRequestDTO;
 import org.provider_microservice.services.ProviderViewService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.sql.SQLException;
@@ -12,9 +13,11 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+//@CrossOrigin(origins = "*", allowedHeaders = "*")
 @RequestMapping(path = "/api")
 public class ProviderViewWeb {
+
+    @Autowired
     private final ProviderViewService providerViewService;
 
     public ProviderViewWeb(ProviderViewService providerViewService) {

@@ -128,10 +128,13 @@ public class ProviderViewServiceImpl implements ProviderViewService {
 
     @Override
     public void Rectification(String dataName, String newValue, String userId, String dataTypeName, Map<String, String> primaryKeys) throws SQLException {
+       /* System.out.println(dataName + newValue + userId + dataTypeName + primaryKeys);
+
         String primaryKeyString = "";
         for (Map.Entry<String, String> entry : primaryKeys.entrySet()) {
             primaryKeyString += " and " + entry.getKey() + " = " + entry.getValue();
         }
+        System.out.println(primaryKeyString);
         String query = "UPDATE provider_view set " + dataName + " = :newValue where pu_ID = :idDS" + primaryKeyString;
 
         Query sqlQuery = entityManager.createNativeQuery(query);
@@ -144,6 +147,34 @@ public class ProviderViewServiceImpl implements ProviderViewService {
         ;
         PreparedStatement ps = con.prepareStatement("UPDATE provider_view set " + attribute + " ='" + newValue + "'where pu_ID =" + patientId+ " and " + primaryKeyName + " = " + primaryKeyValue);
         int i = ps.executeUpdate();*/
+
+
+            // Construction sécurisée de la requête pour éviter l'injection SQL
+            StringBuilder primaryKeyString = new StringBuilder();
+            int index = 0;
+
+            for (Map.Entry<String, String> entry : primaryKeys.entrySet()) {
+                String paramName = "primaryKey" + index;
+                primaryKeyString.append(" and ").append(entry.getKey()).append(" = :").append(paramName);
+                index++;
+            }
+
+            String query = "UPDATE provider_view SET " + dataName + " = :newValue WHERE pu_ID = :idDS" + primaryKeyString;
+
+            Query sqlQuery = entityManager.createNativeQuery(query);
+            sqlQuery.setParameter("newValue", newValue);
+            sqlQuery.setParameter("idDS", userId);
+
+            // Ajouter chaque paramètre de clé primaire à la requête
+            index = 0;
+            for (Map.Entry<String, String> entry : primaryKeys.entrySet()) {
+                sqlQuery.setParameter("primaryKey" + index, entry.getValue());
+                index++;
+            }
+
+            sqlQuery.executeUpdate();
+
+
     }
 
     @Override

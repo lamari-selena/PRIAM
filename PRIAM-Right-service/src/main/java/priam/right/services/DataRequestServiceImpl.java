@@ -225,14 +225,16 @@ public class DataRequestServiceImpl implements DataRequestService {
             Map<String, String> primaryKeys = new HashMap<>();
             List<DataRequestPrimaryKey> listPrimaryKeys = dataRequestPrimaryKeyRepository.findByDataRequestId(dataRequest.getDataRequestId());
             listPrimaryKeys.forEach(pk -> {
-                Data pkData = dataRestClient.getDataById(drd.getDataId());
+                Data pkData = dataRestClient.getDataById(pk.getPrimaryKeyId()); //drd.getDataId()
                 primaryKeys.put(pkData.getDataName(), pk.getPrimaryKeyValue());
+
             });
             // - Apply
 
             if(!requestAnswer.getAnswer().equals(AnswerType.REFUSED)) {
                 if(dataRequest.getDataRequestType().equals(DataRequestType.RECTIFICATION)) {
                     RectificationRequestDTO rectificationRequestDTO = new RectificationRequestDTO(idRef, dataName, dataTypeName, newValue, primaryKeys);
+                    System.out.println("primaryKey" + primaryKeys);
                     providerRestClient.rectification(rectificationRequestDTO);
                 }
                 else if(dataRequest.getDataRequestType().equals(DataRequestType.ERASURE)) {

@@ -49,3 +49,7 @@ table tbody tr:hover {
   background-color: rgba(0, 0, 0, 0.1);
   transition: 0.3s ease;
 }
+
+mat-form-field {
+  width: 50%;
+}

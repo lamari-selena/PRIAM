@@ -18,7 +18,7 @@ public interface ProviderRestClient {
     @PostMapping(path = "/api/rectification")
     void rectification(@RequestBody RectificationRequestDTO rectificationRequestDTO);
 
-    @PostMapping(path = "/api/forgotten")
+    @PostMapping(path = "/api/erasure")
     void erasure(@RequestBody ErasureRequestDTO erasureRequestDTO);
 
     @GetMapping(path = "/api/dataAccessRight")
@@ -29,6 +29,4 @@ public interface ProviderRestClient {
 
    /* @GetMapping(path = "/api/personalDataValues/{idDS}/{dataTypeName}/{attributes}")
     List<Map<String, String>> PersonalDataValues(@PathVariable int idDS, @PathVariable String dataTypeName, @PathVariable List<String> attributes);*/
-
-
 }
