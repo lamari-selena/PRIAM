@@ -92,3 +92,5 @@ testem.log
 .DS_Store
 Thumbs.db
 
+Provider-microservice
+TeaStore app
