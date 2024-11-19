@@ -29,7 +29,7 @@ public class ContractRestController {
 
     //Consent Information Point (CIP)
     @GetMapping("/contract/list/consents/{idRefDataSubject}/{idProcessing}")
-    public List<ConsentResponseDTO> getListConsentByDataSubject(@PathVariable String idRefDataSubject,@PathVariable int idProcessing) {
+    public List<ConsentResponseDTO> getListConsentByDataSubject(@PathVariable String idRefDataSubject,@PathVariable String idProcessing) {
         return contractService.getListConsentByDataSubject(idRefDataSubject, idProcessing);
     }
 
@@ -37,7 +37,8 @@ public class ContractRestController {
 
     //Consent Information Point (CDP)
     @GetMapping("/decision/{processingId}")
-    public Map<String, Boolean>  getDecisionByDataSubject (@RequestParam List<String> idRefList, @PathVariable int processingId) {
+    public Map<String, Boolean>  getDecisionByDataSubject (@RequestParam List<String> idRefList, @PathVariable String processingId) {
+        System.out.println("yes il récupère bien les ids "+ idRefList);
         return contractService.getConsentByDataSubject(idRefList, processingId);
     }
 }

@@ -56,14 +56,14 @@ public class ContractServiceImpl implements ContractService{
 
     //Consent Informantion Point (CIP)
     @Override
-    public List<ConsentResponseDTO> getListConsentByDataSubject(String dataSubjectIdRef, int processingId){
+    public List<ConsentResponseDTO> getListConsentByDataSubject(String dataSubjectIdRef, String processingId){
         int dataSubjectId = dataSubjectRestClient.getDataSubjectIdByIdRef(dataSubjectIdRef);
 
         List<Consent> consents = getContractByIdDataSubject(dataSubjectId).getConsents();
         List<ConsentResponseDTO> consentResponseDTO = new ArrayList<>();
 
          for (Consent c: consents) {
-          if (c.getProcessingId() == processingId /*&& c.getEndDate()== null*/)
+          if (c.getProcessingId().equals(processingId) /*&& c.getEndDate()== null*/)
                 consentResponseDTO.add(consentMapper.fromConsentRequest(c));
         }
         return consentResponseDTO;
@@ -71,7 +71,10 @@ public class ContractServiceImpl implements ContractService{
 
     // ConsentDecision Point (CDP)
     @Override
-    public Map<String, Boolean> getConsentByDataSubject(List<String> idRefList, int processingId){
+    public Map<String, Boolean> getConsentByDataSubject(List<String> idRefList, String processingId){
+        // A supprimer
+        if (processingId.equals("RecommenderSelector.recommendProducts")) processingId = "1";
+        //
         Map<String, Boolean> listDsAndConsent = new HashMap<>();
         for (String dataSubjectIdRef: idRefList) {
             List<ConsentResponseDTO> consents = getListConsentByDataSubject(dataSubjectIdRef, processingId);

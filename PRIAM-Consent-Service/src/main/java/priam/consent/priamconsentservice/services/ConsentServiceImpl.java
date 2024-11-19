@@ -86,7 +86,7 @@ public class ConsentServiceImpl implements ConsentService{
 
         // Mapper ConsentRequestDTO To Consent object
         Consent consent = consentMapper.fromConsentRequestDTO(consentRequestDTO);
-        int processingId = consent.getProcessingId();
+        String processingId = consent.getProcessingId();
 
         // Vérifier si un consentement existe déjà pour ce processingId
         Consent existingConsent = consentRepository.findByProcessingIdAndContract(processingId, contract.getContractId());

@@ -19,6 +19,6 @@ public class ConsentRequestDTO {
     //private Date endDate;
     //private int contractId;
 
-    private int processingId;
+    private String processingId;
     //private Processing processing;
 }

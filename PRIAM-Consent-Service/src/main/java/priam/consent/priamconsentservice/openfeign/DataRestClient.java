@@ -16,7 +16,7 @@ public interface DataRestClient {
     Collection<Processing> getProcessingsByDataSubjectCategoryId(@PathVariable int dsc);
 
     @GetMapping("/api/processing/{id}")
-    Processing getProcessing(@PathVariable int id);
+    Processing getProcessing(@PathVariable String id);
 
     @PostMapping("/api/processed-data/add")
     public ResponseEntity<String> addProcessedData(
@@ -27,5 +27,5 @@ public interface DataRestClient {
             @RequestParam int subjectId, @RequestBody List<Integer> dataIds);
 
     @GetMapping("/processing/data-usage/DataIds/{processingId}")
-    public List<Integer> getDataIds(@PathVariable int processingId);
+    public List<Integer> getDataIds(@PathVariable String processingId);
 }

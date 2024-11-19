@@ -234,7 +234,7 @@ public class DataRequestServiceImpl implements DataRequestService {
             if(!requestAnswer.getAnswer().equals(AnswerType.REFUSED)) {
                 if(dataRequest.getDataRequestType().equals(DataRequestType.RECTIFICATION)) {
                     RectificationRequestDTO rectificationRequestDTO = new RectificationRequestDTO(idRef, dataName, dataTypeName, newValue, primaryKeys);
-                    System.out.println("primaryKey" + primaryKeys);
+
                     providerRestClient.rectification(rectificationRequestDTO);
                 }
                 else if(dataRequest.getDataRequestType().equals(DataRequestType.ERASURE)) {

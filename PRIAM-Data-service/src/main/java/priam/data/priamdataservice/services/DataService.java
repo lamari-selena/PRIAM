@@ -185,7 +185,6 @@ public class DataService implements DataServiceInterface {
 
             ArrayList<Map<String, String>> valuesResponse = new ArrayList<>(providerRestClient.getPersonalDataValues(idRef, dataType.getDataTypeName(), datasNames));
             ArrayList<String> values = new ArrayList<>();
-            System.out.println("erreurrrrr  " +valuesResponse.get(0));
             valuesResponse.forEach(valueMap -> {
                 if (valueMap.get("attribute").equals(data.getDataName()))
                     values.add(valueMap.get("value"));

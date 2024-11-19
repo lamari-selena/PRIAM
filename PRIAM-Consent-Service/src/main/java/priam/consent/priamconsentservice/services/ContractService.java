@@ -11,7 +11,7 @@ import java.util.Map;
 
 public interface ContractService {
      ContractResponseDTO getContractByIdDataSubject(int idDS);
-     public List<ConsentResponseDTO> getListConsentByDataSubject(String dataSubjectIdRef, int processingId);
+     public List<ConsentResponseDTO> getListConsentByDataSubject(String dataSubjectIdRef, String processingId);
 
-     public Map<String, Boolean> getConsentByDataSubject(List<String> idRefList, int processingId);
+     public Map<String, Boolean> getConsentByDataSubject(List<String> idRefList, String processingId);
 }

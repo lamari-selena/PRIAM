@@ -82,7 +82,6 @@ public class DataUsageService implements DataUsageServiceInterface {
         Collection<DataUsage> datausages = getDataUsages(processingId);
         for (DataUsage d: datausages){
             int id = d.getDataId();
-            System.out.print(id);
             ids.add(id);
         }
         return ids;

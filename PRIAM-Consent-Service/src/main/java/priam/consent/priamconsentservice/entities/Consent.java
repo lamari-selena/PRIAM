@@ -24,7 +24,7 @@ public class Consent {
     @ManyToOne//(cascade = CascadeType.ALL,fetch = FetchType.EAGER)
     @JoinColumn(name= "contract_id")
     private Contract contract;
-    private int processingId;
+    private String processingId;
     @Transient
     private Processing processing;
 }

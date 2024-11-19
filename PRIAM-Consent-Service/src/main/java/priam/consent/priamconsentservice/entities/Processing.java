@@ -16,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 public class Processing {
 
-    private int id;
+    private String id;
     private String name;
     private ProcessingType type;
     private ProcessingCategory category;
