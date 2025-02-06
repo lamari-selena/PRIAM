@@ -1,0 +1,70 @@
+{
+    "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+    "type": "SoftwareSourceCode",
+    "applicationCategory": "Software engineering",
+    "author": [
+        {
+            "id": "https://orcid.org/0009-0009-7981-6363",
+            "type": "Person",
+            "affiliation": {
+                "type": "Organization",
+                "name": "LIRMM, Univ. Montpellier, CNRS, Montpellier, France"
+            },
+            "email": "selena.lamari@lirmm.fr",
+            "familyName": "Lamari",
+            "givenName": "Selena"
+        },
+        {
+            "id": "_:author_2",
+            "type": "Person",
+            "affiliation": {
+                "type": "Organization",
+                "name": "Universit´e Bretagne Sud, UMR CNRS 6074, IRISA, F-56000 Vannes, France"
+            },
+            "email": "chouki.tibermacine@univ-ubs.fr",
+            "familyName": "Tibermacine",
+            "givenName": "Chouki"
+        },
+        {
+            "id": "_:author_3",
+            "type": "Person",
+            "affiliation": {
+                "type": "Organization",
+                "name": "EuroMov Digital Health in Motion, Univ. Montpellier & IMT Mines Ales, Ales, France"
+            },
+            "email": "Christelle.Urtado@mines-ales.fr",
+            "familyName": "Urtado",
+            "givenName": "Christelle"
+        },
+        {
+            "id": "_:author_4",
+            "type": "Person",
+            "affiliation": {
+                "type": "Organization",
+                "name": "EuroMov Digital Health in Motion, Univ. Montpellier & IMT Mines Ales, Ales, France"
+            },
+            "email": "sylvain.vauttier@mines-ales.fr",
+            "familyName": "Vauttier",
+            "givenName": "Sylvain"
+        }
+    ],
+    "codeRepository": "https://github.com/lamari-selena/PRIAM/",
+    "description": "PRIAM is an innovative solution specifically designed to help organizations ensure their applications comply with the stringent requirements of the General Data Protection Regulation (GDPR). As privacy and data protection become increasingly critical, businesses need a reliable framework to address the complexities of GDPR compliance, and PRIAM provides just that.\n\nIn this project, we focus primarily on consent management, which is a key aspect of GDPR compliance. Consent management ensures that organizations properly handle and record user consent for the processing of personal data. This feature is crucial for complying with GDPR's requirements on transparency and user control over their data.",
+    "keywords": [
+        "Software engineering",
+        "Privacy",
+        "GDPR regulation",
+        "Personal data",
+        "Consent management",
+        "Microservice architecture",
+        "Interoperability"
+    ],
+    "name": "PRIAM",
+    "programmingLanguage": [
+        "Java",
+        "Spring boot framework",
+        "Angular"
+    ],
+    "version": "1.0.0",
+    "referencePublication": "https://doi.org/10.1007/978-981-96-0808-9_12"
+}
