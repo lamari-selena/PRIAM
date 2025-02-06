@@ -63,6 +63,7 @@ private boolean getConsent(Long userID, int processID) throws InterruptedExcepti
     JSONObject myObject = new JSONObject(sendReq(userID, processID).body());
     return myObject.getBoolean(userID.toString());
 }
+```
 
 This code checks, via the consent manager, whether the user (identified by "userId") has given their consent or not.
 
@@ -84,6 +85,7 @@ public List<Long> suggestMovies(Long userId, List<OrderItem> currentItems)
     
     return new ArrayList<>(); // return example
 }
+```
 
 
 ### Modify your code so that:
@@ -119,6 +121,7 @@ private ArrayList<Long> getConsentList(ArrayList<Long> userID, int processID) th
         .filter(obj -> myObject.getBoolean(obj.toString()))
         .collect(Collectors.toList());
 }
+```
 
 
 ### Note:
