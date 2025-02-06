@@ -1,5 +1,5 @@
 {
-    "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+    "@context": "https://w3id.org/codemeta/3.0",
     "type": "SoftwareSourceCode",
     "applicationCategory": "Software engineering",
     "author": [
@@ -15,7 +15,7 @@
             "givenName": "Selena"
         },
         {
-            "id": "_:author_2",
+            "id": "https://orcid.org/0000-0002-2063-0291",
             "type": "Person",
             "affiliation": {
                 "type": "Organization",
@@ -26,7 +26,7 @@
             "givenName": "Chouki"
         },
         {
-            "id": "_:author_3",
+            "id": "https://orcid.org/0000-0002-6711-8455",
             "type": "Person",
             "affiliation": {
                 "type": "Organization",
@@ -37,7 +37,7 @@
             "givenName": "Christelle"
         },
         {
-            "id": "_:author_4",
+            "id": "https://orcid.org/0000-0002-5812-1230",
             "type": "Person",
             "affiliation": {
                 "type": "Organization",
