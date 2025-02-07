@@ -1,11 +1,11 @@
 {
     "@context": "https://w3id.org/codemeta/3.0",
-    "type": "SoftwareSourceCode",
+    "@type": "SoftwareSourceCode",
     "applicationCategory": "Software engineering",
     "author": [
         {
-            "id": "https://orcid.org/0009-0009-7981-6363",
-            "type": "Person",
+            "@id": "https://orcid.org/0009-0009-7981-6363",
+            "@type": "Person",
             "affiliation": {
                 "type": "Organization",
                 "name": "LIRMM, Univ. Montpellier, CNRS, Montpellier, France"
@@ -15,8 +15,8 @@
             "givenName": "Selena"
         },
         {
-            "id": "https://orcid.org/0000-0002-2063-0291",
-            "type": "Person",
+            "@id": "https://orcid.org/0000-0002-2063-0291",
+            "@type": "Person",
             "affiliation": {
                 "type": "Organization",
                 "name": "Universit´e Bretagne Sud, UMR CNRS 6074, IRISA, F-56000 Vannes, France"
@@ -26,8 +26,8 @@
             "givenName": "Chouki"
         },
         {
-            "id": "https://orcid.org/0000-0002-6711-8455",
-            "type": "Person",
+            "@id": "https://orcid.org/0000-0002-6711-8455",
+            "@type": "Person",
             "affiliation": {
                 "type": "Organization",
                 "name": "EuroMov Digital Health in Motion, Univ. Montpellier & IMT Mines Ales, Ales, France"
@@ -37,8 +37,8 @@
             "givenName": "Christelle"
         },
         {
-            "id": "https://orcid.org/0000-0002-5812-1230",
-            "type": "Person",
+            "@id": "https://orcid.org/0000-0002-5812-1230",
+            "@type": "Person",
             "affiliation": {
                 "type": "Organization",
                 "name": "EuroMov Digital Health in Motion, Univ. Montpellier & IMT Mines Ales, Ales, France"
