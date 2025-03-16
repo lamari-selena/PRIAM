@@ -264,6 +264,7 @@ public class DataRequestServiceImpl implements DataRequestService {
                 requestAnswer.setAnswer(AnswerType.REFUSED);
             }
         }
+        requestAnswer.getDataRequest().setResponse(true);
         // Save request answer
         return requestAnswerRepository.save(requestAnswer);
     }

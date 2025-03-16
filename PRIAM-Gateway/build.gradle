@@ -28,6 +28,8 @@ dependencies {
 	testImplementation 'io.projectreactor:reactor-test'
 	testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    
 }
 
 dependencyManagement {

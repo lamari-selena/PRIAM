@@ -24,6 +24,7 @@ public class ConsentRestController {
         return consentService.getConsent(id);
     }
 
+
     @PostMapping("/create/{idRef}")
     public ConsentResponseDTO newConsent(@RequestBody ConsentRequestDTO consentRequestDTO, @PathVariable String idRef) {
         return consentService.create(consentRequestDTO, idRef);
