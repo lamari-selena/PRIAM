@@ -74,10 +74,12 @@ public class ContractServiceImpl implements ContractService{
     public Map<String, Boolean> getConsentByDataSubject(List<String> idRefList, String processingId){
         // A supprimer
         if (processingId.equals("RecommenderSelector.recommendProducts")) processingId = "1";
+        if (processingId.equals("CartServlet.handleGETRequest")) processingId = "3";
         //
         Map<String, Boolean> listDsAndConsent = new HashMap<>();
         for (String dataSubjectIdRef: idRefList) {
             List<ConsentResponseDTO> consents = getListConsentByDataSubject(dataSubjectIdRef, processingId);
+            System.out.println("------------------------" + dataSubjectIdRef+ "----------=" +  processingId);
             for (ConsentResponseDTO c: consents
                  ) {
                 if (c.getEndDate()==null) {
