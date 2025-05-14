@@ -93,3 +93,7 @@ testem.log
 Thumbs.db
 
 TeaStore app
+
+target/
+*.log
+
