@@ -73,7 +73,10 @@ class RectificationRequestSimulation extends Simulation {
     }
 
   setUp(
-    scn.inject(atOnceUsers(1))
+    scn.inject(
+      rampUsers(50).during(10.seconds) // 100 utilisateurs répartis sur 0.5s
+    )
+    //scn.inject(atOnceUsers(1))
   ).protocols(httpProtocol)
 }
 

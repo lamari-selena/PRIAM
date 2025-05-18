@@ -68,7 +68,7 @@ class TeaStoreCartPage extends Simulation {
       http("Submit login form")
         .post("/loginAction")
         .headers(headers)
-        .formParam("username", "user53")
+        .formParam("username", "user90")
         .formParam("password", "password")
         .check(
           status.is(200),
@@ -105,6 +105,9 @@ class TeaStoreCartPage extends Simulation {
     )
 
   setUp(
-    scn.inject(atOnceUsers(100))
+    //scn.inject(atOnceUsers(100))
+    scn.inject(
+    rampUsers(300).during(10.seconds) // 100 utilisateurs répartis sur 0.5s
+  )
   ).protocols(httpProtocol)
 }

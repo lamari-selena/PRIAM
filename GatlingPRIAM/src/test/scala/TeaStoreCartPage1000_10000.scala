@@ -77,6 +77,5 @@ class TeaStoreCartPage1000_10000 extends Simulation {
     scenario100.inject(atOnceUsers(100)),
 
     // Injection progressive pour 10000 utilisateurs
-
   ).protocols(httpProtocol)
 }
