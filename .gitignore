@@ -92,7 +92,6 @@ testem.log
 .DS_Store
 Thumbs.db
 
-TeaStore app
 
 target/
 *.log
