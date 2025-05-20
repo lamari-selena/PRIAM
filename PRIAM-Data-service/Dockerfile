@@ -11,7 +11,8 @@ ARG ACTOR_SERVICE_URL="http://localhost:8082"
 ARG PROVIDER_SERVICE_URL="http://localhost"
 
 # Image qui va créer le .jar
-FROM gradle:${GRADLE_VERSION} AS builder
+#FROM gradle:${GRADLE_VERSION} AS builder
+FROM gradle:${GRADLE_VERSION}-jdk17 AS builder
 
 WORKDIR /app
 

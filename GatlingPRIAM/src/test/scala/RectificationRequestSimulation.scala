@@ -61,11 +61,11 @@ class RectificationRequestSimulation extends Simulation {
 
       try {
         val actual = DataVerifier.getDataValue(ID, column, table, primaryKeys)
-        assert(actual == expected, s"Mauvaise valeur en base : attendue '$expected', trouvée '$actual'")
-        println(s" Rectification confirmée pour $column = '$actual'")
+        assert(actual == expected, s"Bad value in database: expected : attendue '$expected', trouvée '$actual'")
+        println(s" Rectification confirmed pour $column = '$actual'")
       } catch {
         case e: Exception =>
-          println("Erreur lors de la vérification en base : " + e.getMessage)
+          println("Error during database check:" + e.getMessage)
           throw e
       }
 

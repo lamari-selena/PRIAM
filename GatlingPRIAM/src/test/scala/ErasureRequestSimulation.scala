@@ -23,7 +23,7 @@
 
     val scn = scenario("Erasure Request Flow")
       .exec(
-        http("Submit rectification request")
+        http("Submit erasure request")
           .post("/api/right/erasureRequest")
           .body(StringBody(erasureRequestJson)).asJson
           .check(status.is(200))
@@ -58,11 +58,11 @@
 
         try {
           val actual = DataVerifier.getDataValue(ID, column, table, primaryKeys)
-          assert(actual == expected, s"Mauvaise valeur en base : attendue '$expected', trouvée '$actual'")
-          println(s" Erasure confirmée pour $column=$actual")
+          assert(actual == expected, s"Bad value in database: expected: expected '$expected', actual '$actual'")
+          println(s" Erasure confirmed for $column=$actual")
         } catch {
           case e: Exception =>
-            println("Erreur lors de la vérification en base : " + e.getMessage)
+            println("Error during database check: " + e.getMessage)
             throw e
         }
 
