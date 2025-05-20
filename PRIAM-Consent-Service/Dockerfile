@@ -15,7 +15,7 @@ WORKDIR /app
 COPY . /app
 
 # Build le .jar
-RUN gradle build
+RUN gradle assemble
 
 # Image qui va run le code
 FROM ubuntu
@@ -24,16 +24,16 @@ FROM ubuntu
 ARG APP_VERSION
 ARG JRE_VERSION
 
-EXPOSE 8761
+EXPOSE 8089
 WORKDIR /app
 
 # Update + installation de la JRE-17
-RUN apt update && apt upgrade -y && apt install curl openjdk-${JRE_VERSION}-jre -y
+RUN apt update && apt upgrade -y && apt install openjdk-${JRE_VERSION}-jre curl -y
 
 # On copie les .jar qu'on a build (todo: prendre auto que la version sans le "-plain")
-COPY --from=builder /app/build/libs/Eureka_service-${APP_VERSION}.jar .
+COPY --from=builder /app/build/libs/PRIAM-Consent-service-${APP_VERSION}.jar .
 
 # On transforme la ARG en ENV pour qu'on puisse l'utiliser dans l'entrypoint
 ENV APP_VERSION_ENV=${APP_VERSION} 
 # Lancement du .jar
-ENTRYPOINT java -jar Eureka_service-$APP_VERSION_ENV.jar
+ENTRYPOINT java -jar PRIAM-Consent-service-$APP_VERSION_ENV.jar

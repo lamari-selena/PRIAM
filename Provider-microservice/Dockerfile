@@ -2,9 +2,9 @@
 ## La version de l'application (le .jar)
 ARG APP_VERSION="0.0.1-SNAPSHOT" 
 ## La version de gradle
-ARG GRADLE_VERSION="8.7"
+ARG GRADLE_VERSION="7.4"
 ## La version du java-runtime
-ARG JRE_VERSION="17"
+ARG JRE_VERSION="21"
 
 # Image qui va créer le .jar
 FROM gradle:${GRADLE_VERSION} AS builder

@@ -1,0 +1,292 @@
+name: priam
+services:
+  actor:
+    image: priam/actor-ms
+    container_name: priam-actor-ms
+    #build:
+      #context: ./PRIAM-Actor-service
+      #args:
+        #APP_VERSION: "0.0.1-SNAPSHOT"
+        #GRADLE_VERSION: "8.0"
+        #JRE_VERSION: "17"
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-actor?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    # ports:
+    #   - 8082:8082
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+    healthcheck:
+      test: ["CMD", "/bin/curl", "actor:8082"]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  consent:
+    image: priam/consent-ms
+    container_name: priam-consent-ms
+    #build:
+      #context: ./PRIAM-Actor-service
+      #args:
+      #APP_VERSION: "0.0.1-SNAPSHOT"
+    #GRADLE_VERSION: "8.0"
+    #JRE_VERSION: "17"
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-consent?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    # ports:
+    #   - 8082:8082
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "consent:8089" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  data:
+    image: priam/data-ms
+    container_name: priam-data-ms
+    #build:
+      #context: ./PRIAM-Data-service
+      #args:
+        #APP_VERSION: "0.0.1-SNAPSHOT"
+        #GRADLE_VERSION: "8.0"
+        #JRE_VERSION: "17"
+        #RIGHT_SERVICE_URL: http://gateway:8090/right
+        #ACTOR_SERVICE_URL: http://gateway:8090/actor
+        #PROVIDER_SERVICE_URL: http://gateway:8090/provider
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-data?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      actor:
+        condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+    ports:
+      - 8081:8081
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "data:8081" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  eureka:
+    image: priam/eureka
+    container_name: priam-eureka
+    #build:
+      #context: ./PRIAM-Eureka
+      #args:
+        #APP_VERSION: "0.0.1-SNAPSHOT"
+        #GRADLE_VERSION: "8.7"
+        #JRE_VERSION: "17"
+    env_file:
+      - ".env"
+    ports:
+      - 8761:8761
+    networks:
+      - eureka-to-ms
+    healthcheck:
+      test: ["CMD", "/bin/curl", "eureka:8761"]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  right:
+    image: priam/right-ms
+    container_name: priam-right-ms
+    #build:
+      #context: ./PRIAM-Right-service
+      #args:
+        #APP_VERSION: "0.0.1-SNAPSHOT"
+        #GRADLE_VERSION: "7.0"
+        #JRE_VERSION: "17"
+        #DATA_SERVICE_URL: http://gateway:8090/data
+        #ACTOR_SERVICE_URL: http://gateway:8090/actor
+        #PROVIDER_SERVICE_URL: http://gateway:8090/provider
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-right?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - 8083:8083
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "right:8083" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  provider:
+    image: priam/provider-ms
+    container_name: priam-provider-ms
+    #build:
+      #context: ./Provider-microservice
+      #args:
+        #APP_VERSION: "0.0.1-SNAPSHOT"
+        #GRADLE_VERSION: "8.0"
+        #JRE_VERSION: "17"
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-teadb?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - 8086:8086
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "provider:8086" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  gateway:
+    image: priam/api-gateway
+    container_name: priam-api-gateway
+    #build:
+      #context: ./PRIAM-Gateway
+      #args:
+        #APP_VERSION: "0.0.1-SNAPSHOT"
+        #GRADLE_VERSION: "8.0"
+        #JRE_VERSION: "17"
+    healthcheck:
+      test: curl http://gateway:8090/health
+      retries: 10
+      interval: 3s
+      timeout: 30s
+    depends_on:
+      actor:
+        condition: service_healthy
+      right:
+        condition: service_healthy
+      data:
+        condition: service_healthy
+      provider:
+        condition: service_healthy
+      consent:
+        condition: service_healthy
+    env_file:
+      - ".env"
+    ports:
+      - 8090:8090
+    networks:
+      - gateway_to_ms
+
+#  frontuser:
+#    build:
+#      context: ./PRIAM-Frontend
+#      args:
+#        API_DATA: localhost:8090/data
+#        API_RIGHT: localhost:8090/right
+#        API_ACTOR: localhost:8090/actor
+#        API_PROVIDER: localhost:8090/provider
+#        KEYCLOAK: localhost:8080
+#    ports:
+#      - 4200:4200
+#    depends_on:
+#      mysqldb:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#    networks:
+#      - g-frontend
+#
+#  frontprovider:
+#    build:
+#      context: ./PRIAM-Frontend-Provider
+#    ports:
+#      - 4000:4000
+#    depends_on:
+#      mysqldb:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#    networks:
+#      - g-f-provider
+
+  mysqldb:
+    image: priam/databases
+    container_name: priam-databases
+    networks:
+      - ms-to-db-server
+    env_file:
+      - ".env" # Secrets
+    ports:
+      - 3307:3306
+    volumes:
+      #- ./Databases/init.sh:/docker-entrypoint-initdb.d/init.sh
+      - ./db-volume:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "mysqldb"]
+      retries: 20
+      interval: 3s
+      timeout: 60s
+
+#  keycloak:
+#    image: quay.io/keycloak/keycloak:25.0.0
+#    command: start-dev
+#    networks:
+#      - g-keycloak
+#    env_file:
+#      - ".env" # Secrets
+#    ports:
+#      - 8080:8080
+#    volumes:
+#      - ./keycloak-conf:/opt/keycloak/data/
+
+volumes:
+  db-volume:
+
+networks:
+  ms-to-db-server:
+  eureka-to-ms:
+  gateway_to_ms:

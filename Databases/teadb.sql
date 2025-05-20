@@ -1,28 +1,6 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
---
--- Hôte : localhost
--- Généré le : dim. 16 mars 2025 à 23:47
--- Version du serveur : 10.4.32-MariaDB
--- Version de PHP : 8.2.12
+Create Database `priam-teadb`;
 
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
-SET time_zone = "+00:00";
-
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-
---
--- Base de données : `teadb`
---
-
--- --------------------------------------------------------
-
+Use `priam-teadb`;
 --
 -- Structure de la table `databasemanagemententity`
 --
@@ -1431,7 +1409,7 @@ CREATE TABLE `persistenceuser` (
 
 INSERT INTO `persistenceuser` (`ID`, `EMAIL`, `PASSWORD`, `REALNAME`, `USERNAME`) VALUES
 (507, 'user0@petsupplystore.fr ', '$2a$10$nTQGt/A3frfvEf.3oNc0e.QNB3CcnBxwsRgnowQm88KUZ3voXcJbi', 'Helene Johnson', 'user0'),
-(508, 'user1@petsupplystore.com', '$2a$10$zVxZmFUsinxzgap1ZO8IHusk5ycepkjSNnYwZgcnFvcbxJk1bfKRu', 'Helen Johnson', 'user1'),
+(508, 'user1@petsupplystore.com', '$2a$10$zVxZmFUsinxzgap1ZO8IHusk5ycepkjSNnYwZgcnFvcbxJk1bfKRu', 'Richar', 'user1'),
 (509, 'user2@petsupplystore.com', '$2a$10$f4DFwQjy4Ys2yiQjzEr/2uyQTF0oxTiBf9KXX3OmZXtkWgGEjPixW', 'Stephen Harris', 'user2'),
 (510, 'user3@petsupplystore.com', '$2a$10$QV3Pp5WQtk9wE5vcUDER/OvxjvhAFbKo5ZMXc7FlNGfAa0mUZ1Zv6', 'Larry Williams', 'user3'),
 (511, 'user4@petsupplystore.com', '$2a$10$Qn/KSTLj5kq2B6TJXhmatOEf2SWKSlp9.cbeAjJGhWrH1PwqlUseG', 'Margaret Clark', 'user4'),
@@ -1514,12 +1492,12 @@ INSERT INTO `persistenceuser` (`ID`, `EMAIL`, `PASSWORD`, `REALNAME`, `USERNAME`
 (588, 'user81@petsupplystore.com', '$2a$10$auKmywaCuEd2zi7SiSBFgeDqU1ccYd5Dh91FZ9Uc3T/uQOv9OmyVy', 'Shirley Jones', 'user81'),
 (589, 'user82@petsupplystore.com', '$2a$10$NoWL0umPLW7CEm7j4uQj2Ov1aewTnuUYaWip3wB3.6TGCtSigsvri', 'Edward Martinez', 'user82'),
 (590, 'user83@petsupplystore.com', '$2a$10$SvbayKqCw4eVxie7I69eoOfrf6jfxerIFy.OY5ydjBgxTxdn8nPKa', 'Mark Thomas', 'user83'),
-(591, 'user84@petsupplystore.com', '$2a$10$BkXyPYOOAxb29hTs/pA7Qu/2GYrM.o20iLOe00sMRGRbhf7tn9bx2', 'Dorothy Brown', 'user84'),
+(591, 'user84@petsupplystore.com', '$2a$10$BkXyPYOOAxb29hTs/pA7Qu/2GYrM.o20iLOe00sMRGRbhf7tn9bx2', 'Helen Johnson', 'user84'),
 (592, 'user85@petsupplystore.com', '$2a$10$XgG.UFPTm7UZbkflbEob/ec85gSGs1xS5XeklAVBoV/qB2F/Y76Du', 'Deborah Wilson', 'user85'),
 (593, 'user86@petsupplystore.com', '$2a$10$/8AWqeH6rXH4WKNmRjMOUOMMJCVuwjVrYXpRQDUeU65OSEVsu9vQy', 'Ruth Johnson', 'user86'),
 (594, 'user87@petsupplystore.com', '$2a$10$wnr6fQpSKBMynku5sbokiOoMWCQ9EwPH6q6G3MdsTudckj9gFU6h2', 'Maria Taylor', 'user87'),
 (595, 'user88@petsupplystore.com', '$2a$10$7D55iWVS/xTwqwQWvgcAK.Lem50CO3KSZixtHOpqvQZhwx3H6KgHe', 'Susan Williams', 'user88'),
-(596, 'user89@petsupplystore.com', '$2a$10$93LsJJtqMILlO/pWSU553e17Pgtbq3hTwJ9EX8oE/vCDktCMPF0/i', 'Maria Hall', 'user89'),
+(596, 'user89@petsupplystore.com', '$2a$10$93LsJJtqMILlO/pWSU553e17Pgtbq3hTwJ9EX8oE/vCDktCMPF0/i', 'richard', 'user89'),
 (597, 'user90@petsupplystore.com', '$2a$10$AkHzXjGRnHIq3tJPqy/5CO4hq1orJg.3ENS8MQLylkj/dqcQ0GMei', 'Kevin Brown', 'user90'),
 (598, 'user91@petsupplystore.com', '$2a$10$pRohWxQ1I9sSZ5/7gh1EqeTv5OEoRwTI66jkHwk3eRqjeG.paibnm', 'Gary Rodriguez', 'user91'),
 (599, 'user92@petsupplystore.com', '$2a$10$MalM4nXwlZyW9WrXtRFAROvU11eUCwnPrYXnFUF2NKLd4PUXmYrsq', 'Laura Hill', 'user92'),
@@ -1531,131 +1509,3 @@ INSERT INTO `persistenceuser` (`ID`, `EMAIL`, `PASSWORD`, `REALNAME`, `USERNAME`
 (605, 'user98@petsupplystore.com', '$2a$10$YoCLkcQ6OP9dF.w1f7wIaufGJaLBaCN6xnCLbtpCHw.uOT4tJPezS', 'Jennifer Jackson', 'user98'),
 (606, 'user99@petsupplystore.com', '$2a$10$wE9Tn./8TwcptCQev.32Jumi6sDPJUHWce0f1Tb5amikQH7Zhccou', 'Nancy Hernandez', 'user99');
 
--- --------------------------------------------------------
-
---
--- Doublure de structure pour la vue `provider_view`
--- (Voir ci-dessous la vue réelle)
---
-CREATE TABLE `provider_view` (
-`po_ID` bigint(20)
-,`po_ADDRESS1` varchar(255)
-,`po_ADDRESS2` varchar(255)
-,`po_ADDRESSNAME` varchar(255)
-,`po_CREDITCARDCOMPANY` varchar(255)
-,`po_CREDITCARDEXPIRYLOCALDATE` date
-,`po_CREDITCARDNUMBER` varchar(255)
-,`po_ORDERTIME` datetime
-,`po_TOTALPRICEINCENTS` bigint(20)
-,`po_USER_ID` bigint(20)
-,`pu_ID` bigint(20)
-,`pu_EMAIL` varchar(255)
-,`pu_PASSWORD` varchar(255)
-,`pu_REALNAME` varchar(255)
-,`pu_USERNAME` varchar(255)
-);
-
--- --------------------------------------------------------
-
---
--- Structure de la table `sequence`
---
-
-CREATE TABLE `sequence` (
-  `SEQ_NAME` varchar(50) NOT NULL,
-  `SEQ_COUNT` decimal(38,0) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
-
---
--- Déchargement des données de la table `sequence`
---
-
-INSERT INTO `sequence` (`SEQ_NAME`, `SEQ_COUNT`) VALUES
-('SEQ_GEN', 1400);
-
--- --------------------------------------------------------
-
---
--- Structure de la vue `provider_view`
---
-DROP TABLE IF EXISTS `provider_view`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `provider_view`  AS SELECT `po`.`ID` AS `po_ID`, `po`.`ADDRESS1` AS `po_ADDRESS1`, `po`.`ADDRESS2` AS `po_ADDRESS2`, `po`.`ADDRESSNAME` AS `po_ADDRESSNAME`, `po`.`CREDITCARDCOMPANY` AS `po_CREDITCARDCOMPANY`, `po`.`CREDITCARDEXPIRYLOCALDATE` AS `po_CREDITCARDEXPIRYLOCALDATE`, `po`.`CREDITCARDNUMBER` AS `po_CREDITCARDNUMBER`, `po`.`ORDERTIME` AS `po_ORDERTIME`, `po`.`TOTALPRICEINCENTS` AS `po_TOTALPRICEINCENTS`, `po`.`USER_ID` AS `po_USER_ID`, `pu`.`ID` AS `pu_ID`, `pu`.`EMAIL` AS `pu_EMAIL`, `pu`.`PASSWORD` AS `pu_PASSWORD`, `pu`.`REALNAME` AS `pu_REALNAME`, `pu`.`USERNAME` AS `pu_USERNAME` FROM (`persistenceorder` `po` join `persistenceuser` `pu`) ;
-
---
--- Index pour les tables déchargées
---
-
---
--- Index pour la table `databasemanagemententity`
---
-ALTER TABLE `databasemanagemententity`
-  ADD PRIMARY KEY (`ID`);
-
---
--- Index pour la table `persistencecategory`
---
-ALTER TABLE `persistencecategory`
-  ADD PRIMARY KEY (`ID`);
-
---
--- Index pour la table `persistenceorder`
---
-ALTER TABLE `persistenceorder`
-  ADD PRIMARY KEY (`ID`),
-  ADD KEY `FK_PERSISTENCEORDER_USER_ID` (`USER_ID`);
-
---
--- Index pour la table `persistenceorderitem`
---
-ALTER TABLE `persistenceorderitem`
-  ADD PRIMARY KEY (`ID`),
-  ADD KEY `FK_PERSISTENCEORDERITEM_ORDER_ID` (`ORDER_ID`),
-  ADD KEY `FK_PERSISTENCEORDERITEM_PRODUCT_ID` (`PRODUCT_ID`);
-
---
--- Index pour la table `persistenceproduct`
---
-ALTER TABLE `persistenceproduct`
-  ADD PRIMARY KEY (`ID`),
-  ADD KEY `FK_PERSISTENCEPRODUCT_CATEGORY_ID` (`CATEGORY_ID`);
-
---
--- Index pour la table `persistenceuser`
---
-ALTER TABLE `persistenceuser`
-  ADD PRIMARY KEY (`ID`);
-
---
--- Index pour la table `sequence`
---
-ALTER TABLE `sequence`
-  ADD PRIMARY KEY (`SEQ_NAME`);
-
---
--- Contraintes pour les tables déchargées
---
-
---
--- Contraintes pour la table `persistenceorder`
---
-ALTER TABLE `persistenceorder`
-  ADD CONSTRAINT `FK_PERSISTENCEORDER_USER_ID` FOREIGN KEY (`USER_ID`) REFERENCES `persistenceuser` (`ID`);
-
---
--- Contraintes pour la table `persistenceorderitem`
---
-ALTER TABLE `persistenceorderitem`
-  ADD CONSTRAINT `FK_PERSISTENCEORDERITEM_ORDER_ID` FOREIGN KEY (`ORDER_ID`) REFERENCES `persistenceorder` (`ID`),
-  ADD CONSTRAINT `FK_PERSISTENCEORDERITEM_PRODUCT_ID` FOREIGN KEY (`PRODUCT_ID`) REFERENCES `persistenceproduct` (`ID`);
-
---
--- Contraintes pour la table `persistenceproduct`
---
-ALTER TABLE `persistenceproduct`
-  ADD CONSTRAINT `FK_PERSISTENCEPRODUCT_CATEGORY_ID` FOREIGN KEY (`CATEGORY_ID`) REFERENCES `persistencecategory` (`ID`);
-COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
