@@ -1,7 +1,8 @@
 name: priam
 services:
   actor:
-    image: priam/actor-ms
+    #image: priam/actor-ms
+    image: registry.gitlab.com/priam3/priam-microservice/actor-ms
     container_name: priam-actor-ms
     #build:
       #context: ./PRIAM-Actor-service
@@ -33,7 +34,8 @@ services:
       timeout: 30s
 
   consent:
-    image: priam/consent-ms
+    #image: priam/consent-ms
+    image: registry.gitlab.com/priam3/priam-microservice/consent-ms
     container_name: priam-consent-ms
     #build:
       #context: ./PRIAM-Actor-service
@@ -65,7 +67,8 @@ services:
       timeout: 30s
 
   data:
-    image: priam/data-ms
+    #image: priam/data-ms
+    image: registry.gitlab.com/priam3/priam-microservice/data-ms
     container_name: priam-data-ms
     #build:
       #context: ./PRIAM-Data-service
@@ -102,7 +105,8 @@ services:
       timeout: 30s
 
   eureka:
-    image: priam/eureka
+    #image: priam/eureka
+    image: registry.gitlab.com/priam3/priam-microservice/eureka
     container_name: priam-eureka
     #build:
       #context: ./PRIAM-Eureka
@@ -123,7 +127,8 @@ services:
       timeout: 30s
 
   right:
-    image: priam/right-ms
+    #image: priam/right-ms
+    image: registry.gitlab.com/priam3/priam-microservice/right-ms
     container_name: priam-right-ms
     #build:
       #context: ./PRIAM-Right-service
@@ -158,7 +163,8 @@ services:
       timeout: 30s
 
   provider:
-    image: priam/provider-ms
+    #image: priam/provider-ms
+    image: registry.gitlab.com/priam3/priam-microservice/provider-ms
     container_name: priam-provider-ms
     #build:
       #context: ./Provider-microservice
@@ -190,7 +196,8 @@ services:
       timeout: 30s
 
   gateway:
-    image: priam/api-gateway
+    #image: priam/api-gateway
+    image: registry.gitlab.com/priam3/priam-microservice/api-gateway
     container_name: priam-api-gateway
     #build:
       #context: ./PRIAM-Gateway
@@ -254,7 +261,8 @@ services:
 #      - g-f-provider
 
   mysqldb:
-    image: priam/databases
+    #image: priam/databases
+    image: registry.gitlab.com/priam3/priam-microservice/databases
     container_name: priam-databases
     networks:
       - ms-to-db-server
