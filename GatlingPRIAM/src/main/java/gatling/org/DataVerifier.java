@@ -4,9 +4,9 @@ import java.util.Map;
 
 public class DataVerifier {
 
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/teadb?useSSL=false";
-    private static final String USER = "root";
-    private static final String PASSWORD = "";
+    private static final String DB_URL = "jdbc:mysql://localhost:3308/priam-teadb?useSSL=false";
+    private static final String USER = "priamu";
+    private static final String PASSWORD = "MaiRP_pWd-UsEr";
 
     public static String getDataValue(String idRef, String dataName, String dataTypeName, Map<String, String> primaryKeys) throws SQLException {
         String value = null;

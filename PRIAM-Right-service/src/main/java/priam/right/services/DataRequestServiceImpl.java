@@ -60,6 +60,7 @@ public class DataRequestServiceImpl implements DataRequestService {
      */
     @Override
     public DataRequestResponseDTO saveDataRequest(DataRequestRequestDTO dataRequestDTO, DataRequestType dataRequestType) {
+        System.out.println("=======================================================================" + dataRequestType);
         DataRequest dataRequest = new DataRequest();
         dataRequest.setDataSubjectId(dataRequestDTO.getDataSubjectId());
         dataRequest.setNewValue(dataRequestDTO.getNewValue());
@@ -79,6 +80,7 @@ public class DataRequestServiceImpl implements DataRequestService {
 
         DataRequest result = dataRequestRepository.save(dataRequest);
 
+        System.out.println("=======================================================================" + dataRequestType);
         // DataRequestData
         DataRequestData drd = new DataRequestData(result.getDataRequestId(), data.getDataId(), false);
         dataRequestDataRepository.save(drd);

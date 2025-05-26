@@ -8,25 +8,16 @@ import priam.right.dto.RectificationRequestDTO;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "PROVIDER-SERVICE")
+@FeignClient(name = "gateway", contextId = "providerClient")//@FeignClient(name = "PROVIDER-SERVICE")
 public interface ProviderRestClient {
 
-    // solution avec passage de paramétre par url
-    //@PostMapping(path = "/api/rectification/{patientId}/{attribute}/{newValue}")
-    //void rectification/*Data*/(@PathVariable String attribute, @PathVariable String newValue, @PathVariable int patientId);
-
-    @PostMapping(path = "/api/rectification")
+    //{/provider}  prefixe
+    @PostMapping(path = "/provider/api/rectification")
     void rectification(@RequestBody RectificationRequestDTO rectificationRequestDTO);
 
-    @PostMapping(path = "/api/erasure")
+    @PostMapping(path = "/provider/api/erasure")
     void erasure(@RequestBody ErasureRequestDTO erasureRequestDTO);
 
-    @GetMapping(path = "/api/dataAccessRight")
+    @GetMapping(path = "/provider/api/dataAccessRight")
     List<Map<String, String>> getPersonalDataValues(@RequestParam int idRef, @RequestParam String dataTypeName, @RequestParam List<String> attributes);
-
-    //@PostMapping(path = "/api/rectification/{patientId}/{attribute}")
-    //void eraseData(@PathVariable String attribute, @PathVariable int patientId);
-
-   /* @GetMapping(path = "/api/personalDataValues/{idDS}/{dataTypeName}/{attributes}")
-    List<Map<String, String>> PersonalDataValues(@PathVariable int idDS, @PathVariable String dataTypeName, @PathVariable List<String> attributes);*/
 }

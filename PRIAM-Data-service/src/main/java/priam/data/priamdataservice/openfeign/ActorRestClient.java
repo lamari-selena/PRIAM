@@ -10,17 +10,20 @@ import priam.data.priamdataservice.entities.model.SecondaryActor;
 
 import java.util.List;
 
-@FeignClient(name = "ACTOR-SERVICE")
+@FeignClient(name = "gateway", contextId = "actorClient")
+//@FeignClient(name = "ACTOR-SERVICE")
 public interface ActorRestClient {
 
-    @GetMapping(path = "api/DataSubject/ref/{idRef}")
-    public DataSubjectResponseDTO getDataSubjectByRef(@PathVariable String idRef);
-    @GetMapping(path = "api/actor/DataSubjectCategory/{dataSubjectCategoryId}")
+
+    //{/actor/} prefix
+@GetMapping(path = "/actor/api/DataSubject/ref/{idRef}")
+public DataSubjectResponseDTO getDataSubjectByRef(@PathVariable String idRef);
+    @GetMapping(path = "/actor/api/actor/DataSubjectCategory/{dataSubjectCategoryId}")
     public DataSubjectCategory getDataSubjectCategoryById(@PathVariable int dataSubjectCategoryId);
-    @GetMapping(path = "api/DataSubject/{dataSubjectId}")
+    @GetMapping(path = "/actor/api/DataSubject/{dataSubjectId}")
     public DataSubjectResponseDTO getDataSubjectId(@PathVariable int dataSubjectId);
-    @GetMapping(path = "api/secondaryActor/{secondaryActorId}")
+    @GetMapping(path = "/actor/api/secondaryActor/{secondaryActorId}")
     public SecondaryActorResponseDTO getSecondaryActorId(@PathVariable int secondaryActorId);
-    @GetMapping(path = "api/secondaryActors/dataId={dataId}")
+    @GetMapping(path = "/actor/api/secondaryActors/dataId={dataId}")
     public List<SecondaryActor> getSecondaryActorsByDataId (@PathVariable int dataId);
 }

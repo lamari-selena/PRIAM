@@ -1509,3 +1509,6 @@ INSERT INTO `persistenceuser` (`ID`, `EMAIL`, `PASSWORD`, `REALNAME`, `USERNAME`
 (605, 'user98@petsupplystore.com', '$2a$10$YoCLkcQ6OP9dF.w1f7wIaufGJaLBaCN6xnCLbtpCHw.uOT4tJPezS', 'Jennifer Jackson', 'user98'),
 (606, 'user99@petsupplystore.com', '$2a$10$wE9Tn./8TwcptCQev.32Jumi6sDPJUHWce0f1Tb5amikQH7Zhccou', 'Nancy Hernandez', 'user99');
 
+
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `provider_view`  AS SELECT `po`.`ID` AS `po_ID`, `po`.`ADDRESS1` AS `po_ADDRESS1`, `po`.`ADDRESS2` AS `po_ADDRESS2`, `po`.`ADDRESSNAME` AS `po_ADDRESSNAME`, `po`.`CREDITCARDCOMPANY` AS `po_CREDITCARDCOMPANY`, `po`.`CREDITCARDEXPIRYLOCALDATE` AS `po_CREDITCARDEXPIRYLOCALDATE`, `po`.`CREDITCARDNUMBER` AS `po_CREDITCARDNUMBER`, `po`.`ORDERTIME` AS `po_ORDERTIME`, `po`.`TOTALPRICEINCENTS` AS `po_TOTALPRICEINCENTS`, `po`.`USER_ID` AS `po_USER_ID`, `pu`.`ID` AS `pu_ID`, `pu`.`EMAIL` AS `pu_EMAIL`, `pu`.`PASSWORD` AS `pu_PASSWORD`, `pu`.`REALNAME` AS `pu_REALNAME`, `pu`.`USERNAME` AS `pu_USERNAME` FROM (`persistenceorder` `po` join `persistenceuser` `pu`) ;

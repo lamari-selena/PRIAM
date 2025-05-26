@@ -4,12 +4,20 @@ services:
     image: descartesresearch/teastore-registry
     expose:
       - "8180"
+    depends_on:
+      - jaeger
+    networks:
+      - shared_net
   db:
     image: descartesresearch/teastore-db
     expose:
       - "3306"
     ports:
       - "3307:3306"
+    depends_on:
+      - jaeger
+    networks:
+      - shared_net
   persistence:
     image: descartesresearch/teastore-persistence
     expose:
@@ -19,6 +27,10 @@ services:
       REGISTRY_HOST: "registry"
       DB_HOST: "db"
       DB_PORT: "3306"
+    depends_on:
+      - jaeger
+    networks:
+      - shared_net
   auth:
     image: descartesresearch/teastore-auth
     expose:
@@ -26,6 +38,10 @@ services:
     environment:
       HOST_NAME: "auth"
       REGISTRY_HOST: "registry"
+    depends_on:
+      - jaeger
+    networks:
+      - shared_net
   image:
     image: descartesresearch/teastore-image
     expose:
@@ -33,6 +49,10 @@ services:
     environment:
       HOST_NAME: "image"
       REGISTRY_HOST: "registry"
+    depends_on:
+      - jaeger
+    networks:
+      - shared_net
   recommender:
     image: descartesresearch/teastore-recommender
     expose:
@@ -40,6 +60,10 @@ services:
     environment:
       HOST_NAME: "recommender"
       REGISTRY_HOST: "registry"
+    depends_on:
+      - jaeger
+    networks:
+      - shared_net
   webui:
     image: descartesresearch/teastore-webui
     expose:
@@ -49,14 +73,35 @@ services:
       REGISTRY_HOST: "registry"
     ports:
       - "8180:8080"
+    depends_on:
+      - jaeger
+    networks:
+      - shared_net
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     ports:
       - "8088:8080"
+    networks:
+      - shared_net
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
       - /sys:/sys:ro
 #      - /var/lib/docker/:/var/lib/docker:ro
 
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP gRPC
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - shared_net
+
+networks:
+  shared_net:
+    external: true
+    name: common_network

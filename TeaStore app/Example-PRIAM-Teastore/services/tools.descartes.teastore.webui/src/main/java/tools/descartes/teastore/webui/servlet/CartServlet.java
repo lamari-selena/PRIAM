@@ -52,7 +52,7 @@ import org.json.JSONObject;
 public class CartServlet extends AbstractUIServlet {
   private static final long serialVersionUID = 1L;
 
-///////////////////////////////////////////////////////
+/*///////////////////////////////////////////////////////
   private HttpClient client = HttpClient.newHttpClient();
   private HttpRequest builderHttp(Long userid, String processingId) {
     // Utilisez le nom de la méthode et de la classe dans l'URL
@@ -91,7 +91,7 @@ public class CartServlet extends AbstractUIServlet {
       e.printStackTrace();
       return false;
     }
-  }
+  }*/
 ///////////////////////////////////////////////////////
   /**
    * @see HttpServlet#HttpServlet()
@@ -103,7 +103,7 @@ public class CartServlet extends AbstractUIServlet {
   /**
    * {@inheritDoc}
    */
-  /*@Override
+  @Override
   protected void handleGETRequest(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException, LoadBalancerTimeoutException {
     checkforCookie(request, response);
@@ -148,8 +148,8 @@ public class CartServlet extends AbstractUIServlet {
 
     request.getRequestDispatcher("WEB-INF/pages/cart.jsp").forward(request, response);
 
-  }*/
-  @Override
+  }
+  /*@Override
   protected void handleGETRequest(HttpServletRequest request, HttpServletResponse response)
           throws ServletException, IOException, LoadBalancerTimeoutException {
 
@@ -211,6 +211,6 @@ public class CartServlet extends AbstractUIServlet {
     request.setAttribute("productImages", LoadBalancedImageOperations.getProductPreviewImages(ads));
 
     request.getRequestDispatcher("WEB-INF/pages/cart.jsp").forward(request, response);
-  }
+  }*/
 
 }

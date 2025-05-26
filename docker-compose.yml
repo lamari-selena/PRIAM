@@ -7,7 +7,22 @@ services:
       #context: ./PRIAM-Actor-service
       #args:
         #APP_VERSION: "0.0.1-SNAPSHOT"
-        #GRADLE_VERSION: "8.0"
+        #GRADLE_VERSION: "8.0"pourquoi j pas les modiffdssssssdddqqqqSSDSgit add .
+      #warning: impossible d'ouvrir le répertoire 'db-volume/performance_schema/': Permission non accordée
+      #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002dbreach/': Permission non accordée
+      #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002dactor/': Permission non accordée
+      #warning: impossible d'ouvrir le répertoire 'db-volume/#innodb_temp/': Permission non accordée
+      #warning: impossible d'ouvrir le répertoire 'db-volume/mysql/': Permission non accordée
+      #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002dright/': Permission non accordée
+      #warning: impossible d'ouvrir le répertoire 'db-volume/#innodb_redo/': Permission non accordée
+      #warning: impossible d'ouvrir le répertoire 'db-volume/sys/': Permission non accordée
+      #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002dconsent/': Permission non accordée
+      #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002ddata/': Permission non accordée
+      #error: open("db-volume/#ib_16384_0.dblwr"): Permission non accordée
+      #error: indexation du fichier 'db-volume/#ib_16384_0.dblwr' impossible
+      #fatal: échec de l'ajout de fichiers
+
+
         #JRE_VERSION: "17"
     env_file:
       - ".env"
@@ -15,8 +30,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-actor?useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-    # ports:
-    #   - 8082:8082
+    ports:
+      - 8082:8082
     depends_on:
       mysqldb:
         condition: service_healthy
@@ -26,6 +41,7 @@ services:
       - ms-to-db-server
       - eureka-to-ms
       - gateway_to_ms
+      - shared_net
     healthcheck:
       test: ["CMD", "/bin/curl", "actor:8082"]
       retries: 10
@@ -47,17 +63,19 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-consent?useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-    # ports:
-    #   - 8082:8082
+    ports:
+      - 8089:8089
     depends_on:
       mysqldb:
         condition: service_healthy
       eureka:
         condition: service_healthy
+
     networks:
       - ms-to-db-server
       - eureka-to-ms
       - gateway_to_ms
+      - shared_net
     healthcheck:
       test: [ "CMD", "/bin/curl", "consent:8089" ]
       retries: 10
@@ -93,6 +111,7 @@ services:
       - ms-to-db-server
       - eureka-to-ms
       - gateway_to_ms
+      - shared_net
     ports:
       - 8081:8081
     healthcheck:
@@ -151,6 +170,7 @@ services:
       - ms-to-db-server
       - eureka-to-ms
       - gateway_to_ms
+      - shared_net
     healthcheck:
       test: [ "CMD", "/bin/curl", "right:8083" ]
       retries: 10
@@ -169,20 +189,21 @@ services:
     env_file:
       - ".env"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-teadb?useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/teadb?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${TEADB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${TEADB_PASSWORD}
     ports:
       - 8086:8086
     depends_on:
-      mysqldb:
-        condition: service_healthy
       eureka:
         condition: service_healthy
+      #mysqldb:
+        #condition: service_healthy
     networks:
       - ms-to-db-server
       - eureka-to-ms
       - gateway_to_ms
+      - shared_net
     healthcheck:
       test: [ "CMD", "/bin/curl", "provider:8086" ]
       retries: 10
@@ -214,12 +235,15 @@ services:
         condition: service_healthy
       consent:
         condition: service_healthy
+      eureka:
+        condition: service_healthy
     env_file:
       - ".env"
     ports:
       - 8090:8090
     networks:
       - gateway_to_ms
+      - eureka-to-ms
 
 #  frontuser:
 #    build:
@@ -258,10 +282,11 @@ services:
     container_name: priam-databases
     networks:
       - ms-to-db-server
+
     env_file:
       - ".env" # Secrets
     ports:
-      - 3307:3306
+      - 3308:3306  #- 3307:3306
     volumes:
       #- ./Databases/init.sh:/docker-entrypoint-initdb.d/init.sh
       - ./db-volume:/var/lib/mysql
@@ -290,3 +315,7 @@ networks:
   ms-to-db-server:
   eureka-to-ms:
   gateway_to_ms:
+  shared_net:
+      external: true
+      name: common_network
+

@@ -20,9 +20,7 @@ public class PriamRightServiceApplication {
     @Bean
     CommandLineRunner commandLineRunner(DataRequestService dataRequestService) {
         return args -> {
-            //dataRequestService.save(new DataRequestRequestDTO(1,"error in my age", "20", "Rectification",1,1));
-            //dataRequestService.save(new DataRequestRequestDTO(2,"error in my name", "anais", "Rectification",2,1));
-        };
+           };
     }
 }
 

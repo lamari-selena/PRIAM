@@ -238,7 +238,7 @@ data_request_claim varchar(250),
 data_request_issued_at datetime, 
 new_value varchar(250), 
 is_isolated boolean default false,
-data_request_type varchar(25) check (data_request_type in('Rectification','Forgotten','Access')),
+data_request_type varchar(25) check (data_request_type in('RECTIFICATION','ERASURE','ACCESS')),
 data_subject_id int,
 foreign key(data_subject_id) references `priam-actor`.data_subject(data_subject_id),
 response boolean);

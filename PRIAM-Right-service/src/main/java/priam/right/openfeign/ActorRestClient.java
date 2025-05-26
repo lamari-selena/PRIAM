@@ -8,16 +8,17 @@ import priam.right.dto.DataSubjectCategoryResponseDTO;
 import priam.right.entities.DataSubject;
 
 
-@FeignClient(name = "ACTOR-SERVICE")
 //@FeignClient(name = "ACTOR-SERVICE")
+@FeignClient(name = "gateway", contextId = "actorClient")
 public interface ActorRestClient {
 
-    @GetMapping(path = "/api/DataSubject/{dataSubjectId}")
+    //{/actor} prefix
+    @GetMapping(path = "/actor/api/DataSubject/{dataSubjectId}")
     DataSubject getDataSubject(@PathVariable(name = "dataSubjectId") int dataSubjectId);
 
-    @GetMapping(path = "/api/DataSubject/ref/{idRef}")
+    @GetMapping(path = "/actor/api/DataSubject/ref/{idRef}")
     DataSubject getDataSubjectByRef(@PathVariable String idRef);
 
-    @GetMapping(path = "/api/actor/DataSubjectCategory/{dataSubjectCategoryId}")
+    @GetMapping(path = "/actor/api/actor/DataSubjectCategory/{dataSubjectCategoryId}")
     DataSubjectCategoryResponseDTO getDataSubjectCategoryById(@PathVariable int dataSubjectCategoryId);
 }

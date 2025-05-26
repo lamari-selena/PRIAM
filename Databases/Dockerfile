@@ -15,7 +15,8 @@ RUN chmod +x /init.sh
 
 # Copy the db creation SQL
 COPY db_creation_script.sql /docker-entrypoint-initdb.d/
-COPY teadb.sql /docker-entrypoint-initdb.d/
+#COPY teadb.sql /docker-entrypoint-initdb.d/
+COPY db_insertion_script.sql /docker-entrypoint-initdb.d/
 
 # Replace the entrypoint to generate the SQL before MySQL starts
 COPY docker-entrypoint.sh /docker-entrypoint.sh

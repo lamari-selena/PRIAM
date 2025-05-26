@@ -5,6 +5,26 @@ registry=''     # e.g. 'descartesresearch/'
 print_usage() {
   printf "Usage: docker_build.sh [-p] [-r REGISTRY_NAME]\n"
 }
+####################################################
+# Name of the external Docker network used in docker-compose
+NETWORK_NAME="common_network"
+
+# Create the Docker network if it doesn't already exist
+ensure_network_exists() {
+  if ! docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
+    echo "Creating Docker network: $NETWORK_NAME ..."
+    docker network create "$NETWORK_NAME"
+  else
+    echo "ℹDocker network \"$NETWORK_NAME\" already exists."
+  fi
+}
+
+# Call the function to ensure the network is present
+ensure_network_exists
+####################################################
+print_usage() {
+  printf "Usage: docker_build.sh [-p] [-r REGISTRY_NAME]\n"
+}
 
 while getopts 'pr:' flag; do
   case "${flag}" in

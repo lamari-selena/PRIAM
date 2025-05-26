@@ -19,5 +19,13 @@ keycloak:
   ssl-required: none
   cors: true
 
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka:8761/eureka/
+  instance:
+    preferIpAddress: true
+
 server:
   port: 8090
