@@ -95,5 +95,3 @@ Thumbs.db
 
 target/
 *.log
-
-db-volume/

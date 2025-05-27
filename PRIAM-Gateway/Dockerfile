@@ -29,7 +29,7 @@ WORKDIR /app
 
 # Update + installation de la JRE-17
 RUN apt update && apt upgrade -y && apt install curl openjdk-${JRE_VERSION}-jre -y
-docker
+
 # On copie les .jar qu'on a build (todo: prendre auto que la version sans le "-plain")
 COPY --from=builder /app/build/libs/gateway-${APP_VERSION}.jar .
 

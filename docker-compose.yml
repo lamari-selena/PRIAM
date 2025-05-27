@@ -15,7 +15,7 @@ services:
       #warning: impossible d'ouvrir le répertoire 'db-volume/#innodb_temp/': Permission non accordée
       #warning: impossible d'ouvrir le répertoire 'db-volume/mysql/': Permission non accordée
       #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002dright/': Permission non accordée
-      #warning: impossible d'ouvrir le répertoire 'db-volume/#innodb_redo/': Permission non accordée
+     #warning: impossible d'ouvrir le répertoire 'db-volume/#innodb_redo/': Permission non accordée
       #warning: impossible d'ouvrir le répertoire 'db-volume/sys/': Permission non accordée
       #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002dconsent/': Permission non accordée
       #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002ddata/': Permission non accordée
@@ -143,7 +143,7 @@ services:
       test: ["CMD", "/bin/curl", "eureka:8761"]
       retries: 10
       interval: 3s
-      timeout: 30s
+      timeout: 60s
 
   right:
     #image: priam/right-ms
@@ -217,15 +217,15 @@ services:
       timeout: 30s
 
   gateway:
-    #image: priam/api-gateway
     image: registry.gitlab.com/priam3/priam-microservice/api-gateway
+    #image: priam/api-gateway
     container_name: priam-api-gateway
-    #build:
+      #build:
       #context: ./PRIAM-Gateway
       #args:
-        #APP_VERSION: "0.0.1-SNAPSHOT"
-        #GRADLE_VERSION: "8.0"
-        #JRE_VERSION: "17"
+      #APP_VERSION: "0.0.1-SNAPSHOT"
+    #GRADLE_VERSION: "8.0"
+    #JRE_VERSION: "17"
     healthcheck:
       test: curl http://gateway:8090/health
       retries: 10

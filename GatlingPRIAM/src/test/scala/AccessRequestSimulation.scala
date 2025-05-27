@@ -20,7 +20,6 @@ class AccessRequestSimulation extends Simulation {
       http("AccessRequest")
         .get("personalDataValues/accessRight")
         .queryParam("dataSubjectId", "507")
-
         .queryParam("dataTypeName", "PERSISTENCEUSER")
         .queryParam("attributes", "pu_REALNAME")
         .queryParam("attributes", "pu_USERNAME")
@@ -30,26 +29,28 @@ class AccessRequestSimulation extends Simulation {
         .check(jmesPath("[?attribute=='pu_USERNAME'].value | [0]").saveAs("username"))
         .check(jmesPath("[?attribute=='pu_EMAIL'].value | [0]").saveAs("email"))
     )
-    .exec { session =>
-    var hasFailure = false
 
-    def check(attr: String, key: String): Unit = {
-      val got  = session(attr).asOption[String].getOrElse("Not found")
-      val want = expectedValues(key)
-      if (got != want) {
-        println(s"[KO] $key attendu '$want', trouvé '$got'")
-        hasFailure = true
-      } else {
-        println(s"[OK] $key = $got")
+    .exec { session =>
+      var hasFailure = false
+
+      def check(attr: String, key: String): Unit = {
+        val got  = session(attr).asOption[String].getOrElse("Not found")
+        val want = expectedValues(key)
+        if (got != want) {
+          println(s"[KO] $key attendu '$want', trouvé '$got'")
+          hasFailure = true
+        } else {
+          println(s"[OK] $key = $got")
+        }
       }
+
+      check("realname", "pu_REALNAME")
+      check("username", "pu_USERNAME")
+      check("email",    "pu_EMAIL")
+
+      if (hasFailure) session.markAsFailed else session
     }
 
-    check("realname", "pu_REALNAME")
-    check("username", "pu_USERNAME")
-    check("email",    "pu_EMAIL")
 
-    if (hasFailure) session.markAsFailed else session
-  }
   setUp(scn.inject(atOnceUsers(1))).protocols(httpProtocol)
 }
-

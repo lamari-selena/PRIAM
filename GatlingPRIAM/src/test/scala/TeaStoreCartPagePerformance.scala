@@ -59,23 +59,22 @@ class TeaStoreCartPagePerformance extends Simulation {
           substring("Are you interested in?").exists
         )
     )
+
   setUp(
     // Inject users: ramp up 50 users over 10 seconds
-
     //scn.inject(
 
-      // 1. At once users: simulate a burst of 100 users all starting at the same time
-      scn.inject(atOnceUsers(10))
+    // 1. At once users: simulate a burst of 100 users all starting at the same time
+    scn.inject(atOnceUsers(10))
 
-      // 1. At once users: simulate a burst of 100 users all starting at the same time
-      //scn.inject(atOnceUsers(100))
+    // 1. At once users: simulate a burst of 100 users all starting at the same time
+    //scn.inject(atOnceUsers(100))
 
-      // 2. Ramp users: gradually increase load from 1 to 50 users over 60 seconds
-      // scn.inject(rampUsers(50).during(60.seconds))
+    // 2. Ramp users: gradually increase load from 1 to 50 users over 60 seconds
+    // scn.inject(rampUsers(50).during(60.seconds))
 
-      // 3. Constant users per second: keep a steady load of 20 users per second for 60 seconds
-      // scn.inject(constantUsersPerSec(20).during(60.seconds))
-    ).protocols(httpProtocol)
+    // 3. Constant users per second: keep a steady load of 20 users per second for 60 seconds
+    // scn.inject(constantUsersPerSec(20).during(60.seconds))
+  ).protocols(httpProtocol)
   //)
 }
-
