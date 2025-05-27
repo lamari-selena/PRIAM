@@ -9,11 +9,12 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import priam.consent.priamconsentservice.repositories.ConsentRepository;
 import priam.consent.priamconsentservice.repositories.ContractRepository;
-
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
 
 @Configuration
 @EnableFeignClients
 @SpringBootApplication
+@EnableEurekaClient
 public class PriamConsentServiceApplication {
 
     public static void main(String[] args) {

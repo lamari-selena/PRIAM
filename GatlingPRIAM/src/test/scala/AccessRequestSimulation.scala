@@ -20,6 +20,7 @@ class AccessRequestSimulation extends Simulation {
       http("AccessRequest")
         .get("personalDataValues/accessRight")
         .queryParam("dataSubjectId", "507")
+
         .queryParam("dataTypeName", "PERSISTENCEUSER")
         .queryParam("attributes", "pu_REALNAME")
         .queryParam("attributes", "pu_USERNAME")
@@ -29,7 +30,6 @@ class AccessRequestSimulation extends Simulation {
         .check(jmesPath("[?attribute=='pu_USERNAME'].value | [0]").saveAs("username"))
         .check(jmesPath("[?attribute=='pu_EMAIL'].value | [0]").saveAs("email"))
     )
-
     .exec { session =>
     var hasFailure = false
 
@@ -50,7 +50,6 @@ class AccessRequestSimulation extends Simulation {
 
     if (hasFailure) session.markAsFailed else session
   }
-
-
   setUp(scn.inject(atOnceUsers(1))).protocols(httpProtocol)
 }
+

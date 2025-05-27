@@ -7,7 +7,7 @@ ARG GRADLE_VERSION="7.4"
 ARG JRE_VERSION="21"
 
 # Image qui va créer le .jar
-FROM gradle:${GRADLE_VERSION} AS builder
+FROM gradle:${GRADLE_VERSION}-jdk17 AS builder
 
 WORKDIR /app
 
@@ -29,7 +29,7 @@ WORKDIR /app
 
 # Update + installation de la JRE-17
 RUN apt update && apt upgrade -y && apt install curl openjdk-${JRE_VERSION}-jre -y
-
+docker
 # On copie les .jar qu'on a build (todo: prendre auto que la version sans le "-plain")
 COPY --from=builder /app/build/libs/gateway-${APP_VERSION}.jar .
 

@@ -59,9 +59,9 @@ class TeaStoreCartPagePerformance extends Simulation {
           substring("Are you interested in?").exists
         )
     )
-
   setUp(
     // Inject users: ramp up 50 users over 10 seconds
+
     //scn.inject(
 
       // 1. At once users: simulate a burst of 100 users all starting at the same time
@@ -78,3 +78,4 @@ class TeaStoreCartPagePerformance extends Simulation {
     ).protocols(httpProtocol)
   //)
 }
+
