@@ -8,21 +8,6 @@ services:
       #context: ./PRIAM-Actor-service
       #args:
         #APP_VERSION: "0.0.1-SNAPSHOT"
-        #GRADLE_VERSION: "8.0"pourquoi j pas les modiffdssssssdddqqqqSSDSgit add .
-      #warning: impossible d'ouvrir le répertoire 'db-volume/performance_schema/': Permission non accordée
-      #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002dbreach/': Permission non accordée
-      #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002dactor/': Permission non accordée
-      #warning: impossible d'ouvrir le répertoire 'db-volume/#innodb_temp/': Permission non accordée
-      #warning: impossible d'ouvrir le répertoire 'db-volume/mysql/': Permission non accordée
-      #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002dright/': Permission non accordée
-     #warning: impossible d'ouvrir le répertoire 'db-volume/#innodb_redo/': Permission non accordée
-      #warning: impossible d'ouvrir le répertoire 'db-volume/sys/': Permission non accordée
-      #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002dconsent/': Permission non accordée
-      #warning: impossible d'ouvrir le répertoire 'db-volume/priam@002ddata/': Permission non accordée
-      #error: open("db-volume/#ib_16384_0.dblwr"): Permission non accordée
-      #error: indexation du fichier 'db-volume/#ib_16384_0.dblwr' impossible
-      #fatal: échec de l'ajout de fichiers
-
 
         #JRE_VERSION: "17"
     env_file:

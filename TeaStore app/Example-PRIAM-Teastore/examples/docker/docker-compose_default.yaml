@@ -1,7 +1,8 @@
 version: '3'
 services:
   registry:
-    image: descartesresearch/teastore-registry
+    #image: descartesresearch/teastore-registry
+    image: registry.gitlab.com/priam3/teastore/teastore-registry
     expose:
       - "8180"
     depends_on:
@@ -9,7 +10,8 @@ services:
     networks:
       - shared_net
   db:
-    image: descartesresearch/teastore-db
+    #image: descartesresearch/teastore-db
+    image: registry.gitlab.com/priam3/teastore/teastore-db
     expose:
       - "3306"
     ports:
@@ -19,7 +21,8 @@ services:
     networks:
       - shared_net
   persistence:
-    image: descartesresearch/teastore-persistence
+    #image: descartesresearch/teastore-persistence
+    image: registry.gitlab.com/priam3/teastore/teastore-persistence
     expose:
       - "8180"
     environment:
@@ -32,7 +35,8 @@ services:
     networks:
       - shared_net
   auth:
-    image: descartesresearch/teastore-auth
+    #image: descartesresearch/teastore-auth
+    image: registry.gitlab.com/priam3/teastore/teastore-auth
     expose:
       - "8180"
     environment:
@@ -43,7 +47,8 @@ services:
     networks:
       - shared_net
   image:
-    image: descartesresearch/teastore-image
+    #image: descartesresearch/teastore-image
+    image: registry.gitlab.com/priam3/teastore/teastore-image
     expose:
       - "8180"
     environment:
@@ -54,7 +59,8 @@ services:
     networks:
       - shared_net
   recommender:
-    image: descartesresearch/teastore-recommender
+    #image: descartesresearch/teastore-recommender
+    image: registry.gitlab.com/priam3/teastore/teastore-recommender
     expose:
       - "8180"
     environment:
@@ -65,7 +71,8 @@ services:
     networks:
       - shared_net
   webui:
-    image: descartesresearch/teastore-webui
+    #image: descartesresearch/teastore-webui
+    image: registry.gitlab.com/priam3/teastore/teastore-webui
     expose:
       - "8180"
     environment:
@@ -79,7 +86,8 @@ services:
       - shared_net
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    #image: gcr.io/cadvisor/cadvisor:latest
+    image: registry.gitlab.com/priam3/teastore/cadvisor
     ports:
       - "8088:8080"
     networks:
@@ -91,7 +99,8 @@ services:
 #      - /var/lib/docker/:/var/lib/docker:ro
 
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    #image: jaegertracing/all-in-one:latest
+    image: registry.gitlab.com/priam3/teastore/jaeger-tracing
     container_name: jaeger
     ports:
       - "16686:16686"  # UI
