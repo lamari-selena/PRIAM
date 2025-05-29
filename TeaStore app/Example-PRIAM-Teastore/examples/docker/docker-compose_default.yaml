@@ -30,6 +30,13 @@ services:
       REGISTRY_HOST: "registry"
       DB_HOST: "db"
       DB_PORT: "3306"
+
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.service.name=${SERVICE_NAME:-persistence-service}
     depends_on:
       - jaeger
     networks:
@@ -42,6 +49,13 @@ services:
     environment:
       HOST_NAME: "auth"
       REGISTRY_HOST: "registry"
+
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.service.name=${SERVICE_NAME:-auth-service}
     depends_on:
       - jaeger
     networks:
@@ -54,6 +68,13 @@ services:
     environment:
       HOST_NAME: "image"
       REGISTRY_HOST: "registry"
+
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.service.name=${SERVICE_NAME:-image-service}
     depends_on:
       - jaeger
     networks:
@@ -66,6 +87,13 @@ services:
     environment:
       HOST_NAME: "recommender"
       REGISTRY_HOST: "registry"
+
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.service.name=${SERVICE_NAME:-recommender-service}
     depends_on:
       - jaeger
     networks:
@@ -78,6 +106,13 @@ services:
     environment:
       HOST_NAME: "webui"
       REGISTRY_HOST: "registry"
+
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.service.name=${SERVICE_NAME:-webui-service}
     ports:
       - "8180:8080"
     depends_on:
@@ -112,5 +147,5 @@ services:
 
 networks:
   shared_net:
-#    external: true
+    external: true
     name: common_network

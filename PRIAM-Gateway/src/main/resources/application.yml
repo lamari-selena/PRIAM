@@ -24,7 +24,7 @@ otel:
     exporter: otlp
   exporter:
     otlp:
-      endpoint: http://jaeger:4317
+      endpoint: ${JAEGER_ENDPOINT:http://jaeger:4317}
       protocol: grpc
   service:
     name: PRIAM-gateway-Service
@@ -32,7 +32,7 @@ otel:
 eureka:
   client:
     service-url:
-      defaultZone: http://eureka:8761/eureka/
+      defaultZone: ${EUREKA_URL:http://localhost:8761}/eureka/
   instance:
     preferIpAddress: true
 
