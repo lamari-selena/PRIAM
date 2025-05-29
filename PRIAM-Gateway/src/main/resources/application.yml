@@ -27,7 +27,7 @@ otel:
       endpoint: http://jaeger:4317
       protocol: grpc
   service:
-    name: PRIAM-Right-Service
+    name: PRIAM-gateway-Service
 
 eureka:
   client:

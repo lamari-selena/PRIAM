@@ -236,6 +236,7 @@ services:
     networks:
       - gateway_to_ms
       - eureka-to-ms
+      - shared_net
 
 #  frontuser:
 #    build:
