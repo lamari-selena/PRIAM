@@ -19,6 +19,15 @@ keycloak:
   ssl-required: none
   cors: true
 
+otel:
+  traces:
+    exporter: otlp
+  exporter:
+    otlp:
+      endpoint: http://jaeger:4317
+      protocol: grpc
+  service:
+    name: PRIAM-Right-Service
 
 eureka:
   client:
@@ -29,3 +38,4 @@ eureka:
 
 server:
   port: 8090
+

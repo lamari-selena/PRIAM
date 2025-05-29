@@ -112,5 +112,5 @@ services:
 
 networks:
   shared_net:
-    external: true
+#    external: true
     name: common_network

@@ -275,7 +275,6 @@ services:
     container_name: priam-databases
     networks:
       - ms-to-db-server
-
     env_file:
       - ".env" # Secrets
     ports:
