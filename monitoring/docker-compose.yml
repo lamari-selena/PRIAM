@@ -2,7 +2,8 @@ version: '3.7'
 
 services:
   prometheus:
-    image: prom/prometheus
+    #image: prom/prometheus
+    image: registry.gitlab.com/priam3/monitoring/prometheus
     container_name: prometheus
     ports:
       - "9090:9090"
@@ -12,7 +13,8 @@ services:
       - monitor-net
 
   grafana:
-    image: grafana/grafana
+    #image: grafana/grafana
+    image: registry.gitlab.com/priam3/monitoring/grafana
     container_name: grafana
     ports:
       - "3000:3000"
@@ -31,8 +33,22 @@ services:
     networks:
       - monitor-net
 
+  jaeger:
+    #image: jaegertracing/all-in-one:latest
+    image: registry.gitlab.com/priam3/monitoring/jaeger-tracing
+    container_name: jaeger
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP gRPC
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - shared_net
+
 volumes:
   grafana-storage:
 
 networks:
   monitor-net:
+  shared_net:
+    name: common_network

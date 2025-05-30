@@ -5,8 +5,8 @@ services:
     image: registry.gitlab.com/priam3/teastore/teastore-registry
     expose:
       - "8180"
-    depends_on:
-      - jaeger
+    #depends_on:
+      #- jaeger
     networks:
       - shared_net
   db:
@@ -16,8 +16,8 @@ services:
       - "3306"
     ports:
       - "3307:3306"
-    depends_on:
-      - jaeger
+    #depends_on:
+      #- jaeger
     networks:
       - shared_net
   persistence:
@@ -37,8 +37,8 @@ services:
         -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
         -Dotel.exporter.otlp.protocol=grpc
         -Dotel.service.name=${SERVICE_NAME:-persistence-service}
-    depends_on:
-      - jaeger
+    #depends_on:
+      #- jaeger
     networks:
       - shared_net
   auth:
@@ -56,8 +56,8 @@ services:
         -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
         -Dotel.exporter.otlp.protocol=grpc
         -Dotel.service.name=${SERVICE_NAME:-auth-service}
-    depends_on:
-      - jaeger
+    #depends_on:
+      #- jaeger
     networks:
       - shared_net
   image:
@@ -75,8 +75,8 @@ services:
         -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
         -Dotel.exporter.otlp.protocol=grpc
         -Dotel.service.name=${SERVICE_NAME:-image-service}
-    depends_on:
-      - jaeger
+    #depends_on:
+      #- jaeger
     networks:
       - shared_net
   recommender:
@@ -94,8 +94,8 @@ services:
         -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
         -Dotel.exporter.otlp.protocol=grpc
         -Dotel.service.name=${SERVICE_NAME:-recommender-service}
-    depends_on:
-      - jaeger
+    #depends_on:
+      #- jaeger
     networks:
       - shared_net
   webui:
@@ -115,8 +115,8 @@ services:
         -Dotel.service.name=${SERVICE_NAME:-webui-service}
     ports:
       - "8180:8080"
-    depends_on:
-      - jaeger
+    #depends_on:
+      #- jaeger
     networks:
       - shared_net
 
@@ -133,19 +133,22 @@ services:
       - /sys:/sys:ro
 #      - /var/lib/docker/:/var/lib/docker:ro
 
-  jaeger:
-    #image: jaegertracing/all-in-one:latest
-    image: registry.gitlab.com/priam3/teastore/jaeger-tracing
-    container_name: jaeger
-    ports:
-      - "16686:16686"  # UI
-      - "4317:4317"    # OTLP gRPC
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
-    networks:
-      - shared_net
+#  jaeger:
+#    #image: jaegertracing/all-in-one:latest
+#    image: registry.gitlab.com/priam3/teastore/jaeger-tracing
+#    container_name: jaeger
+#    ports:
+#      - "16686:16686"  # UI
+#      - "4317:4317"    # OTLP gRPC
+#    environment:
+#      - COLLECTOR_OTLP_ENABLED=true
+#    networks:
+#      - shared_net
 
+#networks:
+#  shared_net:
+#    name: common_network
 networks:
   shared_net:
-    #external: true
+    external: true
     name: common_network
