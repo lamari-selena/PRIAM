@@ -4,7 +4,7 @@ ARG APP_VERSION="0.0.1-SNAPSHOT"
 ## La version de gradle
 ARG GRADLE_VERSION="7.4"
 ## La version du java-runtime
-ARG JRE_VERSION="21"
+ARG JRE_VERSION="17"
 ## Pour les feignClient
 ARG RIGHT_SERVICE_URL="http://localhost:8083"
 ARG ACTOR_SERVICE_URL="http://localhost:8082"

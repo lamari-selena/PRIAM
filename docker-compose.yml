@@ -33,6 +33,7 @@ services:
       retries: 10
       interval: 3s
       timeout: 30s
+    pull_policy: always
 
   consent:
     #image: priam/consent-ms
@@ -68,6 +69,7 @@ services:
       retries: 10
       interval: 3s
       timeout: 30s
+    pull_policy: always
 
   data:
     #image: priam/data-ms
@@ -107,6 +109,7 @@ services:
       retries: 10
       interval: 3s
       timeout: 30s
+    pull_policy: always
 
   eureka:
     #image: priam/eureka
@@ -129,6 +132,7 @@ services:
       retries: 10
       interval: 3s
       timeout: 60s
+    pull_policy: always
 
   right:
     #image: priam/right-ms
@@ -166,6 +170,7 @@ services:
       retries: 10
       interval: 3s
       timeout: 30s
+    pull_policy: always
 
   provider:
     #image: priam/provider-ms
@@ -200,6 +205,7 @@ services:
       retries: 10
       interval: 3s
       timeout: 30s
+    pull_policy: always
 
   gateway:
     image: registry.gitlab.com/priam3/priam-microservice/api-gateway
@@ -237,6 +243,7 @@ services:
       - gateway_to_ms
       - eureka-to-ms
       - shared_net
+    pull_policy: always
 
 #  frontuser:
 #    build:
@@ -288,6 +295,7 @@ services:
       retries: 20
       interval: 3s
       timeout: 60s
+    pull_policy: always
 
 #  keycloak:
 #    image: quay.io/keycloak/keycloak:25.0.0
