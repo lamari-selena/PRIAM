@@ -44,7 +44,7 @@ mvn gatling:test -Dgatling.simulationClass=ErasureRequestSimulation
 mvn gatling:test -Dgatling.simulationClass=RectificationRequestSimulation
 ```
 
-### 3.2 — Consent Management Test
+### 3.2 — Consent Management Test (1000 users)
 
 ```bash
 mvn gatling:test -Dgatling.simulationClass=TeaStoreCartPagePerformance
