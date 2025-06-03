@@ -53,9 +53,9 @@ class RectificationRequestSimulation extends Simulation {
     .exec { session =>
       import gatling.org.DataVerifier
 
-      val ID = "507"
+      val ID = "508"
       val expected = session("expectedValue").as[String] // retrieve dynamically
-      val table = "persistenceuser"
+      val table = "PERSISTENCEUSER"
       val column = "REALNAME"
       val primaryKeys = Map("ID" -> ID).asJava
 
@@ -76,6 +76,6 @@ class RectificationRequestSimulation extends Simulation {
     //scn.inject(
     //rampUsers(1).during(10.seconds) // 100 utilisateurs répartis sur 0.5s
     //)
-    scn.inject(atOnceUsers(1))
+    scn.inject(atOnceUsers(1000))
   ).protocols(httpProtocol)
 }

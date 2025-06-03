@@ -65,7 +65,7 @@ class TeaStoreCartPagePerformance extends Simulation {
     //scn.inject(
 
     // 1. At once users: simulate a burst of 100 users all starting at the same time
-    scn.inject(atOnceUsers(10))
+    scn.inject(atOnceUsers(1000))
 
     // 1. At once users: simulate a burst of 100 users all starting at the same time
     //scn.inject(atOnceUsers(100))

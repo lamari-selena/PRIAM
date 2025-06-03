@@ -38,6 +38,14 @@ services:
         -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
         -Dotel.exporter.otlp.protocol=grpc
         -Dotel.service.name=teastore-persistence-service
+        -Dotel.traces.sampler=always_on
+        -Dotel.instrumentation.common.experimental-span-attributes=true
+        -Dotel.instrumentation.jdbc.capture-queries=true
+        -Dotel.instrumentation.jdbc.capture-statement-attributes=true
+        -Dotel.instrumentation.http.capture-headers=request;response
+        -Dotel.instrumentation.servlet.experimental-span-attributes=true
+        -Dotel.javaagent.debug=true
+
     #depends_on:
       #- jaeger
     networks:
@@ -58,6 +66,14 @@ services:
         -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
         -Dotel.exporter.otlp.protocol=grpc
         -Dotel.service.name=teastore-auth-service
+        -Dotel.traces.sampler=always_on
+        -Dotel.instrumentation.common.experimental-span-attributes=true
+        -Dotel.instrumentation.jdbc.capture-queries=true
+        -Dotel.instrumentation.jdbc.capture-statement-attributes=true
+        -Dotel.instrumentation.http.capture-headers=request;response
+        -Dotel.instrumentation.servlet.experimental-span-attributes=true
+        -Dotel.javaagent.debug=true
+
     #depends_on:
       #- jaeger
     networks:
@@ -77,6 +93,14 @@ services:
         -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
         -Dotel.exporter.otlp.protocol=grpc
         -Dotel.service.name=teastore-image-service
+        -Dotel.traces.sampler=always_on
+        -Dotel.instrumentation.common.experimental-span-attributes=true
+        -Dotel.instrumentation.jdbc.capture-queries=true
+        -Dotel.instrumentation.jdbc.capture-statement-attributes=true
+        -Dotel.instrumentation.http.capture-headers=request;response
+        -Dotel.instrumentation.servlet.experimental-span-attributes=true
+        -Dotel.javaagent.debug=true
+
     #depends_on:
       #- jaeger
     networks:
@@ -97,6 +121,15 @@ services:
         -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
         -Dotel.exporter.otlp.protocol=grpc
         -Dotel.service.name=teastore-recommender-service
+        -Dotel.traces.sampler=always_on
+        -Dotel.instrumentation.common.experimental-span-attributes=true
+        -Dotel.instrumentation.jdbc.capture-queries=true
+        -Dotel.instrumentation.jdbc.capture-statement-attributes=true
+        -Dotel.instrumentation.http.capture-headers=request;response
+        -Dotel.instrumentation.servlet.experimental-span-attributes=true
+        -Dotel.javaagent.debug=true
+
+
     #depends_on:
       #- jaeger
     networks:
@@ -117,6 +150,14 @@ services:
         -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
         -Dotel.exporter.otlp.protocol=grpc
         -Dotel.service.name=teastore-webui-service
+        -Dotel.traces.sampler=always_on
+        -Dotel.instrumentation.common.experimental-span-attributes=true
+        -Dotel.instrumentation.jdbc.capture-queries=true
+        -Dotel.instrumentation.jdbc.capture-statement-attributes=true
+        -Dotel.instrumentation.http.capture-headers=request;response
+        -Dotel.instrumentation.servlet.experimental-span-attributes=true
+        -Dotel.javaagent.debug=true
+
     ports:
       - "8180:8080"
     #depends_on:

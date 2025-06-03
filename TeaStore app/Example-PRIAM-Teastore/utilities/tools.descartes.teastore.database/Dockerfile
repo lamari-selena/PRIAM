@@ -9,4 +9,5 @@ RUN sed -i "s/max_connections.*/max_connections = 2048/g" /etc/mysql/my.cnf
 
 ENV MYSQL_ROOT_PASSWORD rootpassword
 
+
 EXPOSE 3306

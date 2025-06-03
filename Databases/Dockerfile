@@ -29,3 +29,4 @@ EXPOSE 3306
 
 # Default command
 CMD ["mysqld"]
+

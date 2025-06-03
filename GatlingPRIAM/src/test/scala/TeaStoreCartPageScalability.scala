@@ -23,7 +23,7 @@ class TeaStoreCartPageScalability extends Simulation {
       http("Submit login form")
         .post("/loginAction")
         .headers(headers)
-        .formParam("username", "user15")
+        .formParam("username", "user0")
         .formParam("password", "password")
         .check(
           status.is(200),
@@ -60,12 +60,12 @@ class TeaStoreCartPageScalability extends Simulation {
         )
     )
 
-  setUp(
-    scn.inject(
+setUp(
+  scn.inject(
+    rampUsersPerSec(5).to(50).during(2.minutes),
+    constantUsersPerSec(50).during(3.minutes),
+    rampUsersPerSec(50).to(0).during(1.minutes)
+  )
+).protocols(httpProtocol)
 
-      rampUsersPerSec(5).to(50).during(2.minutes), // Gradually ramp up from 5 to 50 users per second over 2 minutes
-      constantUsersPerSec(50).during(3.minutes), // Maintain a constant load of 50 users per second for 3 minutes
-      rampUsersPerSec(50).to(0).during(1.minutes) // Gradually ramp down from 50 to 0 users per second over 1 minute
-    )
-  ).protocols(httpProtocol)
 }

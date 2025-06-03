@@ -50,8 +50,8 @@ class ErasureRequestSimulation extends Simulation {
       import gatling.org.DataVerifier
 
       val ID = "508"
-      val expected = ""
-      val table = "persistenceuser"
+      val expected = null
+      val table = "PERSISTENCEUSER"
       val column = "REALNAME"
       val primaryKeys = Map("ID" -> ID).asJava
 
@@ -69,6 +69,6 @@ class ErasureRequestSimulation extends Simulation {
     }
 
   setUp(
-    scn.inject(atOnceUsers(10))
+    scn.inject(atOnceUsers(1000))
   ).protocols(httpProtocol)
 }
