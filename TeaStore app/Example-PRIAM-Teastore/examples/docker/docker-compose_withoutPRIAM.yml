@@ -1,0 +1,168 @@
+version: '3'
+services:
+  registry:
+    #image: descartesresearch/teastore-registry
+    image: registry.gitlab.com/priam3/teastore/teastore-registry
+    expose:
+      - "8180"
+    #depends_on:
+      #- jaeger
+    networks:
+      - shared_net
+    pull_policy: always
+  db:
+    #image: descartesresearch/teastore-db
+    image: registry.gitlab.com/priam3/teastore/teastore-db
+    expose:
+      - "3306"
+    ports:
+      - "3307:3306"
+    #depends_on:
+      #- jaeger
+    networks:
+      - shared_net
+    environment:
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.service.name=teastore-db-service
+  persistence:
+    #image: descartesresearch/teastore-persistence
+    image: registry.gitlab.com/priam3/teastore/teastore-persistence
+    expose:
+      - "8180"
+    environment:
+      HOST_NAME: "persistence"
+      REGISTRY_HOST: "registry"
+      DB_HOST: "db"
+      DB_PORT: "3306"
+
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.service.name=teastore-persistence-service
+    #depends_on:
+      #- jaeger
+    networks:
+      - shared_net
+    pull_policy: always
+  auth:
+    #image: descartesresearch/teastore-auth
+    image: registry.gitlab.com/priam3/teastore/teastore-auth
+    expose:
+      - "8180"
+    environment:
+      HOST_NAME: "auth"
+      REGISTRY_HOST: "registry"
+
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.service.name=teastore-auth-service
+    #depends_on:
+      #- jaeger
+    networks:
+      - shared_net
+  image:
+    #image: descartesresearch/teastore-image
+    image: registry.gitlab.com/priam3/teastore/teastore-image
+    expose:
+      - "8180"
+    environment:
+      HOST_NAME: "image"
+      REGISTRY_HOST: "registry"
+
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.service.name=teastore-image-service
+    #depends_on:
+      #- jaeger
+    networks:
+      - shared_net
+    pull_policy: always
+  recommender:
+    #image: descartesresearch/teastore-recommender
+    image: registry.gitlab.com/priam3/teastore/teastore-recommender-withoutpriam
+    expose:
+      - "8180"
+    environment:
+      HOST_NAME: "recommender"
+      REGISTRY_HOST: "registry"
+
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.service.name=teastore-recommender-service
+    #depends_on:
+      #- jaeger
+    networks:
+      - shared_net
+    #pull_policy: always
+  webui:
+    #image: descartesresearch/teastore-webui
+    image: registry.gitlab.com/priam3/teastore/teastore-webui
+    expose:
+      - "8180"
+    environment:
+      HOST_NAME: "webui"
+      REGISTRY_HOST: "registry"
+
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.endpoint=${JAEGER_ENDPOINT}
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.service.name=teastore-webui-service
+    ports:
+      - "8180:8080"
+    #depends_on:
+      #- jaeger
+    networks:
+      - shared_net
+    #pull_policy: always
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    #image: registry.gitlab.com/priam3/teastore/cadvisor
+    ports:
+      - "8088:8080"
+    networks:
+      - shared_net
+    pull_policy: always
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+#      - /var/lib/docker/:/var/lib/docker:ro
+
+
+#  jaeger:
+#    #image: jaegertracing/all-in-one:latest
+#    image: registry.gitlab.com/priam3/teastore/jaeger-tracing
+#    container_name: jaeger
+#    ports:
+#      - "16686:16686"  # UI
+#      - "4317:4317"    # OTLP gRPC
+#    environment:
+#      - COLLECTOR_OTLP_ENABLED=true
+#    networks:
+#      - shared_net
+
+#networks:
+#  shared_net:
+#    name: common_network
+networks:
+  shared_net:
+    external: true
+    name: common_network

@@ -18,11 +18,11 @@
 			<artifactId>registryclient</artifactId>
 			<version>${teastoreversion}</version>
 		</dependency>
-		<dependency>
+		<!-- <dependency>
 			<groupId>tools.descartes.teastore</groupId>
 			<artifactId>kieker.probes</artifactId>
 			<version>${teastoreversion}</version>
-		</dependency>
+		</dependency> -->
 
 		<dependency>
 			<groupId>jakarta.activation</groupId>
@@ -63,6 +63,11 @@
 					<reuseForks>false</reuseForks>
 					<forkCount>1</forkCount>
 				</configuration>
+			</plugin>
+			<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-war-plugin</artifactId>
+			<version>3.3.2</version> 
 			</plugin>
 		</plugins>
 	</build>

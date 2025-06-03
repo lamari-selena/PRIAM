@@ -21,11 +21,11 @@
 			<artifactId>registryclient</artifactId>
 			<version>${teastoreversion}</version>
 		</dependency>
-		<dependency>
+<!-- 		<dependency>
 			<groupId>tools.descartes.teastore</groupId>
 			<artifactId>kieker.probes</artifactId>
 			<version>${teastoreversion}</version>
-		</dependency>
+		</dependency> -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
@@ -67,6 +67,13 @@
 
 	<build>
 		<finalName>tools.descartes.teastore.image</finalName>
+		<plugins>
+			<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-war-plugin</artifactId>
+			<version>3.3.2</version> 
+			</plugin>
+		</plugins>
 	</build>
 
 	<parent>

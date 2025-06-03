@@ -76,7 +76,7 @@ public final class RecommenderSelector implements IRecommender {
 
     private IRecommender recommender;
 
-    private HttpClient client = HttpClient.newHttpClient();
+    /*private HttpClient client = HttpClient.newHttpClient();
     //http://localhost:8090/cdp/api/decision/1?idRefList=
     //http://localhost:8089/api/decision/1?idRefList=
     //http://localhost:8090/cdp/api/contract/1?idRefList=
@@ -120,7 +120,7 @@ public final class RecommenderSelector implements IRecommender {
             e.printStackTrace();
             return false;
         }
-    }
+    }*/
 
 
     /**
@@ -186,20 +186,12 @@ public final class RecommenderSelector implements IRecommender {
             }
         }
     }
-  /* @Override
+    @Override
     public List<Long> recommendProducts(Long userid, List<OrderItem> currentItems)
             throws UnsupportedOperationException {
 
-       System.out.println("exemple de userid et currentItems " + userid + "ms" + currentItems);
-        long startTime = System.currentTimeMillis(); // Mesure du temps de début
-        System.out.println("Le temps de début est de " + startTime + "ms");
-
         try {
             List<Long> result = recommender.recommendProducts(userid, currentItems); // Appel du premier recommander
-
-            long endTime = System.currentTimeMillis(); // Mesure du temps de fin après l'exécution
-            long diff = endTime - startTime; // Calcul de la différence
-
 
             return result; // Retourne le résultat
         } catch (UseFallBackException e) {
@@ -208,10 +200,6 @@ public final class RecommenderSelector implements IRecommender {
                     + " as recommender failed. Using fallback recommender. Reason:\n" + e.getMessage());
 
             List<Long> result = fallbackrecommender.recommendProducts(userid, currentItems); // Appel du fallback recommender
-            long endTime = System.currentTimeMillis(); // Mesure du temps de fin après l'exécution du fallback
-            long diff = endTime - startTime; // Calcul de la différence
-            System.out.println("Le temps de réponse (fallback) est de " + diff + "ms");
-
             return result; // Retourne le résultat du fallback
         } catch (UnsupportedOperationException e) {
             // Si l'algorithme n'est pas encore formé
@@ -224,15 +212,10 @@ public final class RecommenderSelector implements IRecommender {
                     + " threw an unexpected error. Using fallback recommender. Reason:\n" + e.getMessage());
 
             List<Long> result = fallbackrecommender.recommendProducts(userid, currentItems); // Appel du fallback
-
-            long endTime = System.currentTimeMillis(); // Mesure du temps de fin après l'exécution du fallback
-            long diff = endTime - startTime; // Calcul de la différence
-            System.out.println("Le temps de réponse (exception) est de " + diff + "ms");
-
             return result; // Retourne le résultat du fallback
         }
-    }*/
-
+    }
+/*
     @Override
     public List<Long> recommendProducts(Long userid, List<OrderItem> currentItems) throws UnsupportedOperationException {
         boolean canUse;
@@ -282,7 +265,7 @@ public final class RecommenderSelector implements IRecommender {
         }
 
         return result;
-    }
+    } */
     /**
      * Returns the instance of this Singleton or creates a new one, if this is
      * the first call of this method.
