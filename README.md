@@ -117,6 +117,7 @@ docker compose -f ./examples/docker/docker-compose_withoutPRIAM.yml up -d
 | Jaeger     | http://localhost:16686         |
 -----------------------------------------------
 
-Default Grafana credentials:
-Username: admin
-Password: admin
+### Accessing Grafana
+
+Once logged into Grafana (default credentials: `admin` / `admin`), navigate to the **Cadvisor Dashboard** to monitor container metrics and performance.
+
