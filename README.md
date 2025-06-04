@@ -15,7 +15,8 @@ Three `.env` files are required:
 ### 2.1 — Start Monitoring
 
 ```bash
-docker compose up -d monitoring
+cd monitoring
+docker compose up -d 
 ```
 
 ### 2.2 — Start TeaStore with PRIAM
