@@ -15,10 +15,20 @@ Three `.env` files are required:
 ### 2.1 — Start Monitoring
 
 ```bash
-docker compose up -d monitoring
+cd monitoring
+docker compose up -d 
 ```
 
 ### 2.2 — Start TeaStore with PRIAM
+
+```bash
+cd ..
+```
+
+```bash
+cd teastore
+```
+
 
 ```bash
 docker compose -f "TeaStore app/Example-PRIAM-Teastore/examples/docker/docker-compose.yml" up -d
@@ -40,10 +50,15 @@ From the `GatlingPRIAM` folder:
 
 ```bash
 mvn gatling:test -Dgatling.simulationClass=AccessRequestSimulation
-mvn gatling:test -Dgatling.simulationClass=ErasureRequestSimulation
-mvn gatling:test -Dgatling.simulationClass=RectificationRequestSimulation
 ```
 
+```bash
+mvn gatling:test -Dgatling.simulationClass=ErasureRequestSimulation
+```
+
+```bash
+mvn gatling:test -Dgatling.simulationClass=RectificationRequestSimulation
+```
 ### 3.2 — Consent Management Test (1000 users)
 
 ```bash
@@ -100,3 +115,9 @@ docker compose -f ./examples/docker/docker-compose_withoutPRIAM.yml up -d
 | Prometheus | http://localhost:9090          |
 | cAdvisor   | http://localhost:8088          |
 | Jaeger     | http://localhost:16686         |
+-----------------------------------------------
+
+### Accessing Grafana
+
+Once logged into Grafana (default credentials: `admin` / `admin`), navigate to the **Cadvisor Dashboard** to monitor container metrics and performance.
+
