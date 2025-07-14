@@ -255,6 +255,27 @@ services:
       - ms-to-kafka
 
   #####################################################################################################
+  #                                     BREACHES MICROSERVICE                                         #
+  #####################################################################################################
+
+  priam-breach-service:
+    #build: ./PRIAM-Breaches-Service
+    image: registry.gitlab.com/priam3/priam-microservice/breach-ms
+    container_name: priam-breach-ms
+    ports:
+      - "8087:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=mysqldb
+      - DB_PORT=3306
+      - DB_USER=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - mysqldb
+    networks:
+      - ms-to-db-server
+  #####################################################################################################
   gateway:
     image: registry.gitlab.com/priam3/priam-microservice/api-gateway
     #image: priam/api-gateway
