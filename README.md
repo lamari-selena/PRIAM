@@ -6,7 +6,7 @@ Three `.env` files are required:
 
 - `./GatlingPRIAM/.env`
 - `./TeaStore app/Example-PRIAM-Teastore/examples/docker/.env`
-- `./.env` (at the root of the PRIAM project)
+- `./.env` (at the root of the PRIAM project -- rename the file dot.env which is in the repo to .env)
 
 ---
 
