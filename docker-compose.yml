@@ -242,7 +242,9 @@ services:
       retries: 5
 
   notification-service:
-    build: ./PRIAM-Notification-Service
+    #build: ./PRIAM-Notification-Service
+    image: registry.gitlab.com/priam3/priam-microservice/notification-ms
+    container_name: priam-notification-ms
     ports:
       - "8080:8080"
     depends_on:
