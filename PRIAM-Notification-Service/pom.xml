@@ -10,7 +10,7 @@
         <relativePath/>
     </parent>
     <groupId>priam.notification</groupId>
-    <artifactId>PRIAM-Notification-service</artifactId>
+    <artifactId>PRIAM-Notification-Service</artifactId>
     <version>1.0-SNAPSHOT</version>
     <dependencies>
         <!-- Core Spring Boot -->
