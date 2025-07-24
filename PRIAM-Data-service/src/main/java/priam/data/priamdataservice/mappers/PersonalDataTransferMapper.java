@@ -1,7 +1,6 @@
 package priam.data.priamdataservice.mappers;
 
 import org.mapstruct.Mapper;
-import priam.data.priamdataservice.dto.transfer.*;
 import priam.data.priamdataservice.entities.PersonalDataTransfer;
 import priam.data.priamdataservice.entities.model.SecondaryActor;
 import priam.data.priamdataservice.entities.model.SecondaryActorCategory;

@@ -185,9 +185,9 @@ services:
     env_file:
       - ".env"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/teadb?useSSL=false&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: ${TEADB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${TEADB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-right?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
     ports:
       - 8086:8086
     depends_on:
@@ -242,11 +242,11 @@ services:
       retries: 5
 
   notification-service:
-    #build: ./PRIAM-Notification-Service
+    build: ./PRIAM-Notification-Service
     image: registry.gitlab.com/priam3/priam-microservice/notification-ms
     container_name: priam-notification-ms
     ports:
-      - "8080:8080"
+      - "8084:8080"
     depends_on:
       - kafka
     environment:
@@ -257,9 +257,8 @@ services:
   #####################################################################################################
   #                                     BREACHES MICROSERVICE                                         #
   #####################################################################################################
-
   priam-breach-service:
-    #build: ./PRIAM-Breaches-Service
+    build: ./PRIAM-Breaches-Service
     image: registry.gitlab.com/priam3/priam-microservice/breach-ms
     container_name: priam-breach-ms
     ports:
@@ -292,18 +291,12 @@ services:
       interval: 3s
       timeout: 30s
     depends_on:
-      actor:
-        condition: service_healthy
-      right:
-        condition: service_healthy
-      data:
-        condition: service_healthy
-      provider:
-        condition: service_healthy
-      consent:
-        condition: service_healthy
-      eureka:
-        condition: service_healthy
+      - actor
+      - right
+      - data
+      - provider
+      - consent
+      - eureka
     env_file:
       - ".env"
     ports:
@@ -353,7 +346,7 @@ services:
     networks:
       - ms-to-db-server
     env_file:
-      - ".env" # Secrets
+      - .env
     ports:
       - 3308:3306  #- 3307:3306
     volumes:
@@ -365,18 +358,6 @@ services:
       interval: 3s
       timeout: 60s
     pull_policy: always
-
-#  keycloak:
-#    image: quay.io/keycloak/keycloak:25.0.0
-#    command: start-dev
-#    networks:
-#      - g-keycloak
-#    env_file:
-#      - ".env" # Secrets
-#    ports:
-#      - 8080:8080
-#    volumes:
-#      - ./keycloak-conf:/opt/keycloak/data/
 
 volumes:
   db-volume:

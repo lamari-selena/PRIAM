@@ -127,7 +127,6 @@ package priam.data.priamdataservice.web;
 
 import org.springframework.web.bind.annotation.*;
 
-import priam.data.priamdataservice.dto.*;
 import priam.data.priamdataservice.dto.transfer.DataListTransferDTO;
 import priam.data.priamdataservice.services.DataServiceInterface;
 import priam.data.priamdataservice.services.DataTypeServiceInterface;

@@ -4,8 +4,6 @@ import jdk.internal.org.jline.terminal.TerminalBuilder;
 import lombok.AllArgsConstructor;
 import net.bytebuddy.implementation.bind.MethodDelegationBinder;
 import org.springframework.stereotype.Service;
-import priam.right.dto.*;
-import priam.right.entities.*;
 import priam.right.enums.AnswerType;
 import priam.right.enums.StatusDataRequestType;
 import priam.right.enums.DataRequestType;

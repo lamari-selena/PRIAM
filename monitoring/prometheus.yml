@@ -33,4 +33,4 @@ scrape_configs:
       
   - job_name: 'cadvisor'
     static_configs:
-      - targets: ['172.17.0.1:8088']
+      - targets: ['172.17.96.164:8088']

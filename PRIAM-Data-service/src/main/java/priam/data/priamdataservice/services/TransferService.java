@@ -2,7 +2,6 @@ package priam.data.priamdataservice.services;
 
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
-import priam.data.priamdataservice.dto.transfer.*;
 import priam.data.priamdataservice.entities.Data;
 import priam.data.priamdataservice.entities.PersonalDataTransfer;
 import priam.data.priamdataservice.mappers.PersonalDataTransferMapper;

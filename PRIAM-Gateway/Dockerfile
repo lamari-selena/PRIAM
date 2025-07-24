@@ -1,39 +1,42 @@
 # Options
-## La version de l'application (le .jar)
-ARG APP_VERSION="0.0.1-SNAPSHOT" 
-## La version de gradle
+## The version of the application (the .jar)
+ARG APP_VERSION="0.0.1-SNAPSHOT"
+## The version of Gradle
 ARG GRADLE_VERSION="7.4"
-## La version du java-runtime
-ARG JRE_VERSION="21"
+## The version of the Java runtime
+ARG JRE_VERSION="17"
 
-# Image qui va créer le .jar
-FROM gradle:${GRADLE_VERSION}-jdk17 AS builder
-
+# Image that will create the .jar
+FROM gradle:${GRADLE_VERSION}-jdk${JRE_VERSION} AS builder
 WORKDIR /app
 
-# On copie tout ce qu'on a
+# Copy everything
 COPY . /app
 
-# Build le .jar
-RUN gradle assemble
+# Build the .jar
+RUN ./gradlew assemble
 
-# Image qui va run le code
-FROM ubuntu
+# Image that will run the code
+FROM ubuntu:22.04
 
-# Répétition pour cette image
+# Repeat the arguments for this image
 ARG APP_VERSION
 ARG JRE_VERSION
 
 EXPOSE 8761
 WORKDIR /app
 
-# Update + installation de la JRE-17
-RUN apt update && apt upgrade -y && apt install curl openjdk-${JRE_VERSION}-jre -y
+# Update + installation of the JRE
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y curl openjdk-${JRE_VERSION}-jre && \
+    rm -rf /var/lib/apt/lists/*
 
-# On copie les .jar qu'on a build (todo: prendre auto que la version sans le "-plain")
-COPY --from=builder /app/build/libs/gateway-${APP_VERSION}.jar .
+# Copy the .jar that was built
+COPY --from=builder /app/build/libs/gateway-0.0.1-SNAPSHOT.jar .
 
-# On transforme la ARG en ENV pour qu'on puisse l'utiliser dans l'entrypoint
-ENV APP_VERSION_ENV=${APP_VERSION} 
-# Lancement du .jar
-ENTRYPOINT java -jar gateway-$APP_VERSION_ENV.jar
+# Transform the ARG to ENV so it can be used in the entrypoint
+ENV APP_VERSION_ENV=${APP_VERSION}
+
+# Launch the .jar
+ENTRYPOINT ["java", "-jar", "gateway-0.0.1-SNAPSHOT.jar"]

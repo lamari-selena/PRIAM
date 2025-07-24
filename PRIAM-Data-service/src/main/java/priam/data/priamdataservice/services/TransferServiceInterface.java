@@ -1,7 +1,5 @@
 package priam.data.priamdataservice.services;
 
-import priam.data.priamdataservice.dto.transfer.*;
-
 public interface TransferServiceInterface {
     /**
      * Save a new Transfer

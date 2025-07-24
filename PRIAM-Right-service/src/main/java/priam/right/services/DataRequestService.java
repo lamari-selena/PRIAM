@@ -1,7 +1,6 @@
 package priam.right.services;
 
 
-import priam.right.dto.*;
 import priam.right.entities.DataRequestAnswer;
 import priam.right.enums.DataRequestType;
 

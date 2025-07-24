@@ -2,7 +2,6 @@ package priam.right.web;
 
 import org.bouncycastle.cert.ocsp.Req;
 import org.springframework.web.bind.annotation.*;
-import priam.right.dto.*;
 import priam.right.entities.DataRequestAnswer;
 import priam.right.enums.DataRequestType;
 import priam.right.services.DataRequestService;

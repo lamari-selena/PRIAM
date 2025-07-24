@@ -2,7 +2,6 @@ package priam.data.priamdataservice.services;
 
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
-import priam.data.priamdataservice.dto.*;
 import priam.data.priamdataservice.dto.transfer.DataListTransferDTO;
 import priam.data.priamdataservice.dto.transfer.SecondaryActorCategoryDTO;
 import priam.data.priamdataservice.entities.DataSubjectCategory;
