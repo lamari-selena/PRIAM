@@ -1,0 +1,76 @@
+.container {
+    padding: 0 !important;
+    width: 100%;
+        font-size: 2rem;
+    table {
+        width: 80%;
+        height: 100px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+.tr {
+    font-size: 1.5rem;
+}
+
+h1 {
+    font-size: 4rem;
+}
+
+h2 {
+    font-size: 1.8rem !important;
+}
+
+.small-hr {
+    width: 40%;
+}
+
+.consent {
+    font-size: 1.5rem;
+    padding: 5px;
+    color: brown;
+    font-weight: bold;
+}
+
+td {
+    padding: 4px;
+}
+
+.inside-table {
+    font-size: 1rem !important;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+td:nth-child(1) {
+    max-width: 60%;
+    font-size: 1.5rem;
+}
+td:nth-child(2) {
+    width: 400px;
+}
+
+.title {
+    width: 100%;
+    text-align: center;
+    margin: 10px;
+}
+
+.btn {
+    width: 10px;
+    height: 10px;
+    padding: 30px;
+}
+
+.btn2 {
+    width: 5px;
+    border-radius: 30px;
+    min-width: 30px !important;
+    height: 30px;
+    padding: 4px;
+}
+
+.material-icons {
+    font-size: 30px;
+}

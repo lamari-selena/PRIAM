@@ -1,0 +1,440 @@
+name: priam
+services:
+  actor:
+    #image: priam/actor-ms
+    image: registry.gitlab.com/priam3/priam-microservice/actor-ms
+    container_name: priam-actor-ms
+    #build:
+      #context: ./PRIAM-Actor-service
+      #args:
+        #APP_VERSION: "0.0.1-SNAPSHOT"
+
+        #JRE_VERSION: "17"
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-actor?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.exporter.otlp.endpoint=http://192.168.1.103:4317
+        -Dotel.service.name=actor-service
+        -Dotel.metrics.exporter=none
+        -Dotel.logs.exporter=none
+    volumes:
+      - ./opentelemetry-javaagent.jar:/otel.jar
+    ports:
+      - 8082:8082
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+      - shared_net
+    healthcheck:
+      test: ["CMD", "/bin/curl", "actor:8082"]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+    #pull_policy: always
+
+  consent:
+    #image: priam/consent-ms
+    image: registry.gitlab.com/priam3/priam-microservice/consent-ms
+    container_name: priam-consent-ms
+    #build:
+      #context: ./PRIAM-Actor-service
+      #args:
+      #APP_VERSION: "0.0.1-SNAPSHOT"
+    #GRADLE_VERSION: "8.0"
+    #JRE_VERSION: "17"
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-consent?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.exporter.otlp.endpoint=http://192.168.1.103:4317
+        -Dotel.service.name=consent-service
+        -Dotel.metrics.exporter=none
+        -Dotel.logs.exporter=none
+    volumes:
+      - ./opentelemetry-javaagent.jar:/otel.jar        
+    ports:
+      - 8089:8089
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+   
+
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+      - shared_net
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "consent:8089" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+    #pull_policy: always
+
+  data:
+    #image: priam/data-ms
+    image: registry.gitlab.com/priam3/priam-microservice/data-ms
+    container_name: priam-data-ms
+    #build:
+      #context: ./PRIAM-Data-service
+      #args:
+        #APP_VERSION: "0.0.1-SNAPSHOT"
+        #GRADLE_VERSION: "8.0"
+        #JRE_VERSION: "17"
+        #RIGHT_SERVICE_URL: http://gateway:8090/right
+        #ACTOR_SERVICE_URL: http://gateway:8090/actor
+        #PROVIDER_SERVICE_URL: http://gateway:8090/provider
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-data?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.exporter.otlp.endpoint=http://192.168.1.103:4317
+        -Dotel.service.name=data-service
+        -Dotel.metrics.exporter=none
+        -Dotel.logs.exporter=none
+    volumes:
+      - ./opentelemetry-javaagent.jar:/otel.jar        
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      actor:
+        condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+      - shared_net
+    ports:
+      - 8081:8081
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "data:8081" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+    #pull_policy: always
+
+  eureka:
+    #image: priam/eureka
+    image: registry.gitlab.com/priam3/priam-microservice/eureka
+    container_name: priam-eureka
+    #build:
+      #context: ./PRIAM-Eureka
+      #args:
+        #APP_VERSION: "0.0.1-SNAPSHOT"
+        #GRADLE_VERSION: "8.7"
+        #JRE_VERSION: "17"
+    env_file:
+      - ".env"
+    ports:
+      - 8761:8761
+    networks:
+      - eureka-to-ms
+    healthcheck:
+      test: ["CMD", "/bin/curl", "eureka:8761"]
+      retries: 10
+      interval: 3s
+      timeout: 60s
+    pull_policy: always
+
+  right:
+    #image: priam/right-ms
+    image: registry.gitlab.com/priam3/priam-microservice/right-ms
+    container_name: priam-right-ms
+    #build:
+      #context: ./PRIAM-Right-service
+      #args:
+        #APP_VERSION: "0.0.1-SNAPSHOT"
+        #GRADLE_VERSION: "7.0"
+        #JRE_VERSION: "17"
+        #DATA_SERVICE_URL: http://gateway:8090/data
+        #ACTOR_SERVICE_URL: http://gateway:8090/actor
+        #PROVIDER_SERVICE_URL: http://gateway:8090/provider
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-right?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.exporter.otlp.endpoint=http://192.168.1.103:4317
+        -Dotel.service.name=right-service
+        -Dotel.metrics.exporter=none
+        -Dotel.logs.exporter=none
+    volumes:
+      - ./opentelemetry-javaagent.jar:/otel.jar        
+    ports:
+      - 8083:8083
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+      - shared_net
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "right:8083" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+    #pull_policy: always
+
+  provider:
+    #image: priam/provider-ms
+    image: registry.gitlab.com/priam3/priam-microservice/provider-ms
+    container_name: priam-provider-ms
+    #build:
+      #context: ./Provider-microservice
+      #args:
+        #APP_VERSION: "0.0.1-SNAPSHOT"
+        #GRADLE_VERSION: "8.0"
+        #JRE_VERSION: "17"
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://192.168.1.101:3307/teadb?useSSL=false #192.168.1.41
+      #SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-right?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${TEADB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${TEADB_PASSWORD}
+      JAVA_TOOL_OPTIONS: >
+        -javaagent:/otel.jar
+        -Dotel.traces.exporter=otlp
+        -Dotel.exporter.otlp.protocol=grpc
+        -Dotel.exporter.otlp.endpoint=http://192.168.1.103:4317
+        -Dotel.service.name=provider-service
+        -Dotel.metrics.exporter=none
+        -Dotel.logs.exporter=none
+    volumes:
+      - ./opentelemetry-javaagent.jar:/otel.jar        
+    ports:
+      - 8086:8086
+    depends_on:
+      eureka:
+        condition: service_healthy
+      #mysqldb:
+        #condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+      - shared_net
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "provider:8086" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+    #pull_policy: always
+  #####################################################################################################
+  #                                        Notification SERVICE                                       #
+  #####################################################################################################
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - ms-to-kafka
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+    networks:
+      - ms-to-kafka
+    healthcheck:
+      test: [ "CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  notification-service:
+    build: ./PRIAM-Notification-Service
+    image: registry.gitlab.com/priam3/priam-microservice/notification-ms
+    container_name: priam-notification-ms
+    ports:
+      - "8084:8080"
+    depends_on:
+      - kafka
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - ms-to-kafka
+
+  #####################################################################################################
+  #                                     BREACHES MICROSERVICE                                         #
+  #####################################################################################################
+  priam-breach-service:
+    build: ./PRIAM-Breaches-Service
+    image: registry.gitlab.com/priam3/priam-microservice/breach-ms
+    container_name: priam-breach-ms
+    ports:
+      - "8087:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=mysqldb
+      - DB_PORT=3306
+      - DB_USER=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - mysqldb
+    networks:
+      - ms-to-db-server
+  #####################################################################################################
+  gateway:
+    #image: registry.gitlab.com/priam3/priam-microservice/api-gateway
+    #image: priam/api-gateway
+    image: gateway-node-priam
+    container_name: priam-api-gateway-node
+      #build:
+      #context: ./PRIAM-Gateway
+      #args:
+      #APP_VERSION: "0.0.1-SNAPSHOT"
+    #GRADLE_VERSION: "8.0"
+    #JRE_VERSION: "17"
+    healthcheck:
+      test: curl http://gateway:8090/health
+      retries: 10
+      interval: 3s
+      timeout: 30s
+    #environment:
+      #- NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      #- OTEL_SERVICE_NAME=PRIAM-Gateway
+      #- OTEL_TRACES_EXPORTER=otlp
+      #- OTEL_EXPORTER_OTLP_ENDPOINT=http://192.168.1.103:4318
+      #- OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      #- OTEL_PROPAGATORS=tracecontext,baggage
+    #volumes:
+      # On monte le dossier node_modules que vous venez de créer localement
+      #- ./node_modules:/app/node_modules
+    depends_on:
+      - actor
+      - right
+      - data
+      - provider
+      - consent
+      - eureka
+    env_file:
+      - ".env"
+    ports:
+      - 8090:8090
+    networks:
+      - gateway_to_ms
+      - eureka-to-ms
+      - shared_net
+    #pull_policy: always
+
+#  frontuser:
+#    build:
+#      context: ./PRIAM-Frontend
+#      args:
+#        API_DATA: localhost:8090/data
+#        API_RIGHT: localhost:8090/right
+#        API_ACTOR: localhost:8090/actor
+#        API_PROVIDER: localhost:8090/provider
+#        KEYCLOAK: localhost:8080
+#    ports:
+#      - 4200:4200
+#    depends_on:
+#      mysqldb:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#    networks:
+#      - g-frontend
+#
+#  frontprovider:
+#    build:
+#      context: ./PRIAM-Frontend-Provider
+#    ports:
+#      - 4000:4000
+#    depends_on:
+#      mysqldb:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#    networks:
+#      - g-f-provider
+
+  mysqldb:
+    #image: priam/databases
+    image: registry.gitlab.com/priam3/priam-microservice/databases
+    container_name: priam-databases
+    networks:
+      - ms-to-db-server
+    env_file:
+      - .env
+    ports:
+      - 3308:3306  #- 3307:3306
+    volumes:
+      #- ./Databases/init.sh:/docker-entrypoint-initdb.d/init.sh
+      - ./db-volume:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "mysqldb"]
+      retries: 20
+      interval: 3s
+      timeout: 60s
+    pull_policy: always
+
+volumes:
+  db-volume:
+  kafka_data:
+
+networks:
+  ms-to-db-server:
+  eureka-to-ms:
+  gateway_to_ms:
+  ms-to-kafka:
+  shared_net:
+      external: true
+      #name: common_network
+

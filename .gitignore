@@ -1,0 +1,8 @@
+Example-PRIAM-Teastore/Example-PRIAM-Teastore/.git
+Example-PRIAM-Teastore/Example-PRIAM-Teastore/.gitignore
+Example-PRIAM-Teastore/Example-PRIAM-Teastore/.github
+
+priam-microservice/.git
+priam-microservice/.gitignore
+priam-microservice/node_modules/
+priam-microservice/db-volume/

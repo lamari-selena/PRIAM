@@ -1,0 +1,338 @@
+/**
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package tools.descartes.teastore.recommender.algorithm;
+
+import java.io.Console;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+
+import ch.qos.logback.core.CoreConstants;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import tools.descartes.teastore.recommender.algorithm.impl.UseFallBackException;
+import tools.descartes.teastore.recommender.algorithm.impl.cf.PreprocessedSlopeOneRecommender;
+import tools.descartes.teastore.recommender.algorithm.impl.cf.SlopeOneRecommender;
+import tools.descartes.teastore.recommender.algorithm.impl.orderbased.OrderBasedRecommender;
+import tools.descartes.teastore.recommender.algorithm.impl.pop.PopularityBasedRecommender;
+import tools.descartes.teastore.entities.Order;
+import tools.descartes.teastore.entities.OrderItem;
+import tools.descartes.teastore.entities.message.SessionBlob;
+
+/**
+ * A strategy selector for the Recommender functionality.
+ *
+ * @author Johannes Grohmann
+ *
+ */
+public final class RecommenderSelector implements IRecommender {
+
+    /**
+     * This map lists all currently available recommending approaches and
+     * assigns them their "name" for the environment variable.
+     */
+    private static Map<String, Class<? extends IRecommender>> recommenders = new HashMap<>();
+
+    static {
+        recommenders = new HashMap<String, Class<? extends IRecommender>>();
+        recommenders.put("Popularity", PopularityBasedRecommender.class);
+        recommenders.put("SlopeOne", SlopeOneRecommender.class);
+        recommenders.put("PreprocessedSlopeOne", PreprocessedSlopeOneRecommender.class);
+        recommenders.put("OrderBased", OrderBasedRecommender.class);
+    }
+
+    /**
+     * The default recommender to choose, if no other recommender was set.
+     */
+    private static final Class<? extends IRecommender> DEFAULT_RECOMMENDER = SlopeOneRecommender.class;
+
+    private static final Logger LOG = LoggerFactory.getLogger(RecommenderSelector.class);
+
+    private static RecommenderSelector instance;
+
+    private IRecommender fallbackrecommender;
+
+    private IRecommender recommender;
+     // ************************************* consent management **********************************
+    private HttpClient client = HttpClient.newHttpClient();
+
+      private HttpRequest builderHttp(Long userid, String processingId, String username, String authToken) {
+    String url = "http://172.17.0.1:8090/cdp/api/decision/" + processingId + "?idRefList=" + userid.toString();
+    
+      return HttpRequest.newBuilder()
+          .uri(URI.create(url))
+          .header("x-username", username)
+          .header("authtoken", authToken) // ← AJOUTEZ CE HEADER
+          .header("Content-Type", "application/json")
+          .build();
+     }
+    
+        private HttpResponse<String> sendReq(Long userid, String processingId, String username, String authToken) 
+          throws InterruptedException, IOException {
+          
+          System.out.println("Calling CDP service for user: " + username + ", UID: " + userid);
+          HttpResponse<String> response = client.send(
+              builderHttp(userid, processingId, username, authToken), 
+              HttpResponse.BodyHandlers.ofString()
+          );
+          System.out.println("HTTP response status: " + response.statusCode());
+          System.out.println("HTTP response body: " + response.body());
+          return response;
+      }
+    
+      private boolean getConsent(Long userid, String processingId) throws InterruptedException, IOException {
+      try {
+          // Déterminer le username et authToken depuis l'UID
+          String username = getUsernameFromUID(userid);
+          String authToken = getAuthTokenFromUID(userid); // ← NOUVEAU
+          
+          System.out.println("CDP Request - UID: " + userid + ", Username: " + username + ", Token: " + 
+              (authToken != null ? authToken.substring(0, 8) + "..." : "null"));
+          
+          HttpResponse<String> response = sendReq(userid, processingId, username, authToken);
+
+          if (response.statusCode() != 200) {
+              System.err.println("CDP Error: HTTP " + response.statusCode() + " - " + response.body());
+              return false;
+          }
+
+          if (response.body() == null || response.body().isEmpty()) {
+              System.out.println("CDP returned empty response");
+              return false;
+          }
+
+          JSONObject myObject = new JSONObject(response.body());
+          return myObject.getBoolean(userid.toString());
+          
+      } catch (Exception e) {
+          System.err.println("Error in getConsent: " + e.getMessage());
+          e.printStackTrace();
+          return false;
+      }
+  }
+
+  private String getAuthTokenFromUID(Long userid) {
+      // Mapping UID → authToken 
+      Map<Long, String> tokenMap = new HashMap<>();
+      tokenMap.put(507L, "4923c26e4b6494b24098a37ab54709f39907837125055a054229c954cc8602c9");
+      tokenMap.put(508L, "e5915a0ff9f40afbecdeee96a86e43d80d8b6d050be064d33392aefa2a4e8fa3");
+      
+      return tokenMap.get(userid);
+  }
+
+        private String getUsernameFromUID(Long userid) {
+            // Mapping UID → username
+            Map<Long, String> userMap = new HashMap<>();
+            userMap.put(507L, "user0");
+            userMap.put(508L, "user1");
+            userMap.put(509L, "user2");
+            // Ajoutez d'autres mappings si nécessaire
+            
+            return userMap.getOrDefault(userid, "user0"); // default to user0
+        }
+    // ************************************* consent management **********************************
+
+    /**
+     * Private Constructor.
+     */
+    private RecommenderSelector() {
+        fallbackrecommender = new PopularityBasedRecommender();
+        try {
+            String recommendername = (String) new InitialContext().lookup("java:comp/env/recommenderAlgorithm");
+            // if a specific algorithm is set, we can use that algorithm
+            if (recommenders.containsKey(recommendername)) {
+                try {
+                    recommender = recommenders.get(recommendername).getDeclaredConstructor().newInstance();
+                } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    e.printStackTrace();
+                } catch (NoSuchMethodException e) {
+                    e.printStackTrace();
+                } catch (SecurityException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                LOG.warn("Recommendername: " + recommendername
+                        + " was not found. Using default recommender (SlopeOneRecommeder).");
+                try {
+                    recommender = DEFAULT_RECOMMENDER.getDeclaredConstructor().newInstance();
+                } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    e.printStackTrace();
+                } catch (NoSuchMethodException e) {
+                    e.printStackTrace();
+                } catch (SecurityException e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (InstantiationException | IllegalAccessException e) {
+            // if creating a new instance fails
+            e.printStackTrace();
+            LOG.warn("Could not create an instance of the requested recommender. Using fallback.");
+            recommender = fallbackrecommender;
+        } catch (NamingException e) {
+            // if nothing was set
+            LOG.info("Recommender not set. Using default recommender (SlopeOneRecommeder).");
+            try {
+                try {
+                    recommender = DEFAULT_RECOMMENDER.getDeclaredConstructor().newInstance();
+                } catch (IllegalArgumentException e1) {
+                    e1.printStackTrace();
+                } catch (InvocationTargetException e1) {
+                    e1.printStackTrace();
+                } catch (NoSuchMethodException e1) {
+                    e1.printStackTrace();
+                } catch (SecurityException e1) {
+                    e1.printStackTrace();
+                }
+            } catch (InstantiationException | IllegalAccessException e1) {
+                // also the default algorithm could fail
+                e1.printStackTrace();
+                LOG.warn("Could not create an instance of DEFAULT_RECOMMENDER " + DEFAULT_RECOMMENDER.getName() + ".");
+                recommender = fallbackrecommender;
+            }
+        }
+    }
+    
+    /*@Override
+    public List<Long> recommendProducts(Long userid, List<OrderItem> currentItems)
+            throws UnsupportedOperationException {
+
+        try {
+            List<Long> result = recommender.recommendProducts(userid, currentItems); // Appel du premier recommander
+
+            return result; // Retourne le résultat
+        } catch (UseFallBackException e) {
+            // Si une exception est levée, on passe au fallback recommender
+            LOG.trace("Executing " + recommender.getClass().getName()
+                    + " as recommender failed. Using fallback recommender. Reason:\n" + e.getMessage());
+
+            List<Long> result = fallbackrecommender.recommendProducts(userid, currentItems); // Appel du fallback recommender
+            return result; // Retourne le résultat du fallback
+        } catch (UnsupportedOperationException e) {
+            // Si l'algorithme n'est pas encore formé
+            LOG.error("Executing " + recommender.getClass().getName()
+                    + " threw an UnsupportedOperationException. The recommender was not finished with training.");
+            throw e; // Relance l'exception
+        } catch (Exception e) {
+            // Si une autre exception inattendue se produit
+            LOG.warn("Executing " + recommender.getClass().getName()
+                    + " threw an unexpected error. Using fallback recommender. Reason:\n" + e.getMessage());
+
+            List<Long> result = fallbackrecommender.recommendProducts(userid, currentItems); // Appel du fallback
+            return result; // Retourne le résultat du fallback
+        }
+    }*/
+
+
+    @Override
+    public List<Long> recommendProducts(Long userid, List<OrderItem> currentItems) throws UnsupportedOperationException {
+        boolean canUse;
+        
+        String methodName = new Object() {}.getClass().getEnclosingMethod().getName();
+        String className = new Object() {}.getClass().getEnclosingClass().getSimpleName();
+        String processingId = className+"."+methodName;
+          
+        
+        System.out.println("USER ID ========> " + userid);
+        
+        try {
+            canUse = getConsent(userid, processingId);
+
+        } catch (InterruptedException | IOException ex) {
+            LOG.trace("Executing " + recommender.getClass().getName()
+                    + " with getConsent result in an error. Reason:\n" + ex.getMessage());
+            return new ArrayList<>();
+        }
+
+        List<Long> result = new ArrayList<>();
+
+        try {
+            if (canUse) {
+                result = recommender.recommendProducts(userid, currentItems);
+            } else {
+                result = new ArrayList<>();
+            }
+        } catch (UseFallBackException e) {
+            // a UseFallBackException is usually ignored
+            LOG.trace("Executing " + recommender.getClass().getName()
+                    + " as recommender failed. Using fallback recommender. Reason:\n" + e.getMessage());
+            if (canUse) {
+                result = fallbackrecommender.recommendProducts(userid, currentItems);
+            } else {
+                result = new ArrayList<>();
+            }
+        } catch (UnsupportedOperationException e) {
+            // if algorithm is not yet trained, we throw the error
+            LOG.error("Executing " + recommender.getClass().getName()
+                    + " threw an UnsupportedOperationException. The recommender was not finished with training.");
+            throw e;
+        } catch (Exception e) {
+            // any other exception is just reported
+            LOG.warn("Executing " + recommender.getClass().getName()
+                    + " threw an unexpected error. Using fallback recommender. Reason:\n" + e.getMessage());
+            if (canUse) {
+                result = fallbackrecommender.recommendProducts(userid, currentItems);
+            } else {
+                result = new ArrayList<>();
+            }
+        }
+
+        return result;
+    }
+
+
+    
+    /**
+     * Returns the instance of this Singleton or creates a new one, if this is
+     * the first call of this method.
+     *
+     * @return The instance of this class.
+     */
+    public static synchronized RecommenderSelector getInstance() {
+        if (instance == null) {
+            instance = new RecommenderSelector();
+        }
+        return instance;
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see
+     * tools.descartes.teastore.recommender.IRecommender#train(java.util.List,
+     * java.util.List)
+     */
+    @Override
+    public void train(List<OrderItem> orderItems, List<Order> orders) {
+        recommender.train(orderItems, orders);
+        fallbackrecommender.train(orderItems, orders);
+    }
+
+}
+
