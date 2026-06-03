@@ -102,3 +102,4 @@ case-studies/TeaStore/db_teastore/
 # Leftover root-owned DB volume from old TeaStore location (can only be removed with sudo)
 TeaStore\ app/
 github_access_token.txt
+__pycache__/

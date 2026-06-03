@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from http import HTTPStatus
 from statistics import mean
 from typing import Any
 
@@ -52,8 +53,12 @@ from sporttracker.workout.fitness.FitnessWorkoutCategory import (
 from sporttracker.workout.fitness.FitnessWorkoutEntity import FitnessWorkout
 from sporttracker.workout.fitness.FitnessWorkoutService import FitnessWorkoutService
 from sporttracker.workout.fitness.FitnessWorkoutType import FitnessWorkoutType
+from sporttracker.priam.PriamBlueprint import get_consent
 
 LOGGER = logging.getLogger(Constants.APP_NAME)
+
+# Processing ID registered in PRIAM's Data & Processing service
+_HEART_RATE_PROCESSING_ID = 'heart-rate-tracking'
 
 API_VERSION = '2.1.0'
 
@@ -381,6 +386,13 @@ def construct_blueprint(
     @api.route('/workouts/distanceWorkout/<int:workout_id>/addHeartRateData', methods=['POST'])
     @login_required
     def addHeartRateDataDistanceWorkout(workout_id: int):
+        # ── PRIAM consent check (CEP) ──────────────────────────────────────
+        # Heart-rate data is biometric (GDPR Art. 9) — optional processing
+        # requiring explicit user consent.
+        if not get_consent(current_user.id, _HEART_RATE_PROCESSING_ID):
+            return jsonify({'error': 'Consent for heart-rate tracking has not been granted.'}), HTTPStatus.FORBIDDEN
+        # ──────────────────────────────────────────────────────────────────
+
         workout = distanceWorkoutService.get_distance_workout_by_id(workout_id, current_user.id)
 
         if workout is None:
@@ -397,6 +409,11 @@ def construct_blueprint(
     @api.route('/workouts/fitnessWorkout/<int:workout_id>/addHeartRateData', methods=['POST'])
     @login_required
     def addHeartRateDataFitnessWorkout(workout_id: int):
+        # ── PRIAM consent check (CEP) ──────────────────────────────────────
+        if not get_consent(current_user.id, _HEART_RATE_PROCESSING_ID):
+            return jsonify({'error': 'Consent for heart-rate tracking has not been granted.'}), HTTPStatus.FORBIDDEN
+        # ──────────────────────────────────────────────────────────────────
+
         workout = fitnessWorkoutService.get_fitness_workout_by_id(workout_id, current_user.id)
 
         if workout is None:

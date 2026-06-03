@@ -19,6 +19,7 @@ from flask_migrate import upgrade, stamp
 
 from sporttracker.api import Api
 from sporttracker.api.Api import API_BLUEPRINT_NAME
+from sporttracker.priam import PriamBlueprint
 from sporttracker.general import GeneralBlueprint
 from sporttracker.search import SearchBlueprint
 from sporttracker.map import MapBlueprint
@@ -364,6 +365,7 @@ class SportTracker(FlaskBaseApp):
         )
         app.register_blueprint(AnnualAchievementBlueprint.construct_blueprint())
         app.register_blueprint(NotificationBlueprint.construct_blueprint(app.config['NOTIFICATION_SERVICE']))
+        app.register_blueprint(PriamBlueprint.construct_blueprint())
 
     def __prepare_database(self, app):
         with app.app_context():
