@@ -10,6 +10,7 @@ from app.schemas.appointment import Appointment, AppointmentCreate, AppointmentU
 from app.schemas.user import User
 from app.db.session import get_db
 from app.core.notifications import send_appointment_notification
+from app.priam.consent import get_consent
 
 router = APIRouter()
 
@@ -92,12 +93,12 @@ def create_appointment(
     # Create the appointment
     appointment_obj = appointment.create(db, obj_in=appointment_in)
 
-    # Send notification in background
-    background_tasks.add_task(
-        send_appointment_notification,
-        appointment_id=appointment_obj.id,
-        notification_type="created"
-    )
+    if get_consent(appointment_in.patient_id, "appointment-notifications"):
+        background_tasks.add_task(
+            send_appointment_notification,
+            appointment_id=appointment_obj.id,
+            notification_type="created"
+        )
 
     return appointment_obj
 
@@ -181,12 +182,12 @@ def update_appointment(
     appointment_obj = appointment.update(
         db, db_obj=appointment_obj, obj_in=appointment_in)
 
-    # Send notification in background
-    background_tasks.add_task(
-        send_appointment_notification,
-        appointment_id=appointment_obj.id,
-        notification_type="updated"
-    )
+    if get_consent(appointment_obj.patient_id, "appointment-notifications"):
+        background_tasks.add_task(
+            send_appointment_notification,
+            appointment_id=appointment_obj.id,
+            notification_type="updated"
+        )
 
     return appointment_obj
 

@@ -24,6 +24,7 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
 
 import tools.descartes.teastore.recommender.algorithm.RecommenderSelector;
+import tools.descartes.teastore.recommender.priam.ConsentClient;
 import tools.descartes.teastore.entities.OrderItem;
 import tools.descartes.teastore.entities.Product;
 import tools.descartes.teastore.entities.User;
@@ -58,6 +59,9 @@ public class RecommendSingleEndpoint {
 	public Response recommend(OrderItem item, @QueryParam("uid") final Long uid) {
 		if (item == null) {
 			throw new NullPointerException("OrderItem must not be null.");
+		}
+		if (uid != null && !ConsentClient.getConsent(String.valueOf(uid), "purchase-recommendations")) {
+			return Response.ok().entity(new LinkedList<Long>()).build();
 		}
 		LinkedList<OrderItem> list = new LinkedList<OrderItem>();
 		list.add(item);
