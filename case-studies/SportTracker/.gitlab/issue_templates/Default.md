@@ -1,0 +1,12 @@
+- [ ] escape strings from user input in frontend
+- [ ] add user feedback for long-running actions
+- [ ] adapt/add selenium tests
+- [ ] update localization
+- [ ] update icon overview 
+- [ ] database migration
+- [ ] update API
+- [ ] add dummy data
+- [ ] update SettingsChecker
+- [ ] update README
+- [ ] update changelog
+- [ ] update screenshots

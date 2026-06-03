@@ -1,6 +1,12 @@
 package priam.right.services;
 
 
+import priam.right.dto.AccessRequestRequestDTO;
+import priam.right.dto.DataRequestRequestDTO;
+import priam.right.dto.DataRequestResponseDTO;
+import priam.right.dto.RequestAnswerRequestDTO;
+import priam.right.dto.RequestDetailDTO;
+import priam.right.dto.RequestListDTO;
 import priam.right.entities.DataRequestAnswer;
 import priam.right.enums.DataRequestType;
 

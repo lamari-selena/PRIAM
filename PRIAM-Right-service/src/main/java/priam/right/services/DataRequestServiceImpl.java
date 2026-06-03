@@ -3,14 +3,33 @@ package priam.right.services;
 import jdk.internal.org.jline.terminal.TerminalBuilder;
 import lombok.AllArgsConstructor;
 import net.bytebuddy.implementation.bind.MethodDelegationBinder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import priam.right.dto.AccessRequestRequestDTO;
+import priam.right.dto.DataRequestRequestDTO;
+import priam.right.dto.DataRequestResponseDTO;
+import priam.right.dto.DataSubjectCategoryResponseDTO;
+import priam.right.dto.ErasureRequestDTO;
+import priam.right.dto.NotificationRequestDTO;
+import priam.right.dto.RectificationRequestDTO;
+import priam.right.dto.RequestAnswerRequestDTO;
+import priam.right.dto.RequestDetailDTO;
+import priam.right.dto.RequestListDTO;
+import priam.right.entities.Data;
+import priam.right.entities.DataRequest;
+import priam.right.entities.DataRequestAnswer;
+import priam.right.entities.DataRequestData;
+import priam.right.entities.DataRequestPrimaryKey;
+import priam.right.entities.DataSubject;
 import priam.right.enums.AnswerType;
-import priam.right.enums.StatusDataRequestType;
 import priam.right.enums.DataRequestType;
+import priam.right.enums.StatusDataRequestType;
 import priam.right.mappers.DataRequestMapper;
-import priam.right.openfeign.DataRestClient;
 import priam.right.openfeign.ActorRestClient;
-
+import priam.right.openfeign.DataRestClient;
+import priam.right.openfeign.NotificationRestClient;
 import priam.right.openfeign.ProviderRestClient;
 import priam.right.repositories.DataRequestDataRepository;
 import priam.right.repositories.DataRequestPrimaryKeyRepository;
@@ -29,16 +48,52 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
-@AllArgsConstructor
 public class DataRequestServiceImpl implements DataRequestService {
-    private DataRequestRepository dataRequestRepository;
-    private DataRequestMapper dataRequestMapper;
-    private DataRestClient dataRestClient;
-    private ActorRestClient actorRestClient;
-    private ProviderRestClient providerRestClient;
-    private RequestAnswerRepository requestAnswerRepository;
-    private DataRequestDataRepository dataRequestDataRepository;
-    private DataRequestPrimaryKeyRepository dataRequestPrimaryKeyRepository;
+
+    private static final Logger log = LoggerFactory.getLogger(DataRequestServiceImpl.class);
+
+    private final DataRequestRepository dataRequestRepository;
+    private final DataRequestMapper dataRequestMapper;
+    private final DataRestClient dataRestClient;
+    private final ActorRestClient actorRestClient;
+    private final ProviderRestClient providerRestClient;
+    private final RequestAnswerRepository requestAnswerRepository;
+    private final DataRequestDataRepository dataRequestDataRepository;
+    private final DataRequestPrimaryKeyRepository dataRequestPrimaryKeyRepository;
+    private final NotificationRestClient notificationRestClient;
+
+    @Value("${notification.appOwnerEmail:owner@example.com}")
+    private String appOwnerEmail;
+
+    public DataRequestServiceImpl(DataRequestRepository dataRequestRepository,
+                                   DataRequestMapper dataRequestMapper,
+                                   DataRestClient dataRestClient,
+                                   ActorRestClient actorRestClient,
+                                   ProviderRestClient providerRestClient,
+                                   RequestAnswerRepository requestAnswerRepository,
+                                   DataRequestDataRepository dataRequestDataRepository,
+                                   DataRequestPrimaryKeyRepository dataRequestPrimaryKeyRepository,
+                                   NotificationRestClient notificationRestClient) {
+        this.dataRequestRepository = dataRequestRepository;
+        this.dataRequestMapper = dataRequestMapper;
+        this.dataRestClient = dataRestClient;
+        this.actorRestClient = actorRestClient;
+        this.providerRestClient = providerRestClient;
+        this.requestAnswerRepository = requestAnswerRepository;
+        this.dataRequestDataRepository = dataRequestDataRepository;
+        this.dataRequestPrimaryKeyRepository = dataRequestPrimaryKeyRepository;
+        this.notificationRestClient = notificationRestClient;
+    }
+
+    private void sendNotification(String dataSubjectEmail, String message,
+                                   String requestType, String status) {
+        try {
+            notificationRestClient.sendNotification(
+                    new NotificationRequestDTO(dataSubjectEmail, appOwnerEmail, message, requestType, status));
+        } catch (Exception e) {
+            log.warn("Could not send notification (request type={}): {}", requestType, e.getMessage());
+        }
+    }
 
     /**
      * Retrieve the values of attributes of a dataType by a DataSubject ID
@@ -92,6 +147,12 @@ public class DataRequestServiceImpl implements DataRequestService {
             dataRequestPrimaryKeyRepository.save(dataRequestPrimaryKey);
         });
 
+        // Notify the application owner of the new request
+        sendNotification("",
+                String.format("New %s request #%d submitted by subject ID %d.",
+                        dataRequestType, result.getDataRequestId(), dataRequestDTO.getDataSubjectId()),
+                dataRequestType.toString(), "NEW");
+
         // Response DTO
         DataRequestResponseDTO response = new DataRequestResponseDTO(result, datas, primaryKeys);
         return response;
@@ -127,6 +188,12 @@ public class DataRequestServiceImpl implements DataRequestService {
             Data data = dataRestClient.getDataById(dataId.getDataId());
             datas.add(data);
         });
+
+        // Notify the application owner of the new access request
+        sendNotification("",
+                String.format("New ACCESS request #%d submitted by subject ID %d.",
+                        result.getDataRequestId(), accessRequestRequestDTO.getDataSubjectId()),
+                DataRequestType.ACCESS.toString(), "NEW");
 
         // Response DTO
         DataRequestResponseDTO response = new DataRequestResponseDTO(result, datas, null);
@@ -265,8 +332,16 @@ public class DataRequestServiceImpl implements DataRequestService {
             }
         }
         requestAnswer.getDataRequest().setResponse(true);
-        // Save request answer
-        return requestAnswerRepository.save(requestAnswer);
+        DataRequestAnswer saved = requestAnswerRepository.save(requestAnswer);
+
+        // Notify the data subject that their request has been processed
+        DataSubject subject = actorRestClient.getDataSubject(dataRequest.getDataSubjectId());
+        sendNotification(subject.getIdRef(),
+                String.format("Your %s request #%d has been processed with decision: %s.",
+                        dataRequest.getDataRequestType(), dataRequest.getDataRequestId(), saved.getAnswer()),
+                dataRequest.getDataRequestType().toString(), saved.getAnswer().toString());
+
+        return saved;
     }
 
     /**

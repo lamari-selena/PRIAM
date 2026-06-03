@@ -1,0 +1,244 @@
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
+from pydantic import ConfigDict
+from sqlalchemy import func, extract
+
+from sporttracker.workout import WorkoutEntity
+from sporttracker.workout.heartRate.HeartRateService import HeartRateService
+
+if TYPE_CHECKING:
+    from sporttracker.notification.NotificationService import NotificationService
+from sporttracker import Constants
+from sporttracker.api.FormModels import FitnessWorkoutApiFormModel
+from sporttracker.db import db
+from sporttracker.monthGoal.MonthGoalService import MonthGoalService
+from sporttracker.user.ParticipantEntity import get_participants_by_ids
+from sporttracker.workout.WorkoutEntity import Workout, MonthDurationSum, get_duration_per_month_by_type
+from sporttracker.workout.WorkoutModel import BaseWorkoutFormModel
+from sporttracker.workout.WorkoutType import WorkoutType
+from sporttracker.workout.distance.DistanceWorkoutEntity import DistanceWorkout
+from sporttracker.workout.fitness.FitnessWorkoutCategory import (
+    FitnessWorkoutCategoryType,
+    update_workout_categories_by_workout_id,
+)
+from sporttracker.workout.fitness.FitnessWorkoutEntity import FitnessWorkout
+from sporttracker.workout.fitness.FitnessWorkoutType import FitnessWorkoutType
+
+LOGGER = logging.getLogger(Constants.APP_NAME)
+
+
+class FitnessWorkoutFormModel(BaseWorkoutFormModel):
+    fitness_workout_type: str
+    fitness_workout_categories: list[str] | str | None | list[FitnessWorkoutCategoryType] = None
+
+    model_config = ConfigDict(
+        extra='allow',
+    )
+
+
+class FitnessWorkoutService:
+    def __init__(self, notification_service: NotificationService) -> None:
+        self._notification_service = notification_service
+
+    def add_workout(
+        self,
+        form_model: FitnessWorkoutFormModel,
+        participant_ids: list[int],
+        fitness_workout_categories: list[FitnessWorkoutCategoryType],
+        user_id: int,
+    ) -> DistanceWorkout:
+        participants = get_participants_by_ids(participant_ids)
+
+        startTime = form_model.calculate_start_time()
+        workout = FitnessWorkout(
+            name=form_model.name,
+            type=WorkoutType(form_model.type),  # type: ignore[call-arg]
+            start_time=startTime,
+            duration=form_model.calculate_duration(),
+            average_heart_rate=form_model.average_heart_rate,
+            custom_fields=form_model.model_extra,
+            user_id=user_id,
+            participants=participants,
+            fitness_workout_type=FitnessWorkoutType(form_model.fitness_workout_type),  # type: ignore[call-arg]
+        )
+
+        previousLongestDuration = self.get_previous_longest_workout_duration(user_id, workout.type)
+        previousCompletedMonthGoals = MonthGoalService.get_goal_summaries_for_completed_goals(
+            startTime.year, startTime.month, [workout.type], user_id
+        )
+        previousBestMonthDuration = FitnessWorkoutService.get_best_month_duration(
+            user_id=user_id, workoutType=workout.type
+        )
+
+        db.session.add(workout)
+        db.session.commit()
+
+        update_workout_categories_by_workout_id(workout.id, fitness_workout_categories)
+
+        LOGGER.debug(f'Saved new fitness workout: {workout}')
+        self._notification_service.on_duration_workout_updated(
+            user_id, workout, previousLongestDuration, previousBestMonthDuration
+        )
+        self._notification_service.on_check_month_goals(user_id, workout, previousCompletedMonthGoals)
+        return workout
+
+    def add_workout_via_api(
+        self,
+        form_model: FitnessWorkoutApiFormModel,
+        fitness_workout_categories: list[FitnessWorkoutCategoryType],
+        user_id: int,
+    ) -> DistanceWorkout:
+        participants = get_participants_by_ids(form_model.participants)
+
+        startTime = form_model.calculate_start_time()
+        workout = FitnessWorkout(
+            name=form_model.name,
+            type=WorkoutType(form_model.workout_type),  # type: ignore[call-arg]
+            start_time=startTime,
+            duration=form_model.duration,
+            average_heart_rate=form_model.average_heart_rate,
+            custom_fields={} if form_model.custom_fields is None else form_model.custom_fields,
+            user_id=user_id,
+            participants=participants,
+            fitness_workout_type=FitnessWorkoutType(form_model.fitness_workout_type),  # type: ignore[call-arg]
+        )
+
+        previousLongestDuration = self.get_previous_longest_workout_duration(user_id, workout.type)
+        previousCompletedMonthGoals = MonthGoalService.get_goal_summaries_for_completed_goals(
+            startTime.year, startTime.month, [workout.type], user_id
+        )
+        previousBestMonthDuration = FitnessWorkoutService.get_best_month_duration(
+            user_id=user_id, workoutType=workout.type
+        )
+
+        db.session.add(workout)
+        db.session.commit()
+
+        update_workout_categories_by_workout_id(workout.id, fitness_workout_categories)
+
+        LOGGER.debug(f'Saved new fitness workout: {workout}')
+        self._notification_service.on_duration_workout_updated(
+            user_id, workout, previousLongestDuration, previousBestMonthDuration
+        )
+        self._notification_service.on_check_month_goals(user_id, workout, previousCompletedMonthGoals)
+        return workout
+
+    def delete_workout_by_id(self, workout_id: int, user_id: int) -> None:
+        workout = self.get_fitness_workout_by_id(workout_id, user_id)
+
+        if workout is None:
+            raise ValueError(f'No fitness workout with ID {workout_id} found')
+
+        db.session.delete(workout)
+        db.session.commit()
+
+        HeartRateService.delete_heart_rate_data(workout_id)
+
+        LOGGER.debug(f'Deleted fitness workout: {workout}')
+        self._notification_service.on_duration_workout_updated(user_id, workout, None, None)
+
+    def edit_workout(
+        self,
+        workout_id: int,
+        form_model: FitnessWorkoutFormModel,
+        participant_ids: list[int],
+        fitness_workout_categories: list[FitnessWorkoutCategoryType],
+        user_id: int,
+    ) -> DistanceWorkout:
+        workout = self.get_fitness_workout_by_id(workout_id, user_id)
+
+        if workout is None:
+            raise ValueError(f'No fitness workout with ID {workout_id} found')
+
+        startTime = form_model.calculate_start_time()
+
+        previousLongestDuration = self.get_previous_longest_workout_duration(user_id, workout.type)
+        previousCompletedMonthGoals = MonthGoalService.get_goal_summaries_for_completed_goals(
+            startTime.year, startTime.month, [workout.type], user_id
+        )
+        previousBestMonthDuration = FitnessWorkoutService.get_best_month_duration(
+            user_id=user_id, workoutType=workout.type
+        )
+
+        workout.name = form_model.name  # type: ignore[assignment]
+        workout.start_time = startTime  # type: ignore[assignment]
+        workout.duration = form_model.calculate_duration()  # type: ignore[assignment]
+        workout.average_heart_rate = form_model.average_heart_rate  # type: ignore[assignment]
+        workout.participants = get_participants_by_ids(participant_ids)
+        workout.fitness_workout_type = (
+            None if form_model.fitness_workout_type is None else FitnessWorkoutType(form_model.fitness_workout_type)  # type: ignore[call-arg]
+        )
+
+        workout.custom_fields = form_model.model_extra
+
+        update_workout_categories_by_workout_id(workout.id, fitness_workout_categories)
+
+        db.session.commit()
+
+        LOGGER.debug(f'Updated fitness workout: {workout}')
+        self._notification_service.on_duration_workout_updated(
+            user_id, workout, previousLongestDuration, previousBestMonthDuration
+        )
+        self._notification_service.on_check_month_goals(user_id, workout, previousCompletedMonthGoals)
+        return workout
+
+    @staticmethod
+    def get_fitness_workout_by_id(workout_id: int, user_id: int) -> FitnessWorkout | None:
+        return (
+            FitnessWorkout.query.filter(FitnessWorkout.user_id == user_id)
+            .filter(FitnessWorkout.id == workout_id)
+            .first()
+        )
+
+    @staticmethod
+    def get_previous_longest_workout_duration(user_id: int, workout_type: WorkoutType) -> int | None:
+        longestWorkout = (
+            Workout.query.filter(Workout.type == workout_type)
+            .filter(Workout.user_id == user_id)
+            .order_by(Workout.duration.desc())
+            .first()
+        )
+
+        if longestWorkout is None:
+            return None
+
+        return longestWorkout.duration
+
+    @staticmethod
+    def get_month_duration(user_id: int, workoutType: WorkoutType, year: int, month: int) -> int:
+        return (
+            FitnessWorkout.query.with_entities(func.sum(FitnessWorkout.duration))
+            .filter(FitnessWorkout.type == workoutType)
+            .filter(FitnessWorkout.user_id == user_id)
+            .filter(extract('year', FitnessWorkout.start_time) == year)  # type: ignore[attr-defined]
+            .filter(extract('month', FitnessWorkout.start_time) == month)  # type: ignore[attr-defined]
+            .scalar()
+            or 0
+        )
+
+    @staticmethod
+    def get_best_duration_months_by_type(user_id: int, workoutType: WorkoutType) -> list[MonthDurationSum]:
+        maxDate, minDate = WorkoutEntity.get_min_and_max_date(user_id, workoutType)
+
+        if minDate is None or maxDate is None:
+            return []
+
+        monthDurationSums = get_duration_per_month_by_type(workoutType, minDate.year, maxDate.year)
+        monthDurationSums = [month for month in monthDurationSums if month.durationSum > 0.0]
+
+        if not monthDurationSums:
+            return []
+
+        return sorted(monthDurationSums, key=lambda monthDistanceSum: monthDistanceSum.durationSum, reverse=True)
+
+    @staticmethod
+    def get_best_month_duration(user_id: int, workoutType: WorkoutType) -> int:
+        bestMonths = FitnessWorkoutService.get_best_duration_months_by_type(user_id, workoutType)
+
+        if not bestMonths:
+            return 0
+
+        return bestMonths[0].durationSum

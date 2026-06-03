@@ -1,0 +1,305 @@
+:root {
+    --color-background: #212121;
+}
+
+@font-face {
+    font-family: 'Material Symbols Outlined';
+    font-style: normal;
+    font-weight: 600;
+    src: url(/static/fonts/MaterialSymbolsOutlined.woff2) format('woff2');
+}
+
+.material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -moz-font-feature-settings: 'liga';
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.material-symbols-outlined.filled {
+    font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 48;
+}
+
+body {
+}
+
+.progress {
+    background-color: #AAAAAA;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+}
+
+#map {
+    height: 60vh;
+}
+
+.map-taller {
+    height: 85vh !important;
+}
+
+#map .leaflet-control-layers-inline .leaflet-control-layers-base span {
+    padding: 0.2rem;
+}
+
+/* smalled than xxl */
+@media (max-width: 1399.98px) {
+    .map-smaller {
+        height: 42vh !important;
+    }
+
+    .preview-image {
+        max-width: 90% !important;
+    }
+
+    .inline-summary {
+        display: none !important;
+    }
+}
+
+.svg-inline--fa.fa-fw {
+    width: 1em;
+}
+
+.bg-green {
+    background-color: #6BBDA5;
+}
+
+.text-green {
+    color: #6BBDA5;
+}
+
+.border-green {
+    border-color: #6BBDA5 !important;
+}
+
+.bg-purple {
+    background-color: #AB87FF;
+}
+
+.text-purple {
+    color: #AB87FF;
+}
+
+.border-purple {
+    border-color: #AB87FF !important;
+}
+
+.btn-outline-light.btn-outline-purple {
+    --bs-btn-color: #AB87FF;
+    --bs-btn-border-color: #AB87FF;
+    --bs-btn-hover-bg: #AB87FF;
+    --bs-btn-hover-border-color: #AB87FF;
+    --bs-btn-active-bg: #AB87FF;
+    --bs-btn-active-border-color: #AB87FF;
+    --bs-btn-disabled-color: #AB87FF;
+    --bs-btn-disabled-border-color: #AB87FF;
+}
+
+.bg-orange {
+    background-color: #FD7E14;
+}
+
+.text-orange {
+    color: #FD7E14;
+}
+
+.border-orange {
+    border-color: #FD7E14 !important;
+}
+
+.btn-orange {
+    --bs-btn-color: #000;
+    --bs-btn-bg: #FD7E14;
+    --bs-btn-border-color: #FD7E14;
+    --bs-btn-hover-color: #000;
+    --bs-btn-hover-bg: #E17214;
+    --bs-btn-hover-border-color: #FD7E14;
+    --bs-btn-focus-shadow-rgb: 253, 126, 20;
+    --bs-btn-active-color: #000;
+    --bs-btn-active-bg: #FD7E14;
+    --bs-btn-active-border-color: #E17214;
+    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color: #000;
+    --bs-btn-disabled-bg: #FD7E14;
+    --bs-btn-disabled-border-color: #FD7E14
+}
+
+.calendar-container {
+    max-width: 90%;
+    margin: auto;
+}
+
+.calendar-cell {
+    width: 1.7rem;
+    min-width: 1.7rem;
+}
+
+.btn-available-year {
+    color: white !important;
+    background-color: transparent !important;
+    border-color: var(--bs-secondary) !important;
+}
+
+
+.btn-check:checked + .btn-available-year {
+    color: white !important;
+    background-color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+}
+
+.no-margin-bottom {
+    margin-bottom: 0 !important;
+}
+
+.border-10 {
+    border-width: 10px !important;
+}
+
+.margin-maintenance {
+    margin-left: -10px;
+}
+
+.navbar-icon {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.navbar-icon-svg {
+    height: 1.25rem;
+    width: 1.25rem;
+}
+
+.headline-icon {
+    width: 3rem !important;
+    height: 3rem !important;
+}
+
+.headline-icon-svg {
+    width: 2.5rem;
+    height: 2.5rem;
+}
+
+.icon-svg-small {
+    height: 1.2rem;
+    width: 1.2rem;
+}
+
+.input-field-margin, .autocomplete-menu {
+    margin-left: 2.5rem;
+}
+
+.workout-type-icon-easter-egg.fs-1 {
+    height: 2.5rem;
+    width: 2.5rem;
+}
+
+.workout-type-icon-easter-egg.fs-2 {
+    height: 2rem;
+    width: 2rem;
+}
+
+.workout-type-icon-easter-egg.fs-3 {
+    height: 1.75rem;
+    width: 1.75rem;
+}
+
+.workout-type-icon-easter-egg.fs-4 {
+    height: 1.5rem;
+    width: 1.5rem;
+}
+
+.user-name-max-width {
+    max-width: 20ch;
+}
+
+.max-height-90 {
+    max-height: 90% !important;
+}
+
+.heatmap-legend-cell {
+    height: 2.5rem;
+    width: 3rem;
+}
+
+.tooltip-inner {
+    max-width: 250px;
+}
+
+.changelog-badge {
+    width: 5rem;
+}
+
+/* plotly hover labe: background for trace name */
+.plotly .hoverlayer .hovertext rect {
+    fill: black !important;
+}
+
+.plotly .bartext-outside {
+    fill: #FFFFFF !important;
+}
+
+#chartContainer {
+    height: 75vmin;
+}
+
+.button-long-distance-tour-unlink-planned-tour:hover {
+    cursor: pointer;
+}
+
+.min-width-0 {
+    min-width: 0;
+}
+
+select[disabled] {
+    opacity: 0.5;
+}
+
+#long-distance-stages {
+    max-height: 65vh;
+    overflow-y: scroll;
+}
+
+#long-distance-stages .stage {
+    scroll-margin-top: 75px;
+}
+
+.stage:hover {
+    cursor: pointer;
+}
+
+#dropdown-years-container {
+    max-height: 30vh;
+}
+
+.badge-debug:hover {
+    cursor: pointer;
+}
+
+.btn .badge {
+    position:relative;
+    top: 0;  /* override bootstrap -1px to avoid misalignment */
+}
+
+.font-extra-small {
+    font-size: 0.75rem;
+}
+
+.debug {
+    outline: 1px solid red !important;
+}
+
+.hidden {
+    display: none !important;
+}

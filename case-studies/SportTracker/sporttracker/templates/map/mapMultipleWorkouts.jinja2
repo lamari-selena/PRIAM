@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+
+{% macro toggleWorkoutsAndPlannedTours(margin) -%}
+    <div class="btn-group {{ margin }}" role="group">
+        <a href="{{ url_for('maps.showAllWorkoutsOnMap') }}" class="btn btn-sm btn-primary d-flex flex-row align-items-center justify-content-center {% if mapMode == 'plannedTours' %}btn-available-year{% endif %}">
+            <img class="icon-svg-small" src="{{ url_for('static', filename="images/icon_workouts.svg") }}"/>&nbsp;{{ gettext('Workouts') }}
+        </a>
+        <a href="{{ url_for('maps.showAllPlannedToursOnMap') }}" class="btn btn-sm btn-primary d-flex flex-row align-items-center justify-content-center {% if mapMode == 'workouts' %}btn-available-year{% endif %}">
+            <i class="fa-solid fa-lightbulb fa-fw fs-6"></i>&nbsp;{{ gettext('Planned Tours') }}
+        </a>
+    </div>
+{%- endmacro %}
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>SportTracker - {{ gettext('Map') }}</title>
+        {% import 'macros.jinja2' as macros with context %}
+        {{ macros.header() }}
+        <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename="css/leaflet-theme.css") }}"/>
+    </head>
+    <body class="bg-dark text-light">
+        {{ macros.navbar('map') }}
+
+        {% import 'plannedTour/plannedToursMacros.jinja2' as plannedTourMacros with context %}
+        {% import 'map/mapMacros.jinja2' as mapMacros with context %}
+        {{ mapMacros.mapLocale() }}
+
+        <div class="row mx-0 mt-3">
+            <div class="col col-12 mx-auto d-flex flex-row align-items-center justify-content-center">
+                {% if mapMode == 'plannedTours' %}
+                    {% set isAnyFilterActive=plannedTourFilterState.is_any_filter_active() %}
+                {% endif %}
+                {% if mapMode == 'workouts' %}
+                    {% set isAnyFilterActive=not quickFilterState.is_all_years_active() %}
+                {% endif %}
+
+                <div class="d-none d-lg-block">
+                    <button class="btn btn-sm {% if isAnyFilterActive %}btn-light{% else %}btn-outline-light{% endif %} d-inline-flex align-items-center me-5" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvas">
+                        <span class="material-symbols-outlined fs-5">filter_alt</span>
+                        <span class="ms-2">{{ gettext('Filter') }}</span>
+                    </button>
+                </div>
+
+                <div class="d-none d-lg-block">
+                    {{ toggleWorkoutsAndPlannedTours('me-5') }}
+                </div>
+                <div class="d-none d-lg-block">
+                    {{ macros.workout_type_quick_filter(url_for(redirectUrl), true) }}
+                </div>
+                {% if mapMode == 'plannedTours' and current_user.isTileHuntingActivated %}
+                    <div class="d-none d-lg-block">
+                        {{ mapMacros.tileHuntingMapSettings(tileHuntingFilterState,url_for('maps.showAllPlannedToursOnMap'), enableTilesOption=true, enableGridOption=true, enableNewTilesOption=false, enableMaxSquareOption=true, enablePlannedTileOption=true, forceButtonText=true, classes="ms-5") }}
+                    </div>
+                {% endif %}
+                <div class="d-lg-none">
+                    <div class="d-flex flex-column align-items-center justify-content-center ms-3">
+                        {{ toggleWorkoutsAndPlannedTours('mb-3') }}
+                        {{ macros.workout_type_quick_filter(url_for(redirectUrl), true) }}
+                        <div class="d-flex align-items-center justify-content-center mt-3 gap-3">
+                            <button class="btn btn-sm {% if isAnyFilterActive %}btn-outline-light{% else %}btn-light{% endif %} d-inline-flex align-items-center" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvas">
+                                <span class="material-symbols-outlined fs-5">filter_alt</span>
+                                <span class="ms-2">{{ gettext('Filter') }}</span>
+                            </button>
+                            {% if mapMode == 'plannedTours' and current_user.isTileHuntingActivated %}
+                                    {{ mapMacros.tileHuntingMapSettings(tileHuntingFilterState,url_for('maps.showAllPlannedToursOnMap'), enableTilesOption=true, enableGridOption=true, enableNewTilesOption=false, enableMaxSquareOption=true, enablePlannedTileOption=true, forceButtonText=true, classes="") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="map" class="leaflet-map text-dark mt-3"></div>
+
+        <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvas" data-bs-theme="dark">
+            <div class="offcanvas-header pb-2 bg-dark text-white">
+                <h5 class="offcanvas-title mx-auto d-flex flex-row align-items-center justify-content-center">
+                    <span class="material-symbols-outlined fs-5">filter_alt</span>
+                    <span>{{ gettext('Filter') }}</span>
+                </h5>
+                <button type="button" class="btn-close ms-0" data-bs-dismiss="offcanvas" data-bs-theme="dark"></button>
+            </div>
+            <div class="offcanvas-body pt-0 bg-dark text-white">
+                {% if mapMode == 'plannedTours' %}
+                    {{ plannedTourMacros.plannedTourFilter(plannedTourFilterState, redirectUrl=url_for('maps.showAllPlannedToursOnMap'), classes="") }}
+                {% endif %}
+                {% if mapMode == 'workouts' %}
+                    {{ mapMacros.mapYearFilter(quickFilterState, url_for(redirectUrl)) }}
+                {% endif %}
+            </div>
+        </div>
+
+        <script>
+            gpxInfo = {{ gpxInfo }};
+            mapMode = '{{ mapMode }}';
+            isTileHuntingOverlayEnabled = {% if mapMode == 'plannedTours' %}true{% else %}false{% endif %};
+            tileRenderUrl = '{{ tileRenderUrl }}';
+        </script>
+
+        {% import 'map/mapMacros.jinja2' as mapMacros with context %}
+        {{ mapMacros.mapLocale() }}
+
+        {{ macros.scripts() }}
+        <script defer src="{{ url_for('static', filename='js/mapCommon.js') }}" type="text/javascript"></script>
+        <script defer src="{{ url_for('static', filename='js/mapMultipleWorkouts.js') }}" type="text/javascript"></script>
+    </body>
+</html>
+

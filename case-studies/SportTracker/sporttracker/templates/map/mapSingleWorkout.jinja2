@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        {% if workout.share_code and workout.ownerName != current_user.username %}
+            <title>SportTracker - {{ gettext('Shared Workout') }}</title>
+            <meta name="description" content="{{ workout.ownerName|capitalize }} is sharing a workout with you!">
+        {% else %}
+            <title>SportTracker - {{ gettext('Workout') }}</title>
+        {% endif %}
+        {% import 'macros.jinja2' as macros with context %}
+        {{ macros.header() }}
+        <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename="css/leaflet-theme.css") }}"/>
+    </head>
+    <body class="bg-dark text-light">
+        {{ macros.navbar('workouts') }}
+
+        {% import 'workout/workoutMacros.jinja2' as workoutMacros with context %}
+        {% import 'map/mapMacros.jinja2' as mapMacros with context %}
+
+        <div class="d-flex flex-row align-items-center justify-content-center my-3 px-3">
+            <div class="d-flex align-items-center text-truncate justify-content-center">
+                {{ workoutMacros.workout_type_icon_small(workout.type, fontSize='fs-3') }}
+                <div class="fs-5 text-truncate planned-tour-name ps-3 pe-2">
+                    {{ workout.name | e}}
+                </div>
+            </div>
+
+            {% if editUrl and current_user.isTileHuntingActivated %}
+                {{ mapMacros.tileHuntingMapSettings(tileHuntingFilterState, url_for('maps.showSingleWorkout', workout_id=workout.id)) }}
+                <div class="fs-5 ms-3">{{ tileHuntingNumberOfNewVisitedTiles }} {{ gettext('new tiles') }}</div>
+            {% endif %}
+        </div>
+
+
+        <!-- small displays -->
+        <div class="card bg-body-secondary mx-3 mb-3 d-xl-none" data-bs-theme="dark">
+            {{ mapMacros.gpxDownloadButton(gettext('Workout'), gpxUrl, 'icon_workouts', true, editUrl=editUrl) }}
+
+            <div class="card-body ps-4 pt-4 pb-0">
+                <div class="row row-cols-4 gy-3 pb-3 overflow-x-auto">
+                    {% call mapMacros.meta_info_item_small('event', workout.type.text_color, gettext('Date')) %}
+                        {{ workout.start_time | format_date }}
+                    {% endcall %}
+                    {% call mapMacros.meta_info_item_small('route', workout.type.text_color, gettext('Distance')) %}
+                        {{ (workout.distance / 1000) | format_decimal(2) }} km
+                    {% endcall %}
+                    {% call mapMacros.meta_info_item_small('timer', workout.type.text_color, gettext('Duration'), 'material-symbols-outlined') %}
+                        {{ workout.duration | format_duration }} h
+                    {% endcall %}
+                    {% call mapMacros.meta_info_item_small('speed', workout.type.text_color, gettext('Speed'), 'material-symbols-outlined') %}
+                        {% if workout.type.render_speed_in_kph %}
+                            {% if workout.duration is none %}
+                                -
+                            {% else %}
+                                {{ (workout.distance / workout.duration * 3.6) | round(1) | format_decimal }} km/h
+                            {% endif %}
+                        {% else %}
+                            {% if workout.duration is none %}
+                                -
+                            {% else %}
+                                {{ workout | format_pace }} min
+                            {% endif %}
+                        {% endif %}
+                    {% endcall %}
+                </div>
+            </div>
+
+            <div class="card-footer text-body-secondary d-flex align-items-center justify-content-end">
+                <div class="d-flex align-items-center">
+                    <div class="material-symbols-outlined filled fs-4 me-1">person</div>
+                    <div>{{ workout.ownerName | e}}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mx-3 mx-xl-5">
+            <div class="col col-12 col-xl-10 p-0">
+                <div id="map" class="leaflet-map text-dark"></div>
+            </div>
+
+            <!-- large displays -->
+            <div class="col col-2 p-0 ps-4 d-none d-xl-block">
+                <div class="card bg-body-secondary" data-bs-theme="dark">
+                    {{ mapMacros.gpxDownloadButton(gettext('Workout'), gpxUrl, 'icon_workouts', true, 'flex-column flex-xxl-row', editUrl=editUrl) }}
+
+                    <div class="card-body ps-4 pt-4">
+                        {% call mapMacros.meta_info_item('event', workout.type.text_color, gettext('Date')) %}
+                            {{ workout.start_time | format_date }}
+                        {% endcall %}
+
+                        {% call mapMacros.meta_info_item('route', workout.type.text_color, gettext('Distance')) %}
+                            {{ (workout.distance / 1000) | format_decimal(2) }} km
+                        {% endcall %}
+
+                        {% call mapMacros.meta_info_item('timer', workout.type.text_color, gettext('Duration'), 'material-symbols-outlined') %}
+                            {{ workout.duration | format_duration }} h
+                        {% endcall %}
+
+                        {% call mapMacros.meta_info_item('speed', workout.type.text_color, gettext('Avg. Speed'), 'material-symbols-outlined') %}
+                            {% if workout.type.render_speed_in_kph %}
+                                {% if workout.duration is none %}
+                                    -
+                                {% else %}
+                                    {{ (workout.distance / workout.duration * 3.6) | round(1) | format_decimal }} km/h
+                                {% endif %}
+                            {% else %}
+                                {% if workout.duration is none %}
+                                    -
+                                {% else %}
+                                    {{ workout | format_pace }} min
+                                {% endif %}
+                            {% endif %}
+                        {% endcall %}
+
+                        {% call mapMacros.meta_info_item('favorite_border', workout.type.text_color, gettext('Avg. Heart Rate'), 'material-symbols-outlined') %}
+                            {% if workout.average_heart_rate is not none %}
+                                {{ workout.average_heart_rate }} bpm
+                            {% else %}
+                                -
+                            {% endif %}
+                        {% endcall %}
+
+                        {% call mapMacros.meta_info_item('expand', workout.type.text_color, gettext('Elevation Sum')) %}
+                            {% if workout.elevation_sum is not none %}
+                                {{ workout.elevation_sum }} m
+                            {% else %}
+                                -
+                            {% endif %}
+                        {% endcall %}
+
+                        {% call mapMacros.meta_info_item('vertical_align_bottom', workout.type.text_color, gettext('Min Height')) %}
+                            {% if workout.gpx_metadata is not none %}
+                                {{ (workout.gpx_metadata.elevation_minimum) }} m
+                            {% else %}
+                                -
+                            {% endif %}
+                        {% endcall %}
+
+                        {% call mapMacros.meta_info_item('vertical_align_top', workout.type.text_color, gettext('Max Height')) %}
+                            {% if workout.gpx_metadata is not none %}
+                                {{ (workout.gpx_metadata.elevation_maximum) }} m
+                            {% else %}
+                                -
+                            {% endif %}
+                        {% endcall %}
+                    </div>
+
+                    <div class="card-footer text-body-secondary d-flex align-items-center justify-content-end">
+                        <div class="d-flex align-items-center">
+                            <div class="material-symbols-outlined filled fs-4 me-1">person</div>
+                            <div>{{ workout.ownerName | e }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            gpxUrl = '{{ gpxUrl }}';
+            tileRenderUrl = '{{ tileRenderUrl }}';
+        </script>
+
+        {% import 'map/mapMacros.jinja2' as mapMacros with context %}
+        {{ mapMacros.mapLocale() }}
+
+        {{ macros.scripts() }}
+        <script defer src="{{ url_for('static', filename='js/mapCommon.js') }}" type="text/javascript"></script>
+        <script defer src="{{ url_for('static', filename='js/mapSingleWorkout.js') }}" type="text/javascript"></script>
+    </body>
+</html>

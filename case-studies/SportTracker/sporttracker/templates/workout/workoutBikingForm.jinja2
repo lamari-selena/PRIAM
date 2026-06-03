@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>SportTracker - {% if workout %}{{ gettext('Edit Biking Workout') }}{% else %}{{ gettext('New Biking Workout') }}{% endif %}</title>
+        {% import 'macros.jinja2' as macros with context %}
+        {{ macros.header() }}
+    </head>
+    <body class="bg-dark text-light">
+        {{ macros.navbar('workouts') }}
+
+        {% import 'workout/workoutMacros.jinja2' as workoutMacros with context %}
+
+        {{ macros.scripts() }}
+
+        <div id="main" class="center-align">
+            <section class="py-5 text-center container">
+                <div class="row">
+                    <div class="col col-12 mx-auto">
+                        {% if workout %}
+                            {% call macros.headline(gettext('Edit Biking Workout')) %}
+                                <span class="material-symbols-outlined filled fs-1">directions_bike</span>
+                            {% endcall %}
+                            <button type="button" class="btn btn-danger mt-3 d-flex align-items-center mx-auto button-automatically-disabled" data-bs-toggle="modal" data-bs-target="#delete-modal-0">
+                                <span class="material-symbols-outlined filled text-light">delete</span>&nbsp;{{ gettext('Delete') }}
+                            </button>
+
+                            {% call macros.deleteModal(gettext('Delete Workout?'), gettext('Do you really want to delete the workout "%(name)s" (ID: %(id)d)?', name=workout.name | e, id=workout_id)) %}
+                                {{ macros.buttonSubmitAutomaticallyDisabled(classes='btn btn-danger button-delete-modal-action', icon='delete', text=gettext('Delete'), disabledText=gettext('Deleting...'), dataUrl=url_for('distanceWorkouts.delete', workout_id=workout_id)) }}
+                            {% endcall %}
+                        {% else %}
+                            {% call macros.headline(gettext('New Biking Workout')) %}
+                                <span class="material-symbols-outlined filled fs-1">directions_bike</span>
+                            {% endcall %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row mt-5 text-start">
+                    <div class="col col-11 col-md-9 mx-auto">
+                        <form role="form" action="{% if workout %}{{ url_for('distanceWorkouts.editPost', workout_id=workout_id) }}{% else %}{{ url_for('distanceWorkouts.addPost') }}{% endif %}"
+                              method="post"
+                              onsubmit="return automaticallyDisableButtonsOnFormSubmit(this);"
+                              enctype=multipart/form-data>
+
+                            <input type="hidden" class="form-control" id="workout-type" name="type" value="BIKING">
+
+                            {{ workoutMacros.workout_form_name(workout, workoutNames) }}
+
+                            {{ workoutMacros.workout_form_start_time(workout, workoutFromFitImport) }}
+
+                            {{ workoutMacros.workout_form_distance(workout, workoutFromFitImport) }}
+
+                            {{ workoutMacros.workout_form_duration(workout, workoutFromFitImport) }}
+
+                            {{ workoutMacros.workout_form_average_heart_rate(workout, workoutFromFitImport) }}
+
+                            {{ workoutMacros.workout_form_elevation_sum(workout, workoutFromFitImport) }}
+
+                            {% for field in customFields %}
+                                {{ workoutMacros.workout_form_custom_field_input(field) }}
+                            {% endfor %}
+
+                            {{ workoutMacros.workout_form_participants(workout, participants) }}
+
+                            {{ workoutMacros.workout_form_gpx(workout, workoutFromFitImport, workout_id) }}
+
+                            {{ workoutMacros.form_linked_planned_tour(workout, plannedTours) }}
+
+                            {{ workoutMacros.form_share_link(workout, 'maps.showSharedSingleWorkout', 'distanceWorkouts.createShareCode')}}
+
+                            {{ macros.buttonSubmitAutomaticallyDisabled(classes='mt-5 input-field-margin', id='buttonSaveWorkout') }}
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <script>
+            Autocomplete.init('#workout-name', {
+                'fullWidth': true,
+                'highlightTyped': true,
+                'suggestionsThreshold': 2,
+            });
+        </script>
+    </body>
+</html>

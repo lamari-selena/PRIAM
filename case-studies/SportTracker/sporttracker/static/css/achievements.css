@@ -1,0 +1,49 @@
+.tile {
+    transform: rotateY(0);
+    transform-origin: center center;
+    position: relative;
+    z-index: 2;
+}
+
+.diamond {
+    width: 8rem;
+    height: 8rem;
+    border-radius: 0.5rem;
+    border: 0.75rem solid;
+    transform: translateY(25%) rotateZ(45deg);
+    transform-origin: center center;
+    transform-style: preserve-3d;
+}
+
+.diamond-small {
+    width: 5rem;
+    height: 5rem;
+    border-radius: 0.5rem;
+    border: 0.4rem solid;
+    transform: translateY(25%) rotateZ(45deg);
+    transform-origin: center center;
+    transform-style: preserve-3d;
+}
+
+.label {
+    transform: rotateZ(-45deg);
+    transform-style: preserve-3d;
+}
+
+.diamond .label .material-symbols-outlined,
+.diamond .label svg {
+    font-size: 4rem;
+}
+
+.diamond-small .label .material-symbols-outlined,
+.diamond-small .label svg {
+    font-size: 2rem;
+}
+
+.height-60 {
+    height: 60%;
+}
+
+.height-77 {
+    height: 77%;
+}

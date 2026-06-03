@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>SportTracker - {{ gettext('Charts') }}</title>
+        {% import 'macros.jinja2' as macros with context %}
+        {{ macros.header() }}
+    </head>
+    <body class="bg-dark text-light">
+        {{ macros.navbar('charts') }}
+        {% import 'workout/workoutMacros.jinja2' as workoutMacros with context %}
+
+        <div id="main" class="center-align">
+            <section class="py-5 text-center container">
+                <div class="row">
+                    <div class="col col-12 mx-auto">
+                        {% call macros.headline(gettext('Charts')) %}
+                            <span class="material-symbols-outlined filled fs-1">leaderboard</span>
+                        {% endcall %}
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col col-12 mx-auto">
+                        <h3>{{ gettext('Choose custom field') }}</h3>
+
+                        {% for workoutType, customFields in customFieldsByWorkoutType.items() %}
+                            <div class="row mt-5 mb-3">
+                                <div class="col col-12 mx-auto">
+                                    <h3 class="d-flex align-items-center justify-content-center">
+                                        {{ workoutMacros.workout_type_icon_small(workoutType, classes='me-3') }}
+                                        <span class="me-3">{{ workoutType.get_localized_name() }}</span>
+                                    </h3>
+                                </div>
+                            </div>
+
+                            {% for field in customFields %}
+                                <a href="{{ url_for('charts.chartDistancePerCustomField', workout_type=workoutType.name, custom_field_id=field.custom_field.id) }}" class="btn btn-primary">
+                                    <span class="fs-5 text-light">{{ field.custom_field.name | e }}</span>
+                                </a>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        {{ macros.scripts() }}
+    </body>
+</html>

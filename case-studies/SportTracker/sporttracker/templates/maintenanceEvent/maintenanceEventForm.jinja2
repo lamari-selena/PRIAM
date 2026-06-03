@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        {% set isEdit = false %}
+        {% if maintenanceEvent and maintenanceEvent.id is not none %}
+            {% set isEdit = true %}
+        {% endif %}
+
+        <meta charset="UTF-8">
+        <title>SportTracker - {% if isEdit %}{{ gettext('Edit Maintenance Event') }}{% else %}
+            {{ gettext('New Maintenance Event') }}{% endif %}</title>
+        {% import 'macros.jinja2' as macros with context %}
+        {{ macros.header() }}
+    </head>
+    <body class="bg-dark text-light">
+        {{ macros.navbar('maintenance') }}
+        {% import 'workout/workoutMacros.jinja2' as workoutMacros with context %}
+
+        <div id="main" class="center-align">
+            <section class="py-5 text-center container">
+                <div class="row">
+                    <div class="col col-12 mx-auto">
+                        {% if isEdit %}
+                            {% call macros.headline(gettext('Edit Maintenance Event')) %}
+                                <i class="fa-solid fa-wrench fa-fw fs-2"></i>
+                            {% endcall %}
+                            <button type="button" class="btn btn-danger mt-3 d-flex align-items-center mx-auto button-automatically-disabled" data-bs-toggle="modal" data-bs-target="#delete-modal-0">
+                                <span class="material-symbols-outlined filled text-light">delete</span>&nbsp;{{ gettext('Delete') }}
+                            </button>
+
+                            {% call macros.deleteModal(gettext('Delete Maintenance Event?'), gettext('Do you really want to delete this maintenance event?')) %}
+                                {{ macros.buttonSubmitAutomaticallyDisabled(classes='btn btn-danger button-delete-modal-action', icon='delete', text=gettext('Delete'), disabledText=gettext('Deleting...'), dataUrl=url_for('maintenanceEventInstances.delete', event_id=event_id)) }}
+                            {% endcall %}
+                        {% else %}
+                            {% call macros.headline(gettext('New Maintenance Event')) %}
+                                <i class="fa-solid fa-wrench fa-fw fs-2"></i>
+                            {% endcall %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row mt-5 text-start">
+                    <div class="col col-11 col-md-9 mx-auto">
+                        <form role="form" action="{% if isEdit %}{{ url_for('maintenanceEventInstances.editPost', event_id=event_id) }}{% else %}{{ url_for('maintenanceEventInstances.addPost', maintenance_id=maintenance.id) }}{% endif %}"
+                              onsubmit="return automaticallyDisableButtonsOnFormSubmit(this);"
+                              method="post">
+
+                            <div class="mb-5">
+                                <div class="d-flex align-items-center text-truncate justify-content-center">
+                                    {{ workoutMacros.workout_type_icon_small(maintenance.type, fontSize='fs-3') }}
+                                    <div class="fs-5 text-truncate planned-tour-name ps-3 pe-2">{{ maintenance.description | e }}</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="row">
+                                    <div class="col col-12 col-md-6">
+                                        <label for="maintenance-event-date" class="form-label input-field-margin">{{ gettext('Date') }}</label>
+                                        <div class="d-flex align-items-center">
+                                            <span class="material-symbols-outlined filled me-3">event</span>
+                                            <input type="date" class="form-control" id="maintenance-event-date" name="date"
+                                                   required="required" value="{% if maintenanceEvent %}{{ maintenanceEvent.date }}{% else %}{{ today }}{% endif %}">
+                                        </div>
+                                    </div>
+                                    <div class="col col-12 col-md-6 mt-3 mt-md-0">
+                                        <label for="maintenance-event-time" class="form-label input-field-margin">{{ gettext('Time') }}</label>
+                                        <div class="d-flex align-items-center">
+                                            <span class="material-symbols-outlined me-3">schedule</span>
+                                            <input type="time" class="form-control" id="maintenance-event-time" name="time"
+                                                   required="required" {% if maintenanceEvent %}value="{{ maintenanceEvent.time }}"{% endif %}>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{ macros.buttonSubmitAutomaticallyDisabled(classes='mt-5 input-field-margin', id='buttonSaveLongDistanceTour') }}
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        {{ macros.scripts() }}
+    </body>
+</html>

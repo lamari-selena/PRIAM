@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import priam.right.entities.DataRequest;
 import priam.right.enums.DataRequestType;
 
+import java.util.Date;
 import java.util.List;
 //@Repository
 public interface DataRequestRepository extends JpaRepository<DataRequest, Integer> {
@@ -16,4 +17,6 @@ public interface DataRequestRepository extends JpaRepository<DataRequest, Intege
     @Query(value = "SELECT * FROM data_request dr WHERE dr.data_request_type IN :types",
             nativeQuery = true)
     List<DataRequest> findByTypes(List<Integer> types);
+
+    List<DataRequest> findByResponseFalseAndDataRequestIssuedAtBefore(Date threshold);
 }

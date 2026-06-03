@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+
+{% macro materialize_icon(name, iconName, filled=false) -%}
+    <tr data-bs-container="body" data-bs-toggle="popover" data-bs-placement="right" data-bs-content="{{ iconName }}{% if outlined %} (outlined){% endif %}">
+        <td class="pe-5 fs-5">{{ name }}</td>
+        <td class="fs-4 icon d-flex align-items-center" data-icon="{{ iconName }}">
+            <span class="material-symbols-outlined {% if filled %} filled{% endif %}">{{ iconName }}</span>
+            <span class="count fs-5 ms-2">&nbsp;&nbsp;</span>
+        </td>
+    </tr>
+{%- endmacro %}
+
+{% macro fontawesome_icon(name, iconName) -%}
+    <tr data-bs-container="body" data-bs-toggle="popover" data-bs-placement="right" data-bs-content="{{ iconName }}">
+        <td class="pe-5 fs-5 text-primary">{{ name }}</td>
+        <td class="fs-4 icon d-flex align-items-center" data-icon="{{ iconName }}">
+            <i class="fa-solid {{ iconName }} fa-fw"></i>
+            <span class="count fs-5 ms-2">&nbsp;&nbsp;</span>
+        </td>
+    </tr>
+{%- endmacro %}
+
+{% macro easter_egg_icon(name, iconName) -%}
+    <tr data-bs-container="body" data-bs-toggle="popover" data-bs-placement="right" data-bs-content="{{ iconName }}">
+        <td class="pe-5 fs-5">{{ name }}</td>
+        <td class="fs-4 icon d-flex align-items-center" data-icon="{{ iconName }}">
+            <img src="{{ url_for('static', filename="images/easterEggs/" + iconName + ".svg") }}" style="height: 1.4rem; width: 1.4rem; filter: invert()"/>
+            <span class="count fs-5 ms-2">&nbsp;&nbsp;</span>
+        </td>
+    </tr>
+{%- endmacro %}
+
+{% macro svg_icon(name, iconName) -%}
+    <tr data-bs-container="body" data-bs-toggle="popover" data-bs-placement="right" data-bs-content="{{ iconName }}">
+        <td class="pe-5 fs-5">{{ name }}</td>
+        <td class="fs-4 icon d-flex align-items-center" data-icon="{{ iconName }}">
+            <img src="{{ url_for('static', filename="images/" + iconName + ".svg") }}" style="height: 1.4rem; width: 1.4rem;"/>
+            <span class="count fs-5 ms-2">&nbsp;&nbsp;</span>
+        </td>
+    </tr>
+{%- endmacro %}
+
+{% macro group(name) -%}
+    <div class="mb-5">
+        <h2>{{ name }}</h2>
+        <table>
+            {{ caller() }}
+        </table>
+    </div>
+{%- endmacro %}
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>SportTracker - {{ gettext('Icons') }}</title>
+        {% import 'macros.jinja2' as macros with context %}
+        {{ macros.header() }}
+        <style>
+            td {
+                padding-bottom: 0.5rem;
+            }
+
+            td:hover {
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body class="bg-dark text-light">
+        <div id="main" class="center-align">
+            <section class="py-5 d-flex justify-content-around">
+                <div class="d-flex flex-column justify-content-between">
+                    {% call group('workout types') %}
+                        {{ materialize_icon('biking', 'directions_bike') }}
+                        {{ materialize_icon('running', 'directions_run') }}
+                        {{ materialize_icon('hiking', 'hiking') }}
+                        {{ materialize_icon('fitness', 'fitness_center') }}
+                        {{ easter_egg_icon('biking easter egg', 'biking_easter_egg') }}
+                        {{ easter_egg_icon('running easter egg', 'running_easter_egg') }}
+                        {{ easter_egg_icon('hiking easter egg', 'hiking_easter_egg') }}
+                        {{ easter_egg_icon('fitness easter egg', 'fitness_easter_egg') }}
+                    {% endcall %}
+
+                    {% call group('workout properties') %}
+                        {{ materialize_icon('distance', 'route') }}
+                        {{ materialize_icon('duration', 'timer') }}
+                        {{ materialize_icon('speed', 'speed') }}
+                        {{ materialize_icon('average heart rate', 'favorite_border') }}
+                        {{ materialize_icon('elevation sum', 'expand') }}
+                        {{ materialize_icon('participants', 'group', true) }}
+                        {{ materialize_icon('heart rate chart', 'ecg', true) }}
+                    {% endcall %}
+
+                    {% call group('workout form') %}
+                        {{ materialize_icon('name', 'edit', true) }}
+                        {{ materialize_icon('date', 'event', true) }}
+                        {{ materialize_icon('start time', 'schedule') }}
+                        {{ materialize_icon('distance', 'route') }}
+                        {{ materialize_icon('duration', 'timer') }}
+                        {{ materialize_icon('average heart rate', 'favorite_border') }}
+                        {{ materialize_icon('elevation sum', 'expand') }}
+                        {{ materialize_icon('custom field', 'drive_file_rename_outline', true) }}
+                        {{ materialize_icon('participants', 'group', true) }}
+                        {{ materialize_icon('gpx track', 'location_on', true) }}
+                        {{ materialize_icon('workout type', 'fitness_center') }}
+                        {{ materialize_icon('workout category type', 'label') }}
+                    {% endcall %}
+
+                    {% call group('shared links') %}
+                        {{ materialize_icon('shared link', 'link') }}
+                        {{ materialize_icon('create', 'add_link') }}
+                        {{ materialize_icon('copy', 'content_copy') }}
+                        {{ materialize_icon('delete', 'delete', true) }}
+                    {% endcall %}
+
+                    {% call group('custom field form') %}
+                        {{ materialize_icon('name', 'edit', true) }}
+                        {{ materialize_icon('type', 'list') }}
+                        {{ materialize_icon('is required', 'question_mark') }}
+                    {% endcall %}
+                </div>
+
+                <div class="d-flex flex-column justify-content-between">
+                    {% call group('gpx tracks') %}
+                        {{ materialize_icon('open map', 'map', true) }}
+                        {{ materialize_icon('download map', 'download') }}
+                        {{ materialize_icon('delete', 'delete', true) }}
+                        {{ materialize_icon('open editor', 'open_in_new') }}
+                    {% endcall %}
+
+                    {% call group('month goals') %}
+                        {{ materialize_icon('month goal distance', 'route') }}
+                        {{ materialize_icon('month goal count', 'format_list_numbered') }}
+                        {{ materialize_icon('month goal duration', 'timer') }}
+                    {% endcall %}
+
+                    {% call group('month goal form') %}
+                        {{ materialize_icon('workout type', 'stars', true) }}
+                        {{ materialize_icon('year', 'calendar_today', true) }}
+                        {{ materialize_icon('minimum distance', 'route') }}
+                        {{ materialize_icon('perfect distance', 'route') }}
+                        {{ materialize_icon('minimum number', 'format_list_numbered') }}
+                        {{ materialize_icon('perfect number', 'format_list_numbered') }}
+                    {% endcall %}
+
+                    {% call group('user form') %}
+                        {{ materialize_icon('name', 'person', true) }}
+                        {{ materialize_icon('password', 'vpn_key', true) }}
+                    {% endcall %}
+
+                    {% call group('charts') %}
+                        {{ materialize_icon('bar chart', 'bar_chart', true) }}
+                        {{ materialize_icon('pie chart', 'pie_chart', true) }}
+                        {{ materialize_icon('calendar chart', 'calendar_month', true) }}
+                        {{ materialize_icon('heatmap', 'background_grid_small') }}
+                        {{ materialize_icon('line chart', 'show_chart') }}
+                    {% endcall %}
+
+                    {% call group('participant form') %}
+                        {{ materialize_icon('name', 'edit', true) }}
+                    {% endcall %}
+
+                    {% call group('annual statistics') %}
+                        {{ materialize_icon('annual statistics trend up', 'trending_up') }}
+                        {{ materialize_icon('annual statistics trend down', 'trending_down') }}
+                        {{ materialize_icon('annual statistics show details down', 'query_stats') }}
+                    {% endcall %}
+
+                    {% call group('tile hunting settings') %}
+                        {{ materialize_icon('show visited tiles', 'explore') }}
+                        {{ materialize_icon('show grid', 'window') }}
+                        {{ materialize_icon('show only new', 'more_time') }}
+                        {{ materialize_icon('show max square', 'arrows_output') }}
+                    {% endcall %}
+                </div>
+
+                <div class="d-flex flex-column justify-content-between">
+                    {% call group('maintenance form') %}
+                        {{ fontawesome_icon('maintenance', 'fa-wrench') }}
+                        {{ materialize_icon('workout type', 'stars', true) }}
+                        {{ materialize_icon('time', 'schedule') }}
+                        {{ materialize_icon('description', 'article', true) }}
+                        {{ materialize_icon('reminder', 'notifications', true) }}
+                        {{ materialize_icon('warning', 'warning', true) }}
+                    {% endcall %}
+
+                    {% call group('planned tour travel types') %}
+                        {{ materialize_icon('none', 'home', true) }}
+                        {{ materialize_icon('by car', 'directions_car', true) }}
+                        {{ materialize_icon('by train', 'train', true) }}
+                    {% endcall %}
+
+                    {% call group('planned tour direction types') %}
+                        {{ materialize_icon('roundtrip', 'refresh') }}
+                        {{ materialize_icon('single', 'turn_sharp_right') }}
+                        {{ materialize_icon('return', 'sync_alt') }}
+                    {% endcall %}
+
+                    {% call group('planned tour form') %}
+                        {{ fontawesome_icon('planned tours', 'fa-lightbulb') }}
+                        {{ materialize_icon('workout type', 'stars', true) }}
+                        {{ materialize_icon('name', 'edit', true) }}
+                        {{ materialize_icon('gpx track', 'location_on', true) }}
+                        {{ materialize_icon('share', 'share', true) }}
+                        {{ materialize_icon('arrival method', 'arrow_forward') }}
+                        {{ materialize_icon('departure method', 'arrow_back') }}
+                        {{ materialize_icon('direction', 'directions', true) }}
+                    {% endcall %}
+
+                    {% call group('planned tour map') %}
+                        {{ materialize_icon('min height', 'vertical_align_bottom') }}
+                        {{ materialize_icon('max height', 'vertical_align_top') }}
+                        {{ materialize_icon('uphill', 'arrow_upward') }}
+                        {{ materialize_icon('downhill', 'arrow_downward') }}
+                    {% endcall %}
+
+                    {% call group('achievements') %}
+                        {{ materialize_icon('achievement streak', 'sports_score') }}
+                        {{ materialize_icon('achievement longest workout', 'route') }}
+                        {{ materialize_icon('achievement total distance', 'map') }}
+                        {{ materialize_icon('achievement best month', 'calendar_month', true) }}
+                    {% endcall %}
+
+                    {% call group('long-distance tours') %}
+                        {{ materialize_icon('stage completed', 'check_circle', true) }}
+                    {% endcall %}
+
+                    {% call group('notification types') %}
+                        {{ fontawesome_icon('maintenance reminder', 'fa-wrench') }}
+                        {{ fontawesome_icon('planned tours', 'fa-lightbulb') }}
+                        {{ materialize_icon('longest workout / best month', 'trophy', true) }}
+                        {{ materialize_icon('month goals', 'flag', true) }}
+                        {{ materialize_icon('annual achievements reminder', 'info', false) }}
+                    {% endcall %}
+                </div>
+
+                <div class="d-flex flex-column justify-content-between">
+                    {% call group('settings') %}
+                        {{ materialize_icon('settings', 'settings', true) }}
+                        {{ materialize_icon('password', 'vpn_key', true) }}
+                        {{ materialize_icon('language', 'translate') }}
+                        {{ materialize_icon('link', 'link') }}
+                        {{ materialize_icon('copy', 'content_copy') }}
+                        {{ materialize_icon('info', 'info') }}
+                        {{ materialize_icon('maintenance reminder notifications', 'notifications') }}
+                        {{ materialize_icon('ntfy settings url', 'travel_explore') }}
+                        {{ materialize_icon('ntfy settings topic', 'sell') }}
+                        {{ materialize_icon('ntfy settings username', 'person') }}
+                        {{ materialize_icon('ntfy settings password', 'vpn_key', true) }}
+                    {% endcall %}
+
+                    {% call group('workout type') %}
+                        {{ materialize_icon('duration', 'update') }}
+                        {{ materialize_icon('repetition', 'repeat') }}
+                    {% endcall %}
+
+                    {% call group('workout category type') %}
+                        {{ materialize_icon('arms', 'humerus_alt') }}
+                        {{ materialize_icon('legs', 'femur_alt') }}
+                        {{ materialize_icon('core', 'adjust') }}
+                        {{ materialize_icon('yoga', 'self_improvement') }}
+                    {% endcall %}
+
+                    {% call group('misc') %}
+                        {{ fontawesome_icon('button today', 'fa-calendar-day') }}
+                        {{ fontawesome_icon('button year/month chooser', 'fa-calendar-days') }}
+                        {{ fontawesome_icon('search', 'fa-magnifying-glass') }}
+                        {{ materialize_icon('save', 'save', true) }}
+                        {{ materialize_icon('delete', 'delete', true) }}
+                        {{ materialize_icon('show all', 'keyboard_arrow_down') }}
+                        {{ materialize_icon('logout', 'logout') }}
+                        {{ materialize_icon('import from FIT file', 'upload_file') }}
+                        {{ materialize_icon('filter', 'filter_alt') }}
+                        {{ materialize_icon('close', 'close') }}
+                    {% endcall %}
+
+                    {% call group('navbar/headlines') %}
+                        {{ svg_icon('workouts', 'icon_workouts') }}
+                        {{ materialize_icon('goals', 'flag', true) }}
+                        {{ materialize_icon('analytics', 'leaderboard', true) }}
+                        {{ materialize_icon('charts', 'leaderboard', true) }}
+                        {{ materialize_icon('achievements', 'emoji_events', true) }}
+                        {{ materialize_icon('annual statistics', 'stacked_line_chart') }}
+                        {{ materialize_icon('calendar chart', 'calendar_month', true) }}
+                        {{ materialize_icon('map', 'map', true) }}
+                        {{ fontawesome_icon('maintenance', 'fa-wrench') }}
+                        {{ fontawesome_icon('planned tours', 'fa-lightbulb') }}
+                        {{ materialize_icon('long-distance tours', 'laps') }}
+                        {{ materialize_icon('more', 'format_list_bulleted') }}
+                        {{ materialize_icon('about', 'info') }}
+                        {{ materialize_icon('tile hunting', 'explore') }}
+                        {{ materialize_icon('profile', 'person', true) }}
+                        {{ materialize_icon('settings', 'settings', true) }}
+                        {{ materialize_icon('users', 'groups', true) }}
+                        {{ materialize_icon('custom fields', 'drive_file_rename_outline', true) }}
+                    {% endcall %}
+                </div>
+            </section>
+        </div>
+        {{ macros.scripts() }}
+
+        <script>
+            const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]')
+            const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl, {
+                container: 'body'
+            }));
+
+            const icons = document.querySelectorAll('.icon');
+            for(let i = 0; i < icons.length; i++)
+            {
+                let icon = icons[i];
+                icon.addEventListener('mouseover', function()
+                {
+                    let iconName = icon.dataset.icon;
+                    let matchingIcons = document.querySelectorAll('.icon[data-icon="' + iconName + '"');
+                    icon.querySelector('.count').innerHTML = '' + matchingIcons.length + 'x';
+
+                    for(let j = 0; j < matchingIcons.length; j++)
+                    {
+                        matchingIcons[j].classList.toggle('text-danger', true)
+                    }
+                });
+                icon.addEventListener('mouseout', function()
+                {
+                    for(let j = 0; j < icons.length; j++)
+                    {
+                        icons[j].classList.toggle('text-danger', false)
+                        icons[j].querySelector('.count').innerHTML = '&nbsp;&nbsp;';
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>
+

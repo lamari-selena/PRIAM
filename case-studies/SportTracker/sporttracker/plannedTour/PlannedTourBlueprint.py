@@ -1,0 +1,241 @@
+import logging
+import uuid
+from typing import Any
+
+from flask import Blueprint, render_template, redirect, url_for, abort, request
+from flask_login import login_required, current_user
+from flask_pydantic import validate
+
+from sporttracker import Constants
+from sporttracker.gpx.GpxService import GpxService
+from sporttracker.longDistanceTour.LongDistanceTourEntity import (
+    LongDistanceTourPlannedTourAssociation,
+)
+from sporttracker.plannedTour.TravelDirection import TravelDirection
+from sporttracker.plannedTour.TravelType import TravelType
+from sporttracker.user.UserEntity import (
+    User,
+    get_all_users_except_self_and_admin,
+    get_user_by_id,
+)
+from sporttracker.workout.WorkoutType import WorkoutType
+from sporttracker.db import db
+from sporttracker.plannedTour.PlannedTourFilterStateEntity import get_planned_tour_filter_state_by_user
+from sporttracker.quickFilter.QuickFilterStateEntity import get_quick_filter_state_by_user
+from sporttracker.longDistanceTour.LongDistanceTourService import LongDistanceTourService
+from sporttracker.plannedTour.PlannedTourService import (
+    PlannedTourFormModel,
+    PlannedTourEditFormModel,
+    PlannedTourService,
+    PlannedTourModel,
+    SharedUserModel,
+)
+
+LOGGER = logging.getLogger(Constants.APP_NAME)
+
+
+def construct_blueprint(
+    gpxService: GpxService,
+    gpxPreviewImageSettings: dict[str, Any],
+    plannedTourService: PlannedTourService,
+) -> Blueprint:
+    plannedTours = Blueprint('plannedTours', __name__, static_folder='static', url_prefix='/plannedTours')
+
+    @plannedTours.route('/')
+    @login_required
+    def listPlannedTours():
+        quickFilterState = get_quick_filter_state_by_user(current_user.id)
+        plannedTourFilterState = get_planned_tour_filter_state_by_user(current_user.id)
+
+        tours = plannedTourService.get_planned_tours_filtered(
+            quickFilterState.get_active_distance_workout_types(), plannedTourFilterState
+        )
+
+        plannedTourList: list[PlannedTourModel] = []
+        for tour in tours:
+            plannedTourList.append(PlannedTourModel.create_from_tour(tour, True))
+
+        return render_template(
+            'plannedTour/plannedTours.jinja2',
+            plannedTours=plannedTourList,
+            quickFilterState=quickFilterState,
+            isGpxPreviewImagesEnabled=gpxPreviewImageSettings['enabled'],
+            plannedTourFilterState=plannedTourFilterState,
+            totalNumberOfPlannedTours=len(
+                plannedTourService.get_planned_tours(WorkoutType.get_distance_workout_types())
+            ),
+        )
+
+    @plannedTours.route('/add')
+    @login_required
+    def add():
+        return render_template(
+            'plannedTour/plannedTourForm.jinja2',
+            users=__get_user_models(get_all_users_except_self_and_admin()),
+        )
+
+    @plannedTours.route('/post', methods=['POST'])
+    @login_required
+    @validate()
+    def addPost(form: PlannedTourFormModel):
+        shared_user_ids = [int(item) for item in request.form.getlist('sharedUsers')]
+
+        planned_tour = plannedTourService.add_planned_tour(
+            form_model=form,
+            files=request.files,
+            shared_user_ids=shared_user_ids,
+            user_id=current_user.id,
+        )
+
+        return redirect(url_for('maps.showPlannedTour', tour_id=planned_tour.id))
+
+    @plannedTours.route('/edit/<int:tour_id>')
+    @login_required
+    def edit(tour_id: int):
+        plannedTour = plannedTourService.get_planned_tour_by_id(tour_id)
+
+        if plannedTour is None:
+            abort(404)
+
+        gpxFileName = None
+        gpxMetadata = plannedTour.get_gpx_metadata()
+        if gpxMetadata is not None:
+            gpxFileName = gpxMetadata.gpx_file_name
+
+        tourModel = PlannedTourEditFormModel(
+            name=plannedTour.name,  # type: ignore[arg-type]
+            type=plannedTour.type,
+            arrivalMethod=plannedTour.arrival_method,
+            departureMethod=plannedTour.departure_method,
+            direction=plannedTour.direction,
+            ownerId=str(plannedTour.user_id),
+            ownerName=get_user_by_id(plannedTour.user_id).username,
+            sharedUsers=[str(user.id) for user in plannedTour.shared_users],
+            share_code=plannedTour.share_code,
+            gpxFileName=gpxFileName,
+            hasFitFile=gpxService.has_fit_file(gpxFileName),
+        )
+
+        longDistanceTours = LongDistanceTourPlannedTourAssociation.query.filter(
+            LongDistanceTourPlannedTourAssociation.planned_tour_id == tour_id
+        ).all()
+
+        userIdsForSharedLongDistanceTour = set()
+        for longDistanceTourAssociation in longDistanceTours:
+            longDistanceTour = LongDistanceTourService.get_long_distance_tour_by_id(
+                longDistanceTourAssociation.long_distance_tour_id
+            )
+            if longDistanceTour is None:
+                continue
+
+            for user in longDistanceTour.shared_users:
+                userIdsForSharedLongDistanceTour.add(user.id)
+
+        return render_template(
+            'plannedTour/plannedTourForm.jinja2',
+            plannedTour=tourModel,
+            tour_id=tour_id,
+            users=__get_user_models(get_all_users_except_self_and_admin()),
+            userIdsForSharedLongDistanceTour=list(userIdsForSharedLongDistanceTour),
+        )
+
+    @plannedTours.route('/edit/<int:tour_id>', methods=['POST'])
+    @login_required
+    @validate()
+    def editPost(tour_id: int, form: PlannedTourFormModel):
+        try:
+            shared_user_ids = [int(item) for item in request.form.getlist('sharedUsers')]
+
+            plannedTourService.edit_planned_tour(
+                tour_id=tour_id,
+                form_model=form,
+                files=request.files,
+                shared_user_ids=shared_user_ids,
+                user_id=current_user.id,
+            )
+
+            return redirect(url_for('maps.showPlannedTour', tour_id=tour_id))
+        except ValueError:
+            abort(404)
+
+    @plannedTours.route('/delete/<int:tour_id>')
+    @login_required
+    def delete(tour_id: int):
+        try:
+            plannedTourService.delete_planned_tour_by_id(tour_id, current_user.id)
+            return redirect(url_for('plannedTours.listPlannedTours'))
+        except ValueError:
+            abort(404)
+
+    @plannedTours.route('/createShareCode')
+    @login_required
+    def createShareCode():
+        shareCode = uuid.uuid4().hex
+        return {
+            'url': url_for('maps.showSharedPlannedTour', shareCode=shareCode, _external=True),
+            'shareCode': shareCode,
+        }
+
+    @plannedTours.route('/applyFilter', methods=['POST'])
+    @login_required
+    def applyFilter():
+        selectedArrivalMethods = [
+            TravelType(value)  # type: ignore[call-arg]
+            for key, value in request.form.items()
+            if key.startswith('plannedTourFilterArrivalMethod')
+        ]
+        arrivalMethods = {t: t in selectedArrivalMethods for t in TravelType}
+
+        selectedDepartureMethods = [
+            TravelType(value)  # type: ignore[call-arg]
+            for key, value in request.form.items()
+            if key.startswith('plannedTourFilterDepartureMethod')
+        ]
+        departureMethods = {t: t in selectedDepartureMethods for t in TravelType}
+
+        selectedDirections = [
+            TravelDirection(value)  # type: ignore[call-arg]
+            for key, value in request.form.items()
+            if key.startswith('plannedTourFilterDirection')
+        ]
+        directions = {t: t in selectedDirections for t in TravelDirection}
+
+        minimumDistanceValue = request.form.get('plannedTourFilterDistanceMin', None)
+        minimumDistance = int(minimumDistanceValue) * 1000 if minimumDistanceValue else None
+
+        maximumDistanceValue = request.form.get('plannedTourFilterDistanceMax', None)
+        maximumDistance = int(maximumDistanceValue) * 1000 if maximumDistanceValue else None
+
+        plannedTourFilterState = get_planned_tour_filter_state_by_user(current_user.id)
+        plannedTourFilterState.update(
+            request.form.get('plannedTourFilterStatusDone', 'off').strip().lower() == 'on',
+            request.form.get('plannedTourFilterStatusTodo', 'off').strip().lower() == 'on',
+            arrivalMethods,
+            departureMethods,
+            directions,
+            request.form.get('plannedTourFilterName', None),
+            minimumDistance,
+            maximumDistance,
+            request.form.get('plannedTourFilterLongDistanceToursInclude', 'off').strip().lower() == 'on',
+            request.form.get('plannedTourFilterLongDistanceToursExclude', 'off').strip().lower() == 'on',
+        )
+        db.session.commit()
+
+        return redirect(request.form.get('redirectUrl', url_for('plannedTours.listPlannedTours')))
+
+    @plannedTours.route('/resetFilter')
+    @login_required
+    def resetFilter():
+        plannedTourFilterState = get_planned_tour_filter_state_by_user(current_user.id)
+        plannedTourFilterState.reset()
+        db.session.commit()
+        return redirect(request.args.get('redirectUrl', url_for('plannedTours.listPlannedTours')))
+
+    return plannedTours
+
+
+def __get_user_models(users: list[User]) -> list[SharedUserModel]:
+    sharedUserModels = []
+    for user in users:
+        sharedUserModels.append(SharedUserModel(user.id, user.username))
+    return sharedUserModels
