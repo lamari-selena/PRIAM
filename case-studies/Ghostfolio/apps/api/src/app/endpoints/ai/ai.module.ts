@@ -21,6 +21,7 @@ import { PropertyModule } from '@ghostfolio/api/services/property/property.modul
 import { PortfolioSnapshotQueueModule } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.module';
 import { SymbolProfileModule } from '@ghostfolio/api/services/symbol-profile/symbol-profile.module';
 
+import { PriamModule } from '@ghostfolio/api/app/priam/priam.module';
 import { Module } from '@nestjs/common';
 
 import { AiController } from './ai.controller';
@@ -31,6 +32,7 @@ import { AiService } from './ai.service';
   exports: [AiService],
   imports: [
     ActivitiesModule,
+    PriamModule,
     ApiModule,
     BenchmarkModule,
     ConfigurationModule,
