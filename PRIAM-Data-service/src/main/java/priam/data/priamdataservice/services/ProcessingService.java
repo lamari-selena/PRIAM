@@ -2,6 +2,11 @@ package priam.data.priamdataservice.services;
 
 import org.springframework.stereotype.Service;
 
+import priam.data.priamdataservice.dto.DataResponseDTO;
+import priam.data.priamdataservice.dto.DataSubjectResponseDTO;
+import priam.data.priamdataservice.dto.ProcessingPersonalDataDTO;
+import priam.data.priamdataservice.dto.ProcessingRequestDTO;
+import priam.data.priamdataservice.dto.ProcessingResponseDTO;
 import priam.data.priamdataservice.entities.DataUsage;
 import priam.data.priamdataservice.entities.Processing;
 import priam.data.priamdataservice.mappers.ProcessingMapper;

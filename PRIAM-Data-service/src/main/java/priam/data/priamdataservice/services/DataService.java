@@ -2,6 +2,12 @@ package priam.data.priamdataservice.services;
 
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import priam.data.priamdataservice.dto.DataRequestDTO;
+import priam.data.priamdataservice.dto.DataResponseDTO;
+import priam.data.priamdataservice.dto.DataSubjectResponseDTO;
+import priam.data.priamdataservice.dto.DataTypeResponseDTO;
+import priam.data.priamdataservice.dto.ProcessedIndirectAndProducedPersonalDataDTO;
+import priam.data.priamdataservice.dto.ProcessedPersonalDataDTO;
 import priam.data.priamdataservice.dto.transfer.DataListTransferDTO;
 import priam.data.priamdataservice.dto.transfer.SecondaryActorCategoryDTO;
 import priam.data.priamdataservice.entities.DataSubjectCategory;

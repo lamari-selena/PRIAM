@@ -1,5 +1,9 @@
 package priam.data.priamdataservice.services;
 
+import priam.data.priamdataservice.dto.transfer.PersonalDataTransferDTO;
+import priam.data.priamdataservice.dto.transfer.SecondaryActorTransferDTO;
+import priam.data.priamdataservice.dto.transfer.DataTransferDTO;
+
 public interface TransferServiceInterface {
     /**
      * Save a new Transfer

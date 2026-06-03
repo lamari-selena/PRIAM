@@ -5,6 +5,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import priam.data.priamdataservice.dto.transfer.DataTransferDTO;
+import priam.data.priamdataservice.dto.transfer.PersonalDataTransferDTO;
+import priam.data.priamdataservice.dto.transfer.SecondaryActorTransferDTO;
 import priam.data.priamdataservice.services.TransferService;
 
 @RestController
