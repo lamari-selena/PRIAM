@@ -4,6 +4,7 @@ from fastapi.openapi.utils import get_openapi
 from sqlalchemy.orm import Session
 import uvicorn
 from app.api.routes import patient_router, doctor_router, appointment_router, auth_router
+from app.priam.router import router as priam_router
 from app.core.config import settings
 from app.db.session import engine, get_db
 from app.db import models
@@ -49,6 +50,8 @@ app.include_router(
     tags=["Appointments"],
     dependencies=[Depends(get_current_user)]
 )
+
+app.include_router(priam_router, prefix="/api/priam", tags=["PRIAM"])
 
 def custom_openapi():
     if app.openapi_schema:
