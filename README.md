@@ -160,7 +160,7 @@ The `case-studies/` folder contains four target applications used to evaluate PR
 
 | Application | Domain | Stack | Architecture | Personal data | Art. 9? |
 |-------------|--------|-------|--------------|---------------|---------|
-| **TeaStore** | E-commerce | Java · Spring Boot · MySQL | Microservices | User accounts, orders, browsing history | No |
+| **TeaStore** | E-commerce | Java · JAX-RS (Jersey) · JPA (EclipseLink) · MySQL | Microservices (6) | User accounts, orders, browsing history | No |
 | **SportTracker** | Fitness & activity tracking | Python · PostgreSQL | Monolithic web app | User profiles, geolocation (GPX), heart-rate biometrics | Yes — biometrics |
 | **FastAPI-Healthcare** | Healthcare management | Python · FastAPI · PostgreSQL | Microservices-adjacent | Patient records, diagnoses, appointments, credentials | Yes — health data |
 | **Ghostfolio** | Personal finance | TypeScript · NestJS · PostgreSQL | Modular monolith (Nx) | Investment portfolio, full transaction history, net worth, account credentials | No (financially sensitive) |
@@ -169,17 +169,30 @@ The `case-studies/` folder contains four target applications used to evaluate PR
 
 ```
 case-studies/
+├── evaluation.tex                       # LaTeX evaluation section (RQ, results, threats)
 ├── TeaStore/
+│   ├── priam-integration/
+│   │   ├── INTEGRATION.md              # Integration report & metrics
+│   │   └── annotations.json            # PRIAM metadata payload (data attributes + processings)
 │   ├── docker-compose.yml               # PRIAMed TeaStore (reference deployment)
 │   ├── docker-compose_withoutPRIAM.yml  # Baseline (no PRIAM) for performance comparison
 │   └── source/                          # Full TeaStore source with PRIAM modifications
 ├── FastAPI-Healthcare/
+│   ├── priam-integration/
+│   │   ├── INTEGRATION.md
+│   │   └── annotations.json
 │   ├── docker-compose.yml               # Standalone deployment
 │   └── app/                             # Python/FastAPI source
 ├── SportTracker/
+│   ├── priam-integration/
+│   │   ├── INTEGRATION.md
+│   │   └── annotations.json
 │   ├── docker-compose.yaml              # Standalone deployment
 │   └── sporttracker/                    # Python source
 └── Ghostfolio/
+    ├── priam-integration/
+    │   ├── INTEGRATION.md
+    │   └── annotations.json
     ├── docker/
     │   └── docker-compose.yml           # Standalone deployment
     └── apps/                            # NestJS + Angular source (Nx monorepo)
@@ -197,7 +210,7 @@ Integrating PRIAM into any of these applications requires only three targeted ch
    | `/api/rectification` | `POST` | Update a personal data attribute with the approved new value |
    | `/api/erasure` | `POST` | Delete or nullify a personal data attribute |
 
-2. **Consent check** — wrap any *optional* processing call with a `getConsent(userId, processingId)` guard that queries PRIAM's Consent Decision Point before execution (see TeaStore's `RecommenderSelector.java` for the reference implementation).
+2. **Consent check** — wrap any *optional* processing call with a `getConsent(userId, processingId)` guard that queries PRIAM's Consent Decision Point before execution (see TeaStore's [`ConsentClient.java`](case-studies/TeaStore/source/services/tools.descartes.teastore.recommender/src/main/java/tools/descartes/teastore/recommender/priam/ConsentClient.java) for the CDP client and [`RecommendSingleEndpoint.java`](case-studies/TeaStore/source/services/tools.descartes.teastore.recommender/src/main/java/tools/descartes/teastore/recommender/rest/RecommendSingleEndpoint.java) for the guard insertion point).
 
 3. **Authentication bridge** — pass the application's existing session token to Keycloak so PRIAM's API Gateway can validate identity without requiring users to authenticate a second time.
 
@@ -209,7 +222,7 @@ TeaStore is the primary case study: it is fully integrated, dockerised, and the 
 case-studies/TeaStore/source/
 ```
 
-The consent enforcement modification is in [`RecommenderSelector.java`](case-studies/TeaStore/source/services/tools.descartes.teastore.recommender/src/main/java/tools/descartes/teastore/recommender/algorithm/RecommenderSelector.java) — the `getConsent()` guard added around the recommendation call is the minimal code change required to enforce consent for an optional processing.
+The consent enforcement uses two new files: [`ConsentClient.java`](case-studies/TeaStore/source/services/tools.descartes.teastore.recommender/src/main/java/tools/descartes/teastore/recommender/priam/ConsentClient.java) (the PRIAM CDP client) and [`RecommendSingleEndpoint.java`](case-studies/TeaStore/source/services/tools.descartes.teastore.recommender/src/main/java/tools/descartes/teastore/recommender/rest/RecommendSingleEndpoint.java) (where the consent guard is inserted, returning an empty recommendation list when consent is absent). Full integration metrics and acceptance tests are in [`priam-integration/INTEGRATION.md`](case-studies/TeaStore/priam-integration/INTEGRATION.md).
 
 ### SportTracker
 
