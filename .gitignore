@@ -4,6 +4,10 @@ keycloak-conf
 *.zip
 .LKC*
 
+# Local-only files not for the public repo
+case-studies/evaluation.tex
+case-studies/SportTracker/poetry.toml
+
 # Pour stocker du code si besoin
 archives
 
