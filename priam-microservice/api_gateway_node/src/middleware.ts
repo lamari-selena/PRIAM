@@ -4,7 +4,8 @@ import qs from 'qs';
 
 export const keycloakAuth = async (req: Request, res: Response, next: NextFunction) => {
   const username = req.headers['x-username'] as string;
-  const token = (req.headers['authToken'] || req.headers['authtoken']) as string;
+  // Express lowercases incoming header names, so only 'authtoken' ever matches.
+  const token = req.headers['authtoken'] as string;
 
   const KEYCLOAK_URL = process.env.KEYCLOAK_URL || 'http://keycloak:8080';
   const REALM = process.env.KEYCLOAK_REALM || 'teastore';

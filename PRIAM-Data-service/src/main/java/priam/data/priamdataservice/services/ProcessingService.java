@@ -127,6 +127,14 @@ public class ProcessingService implements ProcessingServiceInterface {
     }
 
     @Override
+    public Integer getProcessingIdByName(String processingName) {
+        return processingRepository.findByProcessingName(processingName)
+                .map(Processing::getProcessingId)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "No processing found with processingName '" + processingName + "'"));
+    }
+
+    @Override
     public List<ProcessingPersonalDataDTO> getProcessingPersonalDataListPurposes(String idRef) {
         // Retrieve the DataSubject to have its category
         DataSubjectResponseDTO dataSubject = actorRestClient.getDataSubjectByRef(idRef);

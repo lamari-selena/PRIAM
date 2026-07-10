@@ -54,4 +54,13 @@ public interface ProcessingServiceInterface {
 
     Collection<ProcessingPersonalDataDTO> getProcessingPersonalDataListPurposes(String idRef);
 
+    /**
+     * Resolve a Processing's numeric ID from its processingName. Lets callers
+     * (e.g. the Consent service's CDP) identify a processing generically by
+     * name, for any target application, without hardcoding name-to-id pairs.
+     * @param processingName The processingName declared for this Processing
+     * @return The matching processingId
+     */
+    Integer getProcessingIdByName(String processingName);
+
 }

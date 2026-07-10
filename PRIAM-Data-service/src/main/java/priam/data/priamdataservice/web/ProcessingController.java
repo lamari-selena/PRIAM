@@ -158,6 +158,20 @@ public class ProcessingController {
         return processingService.getProcessing(id);
     }
 
+/**
+     * Resolve a Processing's numeric ID from its processingName. Lets any
+     * target application's Consent Enforcement Point identify a processing
+     * by name generically, without PRIAM hardcoding per-application ids.
+     * @param name The processingName declared for this Processing
+     * @return The matching processingId
+     */
+
+
+    @GetMapping("/byName/{name}")
+    public Integer getProcessingIdByName(@PathVariable String name) {
+        return processingService.getProcessingIdByName(name);
+    }
+
 
 
 /**

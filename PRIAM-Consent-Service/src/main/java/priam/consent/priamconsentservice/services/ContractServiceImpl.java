@@ -72,10 +72,11 @@ public class ContractServiceImpl implements ContractService{
     // ConsentDecision Point (CDP)
     @Override
     public Map<String, Boolean> getConsentByDataSubject(List<String> idRefList, String processingId){
-        // A supprimer
-        if (processingId.equals("RecommenderSelector.recommendProducts")) processingId = "1";
-        if (processingId.equals("CartServlet.handleGETRequest")) processingId = "3";
-        //
+        // Accept either a numeric processingId or a human-readable processingName
+        // (resolved generically via the Data service, for any target application).
+        if (!processingId.matches("\\d+")) {
+            processingId = String.valueOf(processingRestClient.getProcessingIdByName(processingId));
+        }
         Map<String, Boolean> listDsAndConsent = new HashMap<>();
         for (String dataSubjectIdRef: idRefList) {
             List<ConsentResponseDTO> consents = getListConsentByDataSubject(dataSubjectIdRef, processingId);

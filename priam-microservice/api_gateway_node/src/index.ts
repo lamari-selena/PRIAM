@@ -19,6 +19,12 @@ app.use(
 );
 
 
+//////////////////// HEALTH CHECK //////////////////////////////////////////
+
+app.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({ status: "ok" });
+});
+
 //////////////////// MICROSERVICES ROUTING ///////////////////////////////////
 
 //app.use("/api/ms-user",function(req: Request,res: Response) {
@@ -61,6 +67,14 @@ app.use("/cdp", keycloakAuth, (req: Request, res: Response) => {
   console.log("URL IS : " + req.url);
   req.url = req.url.replace(/^\/cdp/, "");
   apiProxy.web(req, res, { target: process.env.CUSTOM_CDP_URL }, (err) => console.log(err));
+});
+
+// No keycloakAuth: mirrors the Java gateway's unauthenticated Eureka passthrough.
+app.use("/eureka", (req: Request, res: Response) => {
+  console.log("proxy to Eureka");
+  console.log("URL IS : " + req.url);
+  req.url = req.url.replace(/^\/eureka/, "");
+  apiProxy.web(req, res, { target: process.env.CUSTOM_EUREKA_URL }, (err) => console.log(err));
 });
 
 //////////////////// START SERVER ///////////////////////////////////

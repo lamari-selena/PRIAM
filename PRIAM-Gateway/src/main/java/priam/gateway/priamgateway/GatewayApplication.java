@@ -56,7 +56,11 @@ public class GatewayApplication {
                 )
                 .route(p -> p
                 .path("/data/**")
-                .filters(f -> f.filter(keycloakLoginCheckFilter)
+                .filters(f -> f
+                        // .filter(keycloakLoginCheckFilter) // disabled: /data/** is called service-to-service
+                        // by other PRIAM microservices (e.g. Consent-Service resolving a processing name), which
+                        // carry no human X-Username. Kept commented (not removed) in case a human-facing use of
+                        // this route is added later.
                         .rewritePath("/data/(?<segment>.*)", "/${segment}"))
                 .uri(dataServiceURL)
                 )
@@ -74,13 +78,21 @@ public class GatewayApplication {
                 )
                 .route(p -> p
                 .path("/actor/**")
-                .filters(f -> f.filter(keycloakLoginCheckFilter)
+                .filters(f -> f
+                        // .filter(keycloakLoginCheckFilter) // disabled: /actor/** is called service-to-service
+                        // by other PRIAM microservices (e.g. Consent-Service resolving an idRef), which carry no
+                        // human X-Username. Kept commented (not removed) in case a human-facing use of this
+                        // route is added later.
                         .rewritePath("/actor/(?<segment>.*)", "/${segment}"))
                 .uri(actorServiceURL)
                 )
                 .route(p -> p
                 .path("/provider/**")
-                .filters(f -> f.filter(keycloakLoginCheckFilter)
+                .filters(f -> f
+                        // .filter(keycloakLoginCheckFilter) // disabled: /provider/** is called service-to-service
+                        // by PRIAM-Right-service (ProviderRestClient, e.g. after an "answer=yes" decision on a
+                        // rectification/erasure request), which carries no human X-Username. Kept commented (not
+                        // removed) in case a human-facing use of this route is added later.
                         .rewritePath("/provider/(?<segment>.*)", "/${segment}"))
                 .uri(providerServiceURL)
                 )

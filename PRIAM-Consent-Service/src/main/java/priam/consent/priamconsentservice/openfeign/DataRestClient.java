@@ -20,6 +20,12 @@ public interface DataRestClient {
     @GetMapping("/data/api/processing/{id}")
     Processing getProcessing(@PathVariable String id);
 
+    // Resolves a processingName to its numeric processingId, so the CDP can
+    // accept a human-readable processing name generically for any target
+    // application, without hardcoding per-application name-to-id pairs.
+    @GetMapping("/data/api/processing/byName/{name}")
+    Integer getProcessingIdByName(@PathVariable String name);
+
     @PostMapping("/data/api/processed-data/add")
     public ResponseEntity<String> addProcessedData(
             @RequestParam int subjectId, @RequestBody List<Integer> dataIds);

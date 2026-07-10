@@ -2,14 +2,10 @@ name: priam
 services:
   actor:
     #image: priam/actor-ms
-    image: registry.gitlab.com/priam3/priam-microservice/actor-ms
+    #image: registry.gitlab.com/priam3/priam-microservice/actor-ms
     container_name: priam-actor-ms
-    #build:
-      #context: ./PRIAM-Actor-service
-      #args:
-        #APP_VERSION: "0.0.1-SNAPSHOT"
-
-        #JRE_VERSION: "17"
+    build:
+      context: ./PRIAM-Actor-service
     env_file:
       - ".env"
     environment:
@@ -33,18 +29,13 @@ services:
       retries: 10
       interval: 3s
       timeout: 30s
-    pull_policy: always
 
   consent:
     #image: priam/consent-ms
-    image: registry.gitlab.com/priam3/priam-microservice/consent-ms
+    #image: registry.gitlab.com/priam3/priam-microservice/consent-ms
     container_name: priam-consent-ms
-    #build:
-      #context: ./PRIAM-Actor-service
-      #args:
-      #APP_VERSION: "0.0.1-SNAPSHOT"
-    #GRADLE_VERSION: "8.0"
-    #JRE_VERSION: "17"
+    build:
+      context: ./PRIAM-Consent-Service
     env_file:
       - ".env"
     environment:
@@ -69,21 +60,13 @@ services:
       retries: 10
       interval: 3s
       timeout: 30s
-    pull_policy: always
 
   data:
     #image: priam/data-ms
-    image: registry.gitlab.com/priam3/priam-microservice/data-ms
+    #image: registry.gitlab.com/priam3/priam-microservice/data-ms
     container_name: priam-data-ms
-    #build:
-      #context: ./PRIAM-Data-service
-      #args:
-        #APP_VERSION: "0.0.1-SNAPSHOT"
-        #GRADLE_VERSION: "8.0"
-        #JRE_VERSION: "17"
-        #RIGHT_SERVICE_URL: http://gateway:8090/right
-        #ACTOR_SERVICE_URL: http://gateway:8090/actor
-        #PROVIDER_SERVICE_URL: http://gateway:8090/provider
+    build:
+      context: ./PRIAM-Data-service
     env_file:
       - ".env"
     environment:
@@ -109,18 +92,13 @@ services:
       retries: 10
       interval: 3s
       timeout: 30s
-    pull_policy: always
 
   eureka:
     #image: priam/eureka
-    image: registry.gitlab.com/priam3/priam-microservice/eureka
+    #image: registry.gitlab.com/priam3/priam-microservice/eureka
     container_name: priam-eureka
-    #build:
-      #context: ./PRIAM-Eureka
-      #args:
-        #APP_VERSION: "0.0.1-SNAPSHOT"
-        #GRADLE_VERSION: "8.7"
-        #JRE_VERSION: "17"
+    build:
+      context: ./PRIAM-Eureka
     env_file:
       - ".env"
     ports:
@@ -132,21 +110,13 @@ services:
       retries: 10
       interval: 3s
       timeout: 60s
-    pull_policy: always
 
   right:
     #image: priam/right-ms
-    image: registry.gitlab.com/priam3/priam-microservice/right-ms
+    #image: registry.gitlab.com/priam3/priam-microservice/right-ms
     container_name: priam-right-ms
-    #build:
-      #context: ./PRIAM-Right-service
-      #args:
-        #APP_VERSION: "0.0.1-SNAPSHOT"
-        #GRADLE_VERSION: "7.0"
-        #JRE_VERSION: "17"
-        #DATA_SERVICE_URL: http://gateway:8090/data
-        #ACTOR_SERVICE_URL: http://gateway:8090/actor
-        #PROVIDER_SERVICE_URL: http://gateway:8090/provider
+    build:
+      context: ./PRIAM-Right-service
     env_file:
       - ".env"
     environment:
@@ -170,18 +140,13 @@ services:
       retries: 10
       interval: 3s
       timeout: 30s
-    pull_policy: always
 
   provider:
     #image: priam/provider-ms
-    image: registry.gitlab.com/priam3/priam-microservice/provider-ms
+    #image: registry.gitlab.com/priam3/priam-microservice/provider-ms
     container_name: priam-provider-ms
-    #build:
-      #context: ./Provider-microservice
-      #args:
-        #APP_VERSION: "0.0.1-SNAPSHOT"
-        #GRADLE_VERSION: "8.0"
-        #JRE_VERSION: "17"
+    build:
+      context: ./Provider-microservice
     env_file:
       - ".env"
     environment:
@@ -205,7 +170,6 @@ services:
       retries: 10
       interval: 3s
       timeout: 30s
-    pull_policy: always
   #####################################################################################################
   #                                        Notification SERVICE                                       #
   #####################################################################################################
@@ -277,14 +241,12 @@ services:
   #####################################################################################################
   gateway:
     image: registry.gitlab.com/priam3/priam-microservice/api-gateway
-    #image: priam/api-gateway
+    # Node gateway doesn't self-register with Eureka yet (needed for Actor/
+    # Data/Right's Feign clients to resolve "gateway"), so using the Java
+    # image for now. Switch back once the Node gateway has a Eureka client.
+    #build:
+    #  context: ./priam-microservice/api_gateway_node
     container_name: priam-api-gateway
-      #build:
-      #context: ./PRIAM-Gateway
-      #args:
-      #APP_VERSION: "0.0.1-SNAPSHOT"
-    #GRADLE_VERSION: "8.0"
-    #JRE_VERSION: "17"
     healthcheck:
       test: curl http://gateway:8090/health
       retries: 10
@@ -305,7 +267,6 @@ services:
       - gateway_to_ms
       - eureka-to-ms
       - shared_net
-    pull_policy: always
 
 #  frontuser:
 #    build:
@@ -341,8 +302,10 @@ services:
 
   mysqldb:
     #image: priam/databases
-    image: registry.gitlab.com/priam3/priam-microservice/databases
+    #image: registry.gitlab.com/priam3/priam-microservice/databases
     container_name: priam-databases
+    build:
+      context: ./Databases
     networks:
       - ms-to-db-server
     env_file:
