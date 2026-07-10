@@ -1,6 +1,8 @@
 package priam.actor.services;
 
 import org.springframework.stereotype.Service;
+import priam.actor.dto.SecondaryActorRequestDTO;
+import priam.actor.dto.SecondaryActorResponseDTO;
 import priam.actor.entities.SecondaryActor;
 import priam.actor.mappers.SecondaryActorMapper;
 import priam.actor.repositories.SecondaryActorCategoryRepository;
