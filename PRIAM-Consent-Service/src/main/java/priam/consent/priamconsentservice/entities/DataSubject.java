@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 public class DataSubject {
     private int id;
     private String idRef;
-    private int age;
+    private Integer age;
 }

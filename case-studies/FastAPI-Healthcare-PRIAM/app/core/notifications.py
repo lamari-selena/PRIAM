@@ -66,10 +66,12 @@ def send_appointment_notification(
                 logger.error(f"Appointment {appointment_id} not found for notification")
                 return
 
+            patient_obj = patient.get(db, id=appointment_obj["patient_id"])
+
             message = {
                 "type": notification_type,
                 "appointment_id": appointment_id,
-                "patient_email": appointment_obj["patient"].email,
+                "patient_email": patient_obj.email,
                 "patient_name": appointment_obj["patient_name"],
                 "doctor_name": appointment_obj["doctor_name"],
                 "appointment_time": appointment_obj["start_time"].isoformat(),

@@ -103,7 +103,7 @@ public class DataRequestServiceImpl implements DataRequestService {
      * @return List of Map with the form <value, the value>
      */
     public List<Map<String, String>> DataAccess(int dataSubjectId, String dataTypeName, List<String> attributes){
-        return providerRestClient.getPersonalDataValues(dataSubjectId, dataTypeName, attributes);
+        return providerRestClient.getPersonalDataValues(dataSubjectId, dataTypeName, String.join(",", attributes));
     }
 
     /**

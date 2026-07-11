@@ -16,7 +16,7 @@ public class DataSubject {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int dataSubjectId;
     private String idRef;
-    private int age;
+    private Integer age;
 
     @JsonBackReference(value = "dataSubject_list")
     @ManyToOne

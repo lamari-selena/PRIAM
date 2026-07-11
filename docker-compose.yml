@@ -240,12 +240,12 @@ services:
       - ms-to-db-server
   #####################################################################################################
   gateway:
-    image: registry.gitlab.com/priam3/priam-microservice/api-gateway
     # Node gateway doesn't self-register with Eureka yet (needed for Actor/
     # Data/Right's Feign clients to resolve "gateway"), so using the Java
     # image for now. Switch back once the Node gateway has a Eureka client.
-    #build:
-    #  context: ./priam-microservice/api_gateway_node
+    #image: registry.gitlab.com/priam3/priam-microservice/api-gateway
+    build:
+      context: ./PRIAM-Gateway
     container_name: priam-api-gateway
     healthcheck:
       test: curl http://gateway:8090/health

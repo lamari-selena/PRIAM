@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @lombok.Data
 public class DataSubjectRequestDTO {
     private int dataSubjectId;
-    private int age;
+    private Integer age;
     private String idRef;
     private String username;
     private String password;

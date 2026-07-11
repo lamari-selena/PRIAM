@@ -13,8 +13,10 @@ WORKDIR /app
 # Copy everything
 COPY . /app
 
-# Build the .jar
-RUN ./gradlew assemble
+# Build the .jar (using the base image's own Gradle instead of the wrapper,
+# like every other PRIAM microservice, to avoid re-downloading the
+# gradle-8.7 distribution the wrapper pins on every build)
+RUN gradle assemble
 
 # Image that will run the code
 FROM ubuntu:22.04

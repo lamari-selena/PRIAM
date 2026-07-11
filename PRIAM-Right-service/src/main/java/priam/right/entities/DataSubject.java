@@ -16,7 +16,7 @@ public class DataSubject {
     private String idRef;
     private String username;
     private String password;
-    private int age;
+    private Integer age;
 
     @ManyToOne
     private DataSubjectCategory dataSubjectCategory;

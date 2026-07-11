@@ -209,9 +209,236 @@ n'a pas pu être exécuté cette session — **reste à faire**, une fois les re
 stabilisées (voir `docs/PRIAM-INTEGRATION-PLAYBOOK.md` §9 pour la méthode : démarrer les services
 un par un, laisser le temps aux JVM).
 
-**Pas encore fait** :
+**Pas encore fait à l'issue de l'Étape 5** (tout résolu à l'Étape 6 ci-dessous) :
 - Test bout-en-bout complet du workflow des droits (`answer=false` puis `answer=true`), avec
   vérification Postgres à chaque étape.
 - Test bout-en-bout du consentement retiré (`POST /api/consent/create/1` `{"processingId":"3"}`
   pour basculer, puis vérifier via RabbitMQ — comptage de messages dans la queue `notifications`
   avant/après — qu'aucune notification n'est envoyée), et re-basculer pour restaurer l'état initial.
+
+---
+
+## Étape 6 — Test bout-en-bout complet de la stack (2026-07-11)
+
+**But** : terminer ce que l'Étape 5 n'a pas pu finir — exécuter réellement les 4 workflows
+(accès, rectification, suppression, consentement) contre la stack PRIAM complète (mysqldb,
+eureka, actor, data, consent, right, provider, gateway) + FastAPI-Healthcare-PRIAM, avec
+vérification d'état réel à chaque étape (pas seulement le code HTTP).
+
+### Blocages d'environnement résolus avant de pouvoir tester
+
+| Blocage | Cause | Résolution |
+|---|---|---|
+| `docker pull`/build échoue par intermittence (`no such host`) | Résolveur DNS par défaut de l'hôte (`192.168.100.1`, passerelle VPN) instable ; Docker Desktop (mode réseau "direct connection") en dépend directement | Mode réseau **mirrored** de WSL2 : `%USERPROFILE%\.wslconfig` avec `networkingMode=mirrored` + `dnsTunneling=true`, puis `wsl --shutdown`. Réduit la fréquence des échecs sans les éliminer à 100 % — prévoir des retries sur les builds. |
+| `priam-databases` (MySQL) ne démarre pas : `exec /docker-entrypoint.sh: no such file or directory` | `Databases/docker-entrypoint.sh` et `init.sh` avaient des fins de ligne CRLF (checkout Windows, pas de `.gitattributes` dans le dépôt) | Converti en LF (`sed -i 's/\r$//'`). Voir §9bis du playbook — vérifier tout script `.sh` copié dans une image Docker. |
+| Build `PRIAM-Eureka` échoue : test `contextLoads()` en échec (`NullPointerException` dans `CgroupV2Subsystem`) | `Dockerfile` utilise `gradle build` (exécute les tests) au lieu de `gradle assemble` comme tous les autres services PRIAM ; l'échec est un artefact d'environnement (détection cgroups v2 dans le conteneur de build), pas un vrai bug | `RUN gradle build` → `RUN gradle assemble` dans `PRIAM-Eureka/Dockerfile` |
+| Build `PRIAM-Gateway` très lent (jusqu'à 36 min) puis échoue par timeout réseau | `Dockerfile` utilise `./gradlew assemble` (wrapper), qui télécharge une distribution Gradle 8.7 complète (~130 Mo) à **chaque** build dès qu'une ligne source change (invalide le cache Docker) | `RUN ./gradlew assemble` → `RUN gradle assemble` (utilise le Gradle 7.4 déjà présent dans l'image de base, comme les autres services) — build ramené à ~2-3 min |
+
+### Bugs PRIAM (génériques, pas spécifiques à ce cas d'étude) trouvés et corrigés
+
+Tous documentés en détail dans `docs/PRIAM-INTEGRATION-PLAYBOOK.md` (§7 à §7quater, §9bis) pour
+éviter qu'un futur cas d'étude les redécouvre :
+
+1. **`PRIAM-Actor-service/.../SecondaryActorServiceImpl.java`** — imports manquants
+   (`SecondaryActorRequestDTO`, `SecondaryActorResponseDTO`), empêchait la compilation.
+2. **`PRIAM-Gateway`** — `spring-boot-starter-security` présent sans aucun bean
+   `SecurityWebFilterChain` : Spring Security refuse tout par défaut (401) sur **toutes** les
+   routes, y compris celles où `KeycloakLoginCheckFilter` était déjà désactivé pour le
+   machine-à-machine (§7 du playbook, déjà corrigé lors d'une session précédente). C'était le
+   vrai bloquant, pas le filtre Keycloak. Ajout de `SecurityConfig.java` (permissive, délègue
+   à `KeycloakLoginCheckFilter`).
+3. **Entités `DataSubject.age`** (`PRIAM-Actor-service`, `PRIAM-Data-service`,
+   `PRIAM-Right-service`, `PRIAM-Consent-Service`, + DTOs Actor) — champ `int` primitif alors
+   que la colonne SQL est nullable (`age = NULL` pour un sujet sans âge connu) → 500 dès
+   qu'on lit un `DataSubject`. Changé en `Integer` partout.
+4. **`PRIAM-Right-service/.../ProviderRestClient.java`** — `getPersonalDataValues` envoyait
+   `attributes` en paramètres de requête répétés (comportement par défaut d'OpenFeign pour
+   `List<String>`) au lieu d'un seul paramètre `attributes=a,b,c` comme documenté dans le
+   contrat (§2 du playbook) — un parseur à valeur unique côté appli cible (ex. FastAPI
+   `str`) ne garde que la dernière valeur, perdant silencieusement les autres attributs.
+   Changé en `String` (join côté appelant).
+5. **Données de test — `processing.processing_type`** — insérées en `'Necessary'`/`'Optional'`
+   au lieu de `NECESSARY`/`OPTIONAL` (l'enum Java `ProcessingType` n'a que des constantes
+   majuscules) → `IllegalArgumentException` dès qu'un `processing` est manipulé.
+6. **Données de test — `processed_data` (bookkeeping Data-service)** — un consentement
+   pré-accordé directement en SQL (bypass de l'API) n'a pas de ligne `processed_data`
+   correspondante, alors que `ConsentServiceImpl.create` (retrait de consentement) en a besoin
+   pour fonctionner. Sans ça, le premier retrait de consentement échoue avec un message
+   trompeur (`"Subject not found with ID"` — la vraie cause est le bookkeeping manquant, pas
+   le sujet). Lignes ajoutées dans `Databases/db_insertion_script.sql` (+ copie
+   `priam-integration/`).
+7. **`docker-compose.yml` (racine PRIAM)** — le service `gateway` pointait vers une image
+   Docker distante (`registry.gitlab.com/...`) au lieu de construire depuis
+   `./PRIAM-Gateway` : le code réellement exécuté ne reflétait pas les correctifs déjà commités
+   dans le dépôt (dont le §7 du playbook). Reconfiguré pour builder localement.
+8. **`.env` (racine PRIAM)** — `CUSTOM_PROVIDER_URL` pointait vers le `Provider-microservice`
+   générique (`:8086`, non connecté à la base de FastAPI-Healthcare-PRIAM) au lieu de l'appli
+   cible elle-même (`http://app:8000`), qui implémente son propre pont Provider
+   (`app/priam/router.py`, voir Étape 2-3). Généralisable : quand l'appli cible auto-héberge
+   son pont Provider, `CUSTOM_PROVIDER_URL` doit pointer directement dessus.
+
+### Bug de l'appli cible (pas PRIAM) trouvé et corrigé
+
+**`app/core/notifications.py`** — fichier préexistant de l'appli de base (commit `58846ec2`,
+antérieur à l'intégration PRIAM ; vérifié via `git log --follow`), donc sa correction ne viole
+pas la contrainte "l'intégration PRIAM ne doit pas modifier le code de l'appli". Bug :
+`send_appointment_notification` faisait `appointment_obj["patient"].email`, mais
+`crud_appointment.get_with_details()` ne renvoie jamais de clé `"patient"` (seulement
+`"patient_name"`, une chaîne). `KeyError` intercepté silencieusement par le `except Exception`
+englobant → **aucune notification n'était jamais publiée dans RabbitMQ**, que le consentement
+soit accordé ou non, rendant le test de consentement impossible à prouver. Corrigé en
+récupérant l'objet `Patient` séparément via `patient.get(db, id=appointment_obj["patient_id"])`
+(même patron déjà utilisé dans la branche `notification_type == "cancelled"` du même fichier).
+
+### Données de test manquantes côté appli cible comblées
+
+- **`availabilities`** (Postgres, `app/db/seed.py` ne les seed pas) — sans ça,
+  `POST /api/appointments/` échoue systématiquement (`"Doctor is not available"`), bloquant tout
+  test de consentement. Ligne insérée directement en base pour le médecin id=1 (7 jours,
+  8h-18h) — **pas encore répercuté dans `seed.py`**, à faire si ce test doit être rejouable
+  automatiquement sans intervention manuelle.
+- **Compte utilisateur FastAPI** — `appointment_router` exige une authentification
+  (`Depends(get_current_user)` au niveau `include_router`, `app/main.py`), non documentée dans
+  ce fichier jusqu'ici. Créé via `POST /api/auth/register` + `POST /api/auth/login`.
+
+### Résultats des 4 tests (preuve d'état réel, méthodologie §8 du playbook)
+
+| Droit | Cycle refusé | Cycle accepté |
+|---|---|---|
+| **Accès** | `answer=false` → `data_request_answer.answer=REFUSED` | `answer=true` → `FULL` ; lecture réelle (`GET /personalDataValues/accessRight`) retourne les vraies valeurs Postgres (`first_name`, `email`) |
+| **Rectification** | `last_name` reste `"Doe"` en base Postgres | PRIAM appelle automatiquement `POST /api/rectification` → `last_name` devient `"Smith"` en base réelle |
+| **Suppression** | `insurance_id` reste `"INS-000001"` | PRIAM appelle automatiquement `POST /api/erasure` → `insurance_id` devient `NULL` en base réelle |
+
+**Consentement** (`appointment-notifications`, queue RabbitMQ `notifications` comme preuve
+observable) :
+1. Consentement accordé (état initial) → création d'un RDV → queue `0 → 1` message.
+2. Consentement retiré (`POST /api/consent/create/1` `{"processingId":"3"}`) → nouveau RDV créé
+   normalement (traitement obligatoire non affecté) → queue reste à **1** (aucune notification).
+3. Consentement ré-accordé (même endpoint, rappelé une seconde fois — bascule automatiquement)
+   → nouveau RDV → queue `1 → 2`.
+
+**Tous les scénarios demandés sont validés bout-en-bout, sur base de données réelle, sans mock.**
+
+**Pas encore fait** :
+- Répercuter le seed `availabilities` dans `app/db/seed.py` pour que le test soit rejouable
+  sans intervention manuelle sur une base fraîche.
+- Commit des correctifs (rien n'a été committé automatiquement cette session — décision
+  explicite de l'utilisatrice à confirmer avant tout `git commit`).
+
+### Annexe — commandes exactes utilisées (rejouables telles quelles)
+
+Toutes exécutées en ligne de commande (`curl`), pas via un navigateur. Prérequis : la stack
+PRIAM (mysqldb, eureka, actor, data, consent, right, provider, gateway) et
+FastAPI-Healthcare-PRIAM (db, redis, rabbitmq, app) démarrées, `.env` racine avec
+`CUSTOM_PROVIDER_URL=http://app:8000`, patient id=1 (`Jane Doe`) seedé.
+
+**Droit d'accès — cycle accepté**
+```bash
+curl -X POST http://localhost:8083/api/right/accessRequest \
+  -H "Content-Type: application/json" \
+  -d '{"dataSubjectId":1,"dataRequestClaim":"Test acces","data":[{"dataId":1},{"dataId":3}]}'
+# -> {"dataRequestId": N, ...}
+
+curl -X POST http://localhost:8083/api/right/answer \
+  -H "Content-Type: application/json" \
+  -d '{"requestAnswerId":0,"answer":true,"providerClaim":"Approuve","dataRequestId":N,"data":[{"dataId":1},{"dataId":3}]}'
+# -> {"answer":"FULL", ...}
+
+curl "http://localhost:8083/api/personalDataValues/accessRight?dataSubjectId=1&dataTypeName=Patient&attributes=first_name,email"
+# -> [{"first_name":"Jane","email":"jane.doe@example.com"}]  (lecture reelle, endpoint toujours ouvert)
+```
+
+**Droit d'accès — cycle refusé** (identique, `answer=false` et `data:[]`) :
+```bash
+curl -X POST http://localhost:8083/api/right/answer \
+  -H "Content-Type: application/json" \
+  -d '{"requestAnswerId":0,"answer":false,"providerClaim":"Refuse","dataRequestId":N,"data":[]}'
+# -> {"answer":"REFUSED", ...}
+```
+
+**Rectification — cycle refusé puis accepté** (`dataId":2` = `last_name`) :
+```bash
+# Etat avant
+curl "http://localhost:8000/api/dataAccessRight?idRef=1&dataTypeName=Patient&attributes=last_name"
+
+curl -X POST http://localhost:8083/api/right/rectificationRequest \
+  -H "Content-Type: application/json" \
+  -d '{"dataSubjectId":1,"dataTypeName":"Patient","data":{"dataId":2},"newValue":"Smith","claim":"Correction nom","primaryKeys":[]}'
+# -> {"dataRequestId": N, ...}
+
+curl -X POST http://localhost:8083/api/right/answer \
+  -H "Content-Type: application/json" \
+  -d '{"requestAnswerId":0,"answer":false,"providerClaim":"Refuse","dataRequestId":N,"data":[]}'
+# -> refuse : re-verifier /api/dataAccessRight, doit etre inchange ("Doe")
+
+# Refaire un rectificationRequest (nouveau N), puis :
+curl -X POST http://localhost:8083/api/right/answer \
+  -H "Content-Type: application/json" \
+  -d '{"requestAnswerId":0,"answer":true,"providerClaim":"Approuve","dataRequestId":N,"data":[]}'
+# -> accepte : PRIAM appelle POST /api/rectification sur Provider automatiquement
+# re-verifier /api/dataAccessRight -> "Smith"
+```
+
+**Suppression — même patron** (`erasureRequest` au lieu de `rectificationRequest`, pas de
+`newValue`, `dataId":8` = `insurance_id`) :
+```bash
+curl -X POST http://localhost:8083/api/right/erasureRequest \
+  -H "Content-Type: application/json" \
+  -d '{"dataSubjectId":1,"dataTypeName":"Patient","data":{"dataId":8},"newValue":null,"claim":"Suppression id assurance","primaryKeys":[]}'
+# puis /api/right/answer comme ci-dessus (false puis true sur 2 cycles distincts)
+# accepte -> attribute insurance_id devient "None" via GET /api/dataAccessRight
+```
+
+**Consentement — accordé / retiré / ré-accordé** (`processingId":"3"` = `appointment-notifications`) :
+```bash
+# Etat courant du consentement
+curl "http://localhost:8089/api/decision/appointment-notifications?idRefList=1"
+# -> {"1": true} si accorde
+
+# Authentification FastAPI (JWT maison, sans rapport avec PRIAM/Keycloak)
+curl -X POST http://localhost:8000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"testuser@example.com","username":"testuser","password":"TestPass123!","role":"admin"}'
+
+TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"testuser@example.com","password":"TestPass123!"}' \
+  | python -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+
+# Preuve d'etat reel : compteur de messages AVANT
+docker exec fastapi-healthcare-priam-rabbitmq-1 rabbitmqctl list_queues name messages
+
+# Creation d'un RDV (consentement accorde -> notification attendue)
+curl -X POST http://localhost:8000/api/appointments/ \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+  -d '{"patient_id":1,"doctor_id":1,"start_time":"2026-08-01T10:00:00","end_time":"2026-08-01T11:00:00","status":"scheduled","notes":"test"}'
+
+# Compteur APRES -> doit avoir augmente de 1
+docker exec fastapi-healthcare-priam-rabbitmq-1 rabbitmqctl list_queues name messages
+
+# Retrait du consentement (CAP : bascule automatiquement l'etat a chaque appel)
+curl -X POST http://localhost:8089/api/consent/create/1 \
+  -H "Content-Type: application/json" -d '{"processingId":"3"}'
+curl "http://localhost:8089/api/decision/appointment-notifications?idRefList=1"
+# -> {"1": false}
+
+# Nouveau RDV (consentement retire) -> le RDV est cree (traitement obligatoire),
+# mais le compteur RabbitMQ NE DOIT PAS augmenter
+curl -X POST http://localhost:8000/api/appointments/ \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+  -d '{"patient_id":1,"doctor_id":1,"start_time":"2026-08-03T10:00:00","end_time":"2026-08-03T11:00:00","status":"scheduled","notes":"test 2"}'
+docker exec fastapi-healthcare-priam-rabbitmq-1 rabbitmqctl list_queues name messages
+# -> compteur inchange
+
+# Re-octroi (rappeler le meme endpoint une 2e fois bascule dans l'autre sens)
+curl -X POST http://localhost:8089/api/consent/create/1 \
+  -H "Content-Type: application/json" -d '{"processingId":"3"}'
+```
+
+**Prérequis de données non liés à PRIAM, à créer une fois par base fraîche** (voir section
+"Données de test manquantes" ci-dessus pour le pourquoi) :
+```sql
+-- Disponibilite du medecin id=1, sinon POST /api/appointments/ echoue toujours
+INSERT INTO availabilities (doctor_id, day_of_week, start_time, end_time, is_available)
+SELECT 1, d, '08:00', '18:00', true FROM generate_series(0,6) AS d;
+```

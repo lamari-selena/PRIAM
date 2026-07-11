@@ -15,7 +15,7 @@ WORKDIR /app
 COPY . /app
 
 # Build le .jar
-RUN gradle build
+RUN gradle assemble
 
 # Image qui va run le code
 FROM ubuntu

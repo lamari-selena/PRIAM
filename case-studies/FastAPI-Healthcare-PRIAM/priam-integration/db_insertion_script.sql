@@ -81,9 +81,9 @@ INSERT INTO `data` (`data_id`, `data_name`, `source`, `source_details`, `data_co
 (13, 'notes',              'DIRECT', 'appointments table, column notes',          1825, 1, 1, 0, 3, 7,  1);
 
 INSERT INTO `processing` (`processing_id`, `processing_name`, `processing_type`, `processing_category`, `created_at`, `modified_at`, `ended_at`) VALUES
-(1, 'appointment-management',      'Necessary', 'CONSENT_CONTRACT', '2026-01-01', NULL, NULL),
-(2, 'medical-records-mgmt',        'Necessary', 'CONSENT_CONTRACT', '2026-01-01', NULL, NULL),
-(3, 'appointment-notifications',   'Optional',  'CONSENT_CONTRACT', '2026-01-01', NULL, NULL);
+(1, 'appointment-management',      'NECESSARY', 'CONSENT_CONTRACT', '2026-01-01', NULL, NULL),
+(2, 'medical-records-mgmt',        'NECESSARY', 'CONSENT_CONTRACT', '2026-01-01', NULL, NULL),
+(3, 'appointment-notifications',   'OPTIONAL',  'CONSENT_CONTRACT', '2026-01-01', NULL, NULL);
 
 INSERT INTO `data_usage` (`data_usage_id`, `personal_status`, `c`, `r`, `u`, `d`, `data_id`, `processing_id`) VALUES
 (1,  1, 1, 1, 1, 1, 1,  1),
@@ -125,3 +125,19 @@ INSERT INTO `contract` (`contract_id`, `signature_date`, `expiration_date`, `dat
 
 INSERT INTO `consent` (`consent_id`, `start_date`, `end_date`, `processing_id`, `contract_id`) VALUES
 (1, '2026-01-01', NULL, 3, 1);
+
+-- Consent-Service's withdrawal flow (ConsentServiceImpl.create, case: existing
+-- consent with end_date=NULL) calls Data-service's removeProcessedData, which
+-- requires a matching `processed_data` bookkeeping row per data_id normally
+-- created by addProcessedData when consent is granted through the API. Since
+-- this consent is pre-granted directly in SQL (bypassing that API call), the
+-- bookkeeping row must be seeded too, or the first withdrawal 500s with
+-- "Subject not found with ID" (misleading: the real cause is the missing
+-- processed_data row, not a missing subject). data_ids 1/2/3 (first_name,
+-- last_name, email) are the ones data_usage ties to processing_id=3.
+USE `priam-data`;
+
+INSERT INTO `processed_data` (`data_id`, `data_subject_id`, `nb_occurrences`) VALUES
+(1, 1, 1),
+(2, 1, 1),
+(3, 1, 1);
