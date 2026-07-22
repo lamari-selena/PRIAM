@@ -1,0 +1,268 @@
+name: Healthcare DevOps Pipeline
+
+on:
+  push:
+    branches: [main, devops-pipeline, youssef]
+  pull_request:
+    branches: [main]
+
+env:
+  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/healthcare-fastapi
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build-and-install:
+    name: 📦 Build & Install
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 💾 Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: ⬇️ Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 📋 Packages
+        run: pip list
+
+  lint-and-security:
+    name: 🔍 Lint & Security
+    runs-on: ubuntu-latest
+    needs: build-and-install
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: ⬇️ Linters
+        run: pip install flake8 bandit safety black
+
+      - name: 🎨 Black
+        run: black --check app/ || true
+
+      - name: 🔎 Flake8
+        run: flake8 app/ --count --exit-zero --max-line-length=120
+        continue-on-error: true
+
+      - name: 🛡️ Bandit
+        run: bandit -r app/ -f json -o bandit-report.json || true
+        continue-on-error: true
+
+      - name: 🔐 Safety
+        run: safety check || true
+        continue-on-error: true
+
+      - name: 📊 Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+  test:
+    name: 🧪 Tests & Coverage
+    runs-on: ubuntu-latest
+    needs: lint-and-security
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_healthcare_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 💾 Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: ⬇️ Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio "uvicorn[standard]" httpx
+
+      - name: 🗃️ Wait PostgreSQL
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U test_user; then
+              echo "✅ PostgreSQL ready"
+              break
+            fi
+            echo "⏳ PostgreSQL ($i/30)"
+            sleep 2
+          done || exit 1
+
+      - name: 🔍 DEBUG Structure
+        run: |
+          echo "=== FILES ==="
+          find . -name "*.py" | head -20
+          echo "=== APP ==="
+          ls -la app/ || echo "No app/"
+          echo "=== TESTS ==="
+          find . -name "test*.py" | head -10
+
+      - name: 🗄️ Create DB Tables
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_healthcare_db
+          SQLALCHEMY_DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_healthcare_db
+          PYTHONPATH: .
+        run: |
+          cd app && python -c "
+          import sys, os
+          sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+          from db.session import engine
+          from db.models import Base
+          Base.metadata.create_all(bind=engine)
+          print('✅ Tables created!')
+          " || echo '⚠️ Tables warning'
+
+
+      - name: 🧪 Run tests with coverage
+        env:
+          TEST: true
+          ENVIRONMENT: testing
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_healthcare_db
+          SQLALCHEMY_DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_healthcare_db
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test_super_secret_key_very_long_for_ci_32_plus_chars_123456789
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest app/tests/ -v \
+            --cov=app \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=0 \
+            --tb=short
+      - name: 📊 Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+
+      - name: 📁 Coverage HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: htmlcov/
+
+  build-docker:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    needs: test
+    if: needs.test.result == 'success'
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔑 DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 🏷️ Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🏗️ Build & Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: |
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/youssef') &&
+      github.event_name == 'push' &&
+      needs.build-docker.result == 'success'
+    steps:
+      - name: 🚀 Test Deploy Hook
+        run: |
+          echo "🎉 build-docker SUCCESS ✅"
+          echo "🚀 Branche: ${{ github.ref }}"
+          echo "📋 Event: ${{ github.event_name }}"
+          echo "✅ Deploy prêt !"
+          echo "🐳 Docker: ${{ env.DOCKER_IMAGE }}:youssef LIVE !"
+
+
+  summary:
+    name: 📊 Summary
+    runs-on: ubuntu-latest
+    needs: 
+      - build-and-install
+      - lint-and-security
+      - test
+      - build-docker
+      - deploy
+    if: always()
+    steps:
+      - name: 📊 Status
+        run: |
+          echo "# 🏁 Pipeline Status" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 📦 Build | ${{ needs.build-and-install.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔍 Lint | ${{ needs.lint-and-security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🧪 Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🐳 Docker | ${{ needs.build-docker.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🚀 Deploy | ${{ needs.deploy.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY

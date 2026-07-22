@@ -1,0 +1,64 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: healthcare_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: healthcare_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - healthcare-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U healthcare_user -d healthcare_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    networks:
+      - healthcare-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ (already in project)
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    networks:
+      - healthcare-network
+
+  # FastAPI Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://healthcare_user:${DB_PASSWORD}@db:5432/healthcare_db
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - healthcare-network
+
+volumes:
+  postgres_data:
+
+networks:
+  healthcare-network:
+    driver: bridge

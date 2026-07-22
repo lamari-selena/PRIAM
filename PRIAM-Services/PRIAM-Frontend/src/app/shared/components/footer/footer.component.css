@@ -1,0 +1,8 @@
+span {
+    margin: 10px;
+}
+
+.base {
+    height: 6dvh;
+    position: fixed;
+}

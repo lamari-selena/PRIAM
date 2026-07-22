@@ -1,0 +1,74 @@
+<div class="row">
+  <div class="col">
+    @if (readonly) {
+      <div class="h5" i18n>Tags</div>
+      @if (
+        (tags && tags.length > 0) || (tagsReadOnly && tagsReadOnly.length > 0)
+      ) {
+        <mat-chip-listbox>
+          @if (tagsReadOnly) {
+            @for (tag of tagsReadOnly; track tag) {
+              <mat-chip-option disabled>{{ tag.name }}</mat-chip-option>
+            }
+          }
+          @if (tags) {
+            @for (tag of tags; track tag) {
+              <mat-chip-option disabled>{{ tag.name }}</mat-chip-option>
+            }
+          }
+        </mat-chip-listbox>
+      } @else {
+        <div>-</div>
+      }
+    } @else {
+      <mat-form-field appearance="outline" class="w-100 without-hint">
+        <mat-label i18n>Tags</mat-label>
+        <mat-chip-grid #tagsChipList>
+          @if (tagsReadOnly) {
+            @for (tag of tagsReadOnly; track tag.id) {
+              <mat-chip-row disabled [removable]="false">
+                {{ tag.name }}
+              </mat-chip-row>
+            }
+          }
+          @for (tag of tagsSelected(); track tag.id) {
+            <mat-chip-row [removable]="true" (removed)="onRemoveTag(tag)">
+              {{ tag.name }}
+              <button matChipRemove type="button">
+                <ion-icon name="close-outline" />
+              </button>
+            </mat-chip-row>
+          }
+          <input
+            #tagInput
+            [formControl]="tagInputControl"
+            [matAutocomplete]="autocompleteTags"
+            [matChipInputFor]="tagsChipList"
+            [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+          />
+        </mat-chip-grid>
+        <mat-autocomplete
+          #autocompleteTags="matAutocomplete"
+          (optionSelected)="onAddTag($event)"
+        >
+          @for (tag of filteredOptions | async; track tag.id) {
+            <mat-option [value]="tag.id">
+              {{ tag.name }}
+            </mat-option>
+          }
+
+          @if (hasPermissionToCreateTag && tagInputControl.value) {
+            <mat-option [value]="tagInputControl.value.trim()">
+              <span class="align-items-center d-flex">
+                <ion-icon class="mr-2" name="add-circle-outline" />
+                <ng-container i18n>Create</ng-container> "{{
+                  tagInputControl.value.trim()
+                }}"
+              </span>
+            </mat-option>
+          }
+        </mat-autocomplete>
+      </mat-form-field>
+    }
+  </div>
+</div>

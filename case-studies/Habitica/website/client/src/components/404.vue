@@ -1,0 +1,78 @@
+<template>
+  <div class="row">
+    <div class="col-6 text-center mx-auto mb-5">
+      <!-- @TODO i18n. How to setup the strings with the router-link inside?-->
+      <img
+        :class="retiredChatPage ? 'mt-5' : 'image-404'"
+        src="@/assets/images/404.png"
+      >
+      <div v-if="retiredChatPage">
+        <h1>
+          {{ $t('tavernDiscontinued') }}
+        </h1>
+        <p>{{ $t('tavernDiscontinuedDetail') }}</p>
+        <p v-html="$t('tavernDiscontinuedLinks', tavernLinks)"></p>
+      </div>
+      <div v-else>
+        <h1>
+          Sometimes even the bravest adventurer gets lost.
+        </h1>
+        <p class="mb-0">
+          Looks like this link is broken or the page may have moved, sorry!
+        </p>
+        <p>
+          Head back to the
+          <router-link to="/">
+            Homepage
+          </router-link>or
+          <a href="mailto:admin@habitica.com">
+            Contact Us
+          </a>about the issue.
+        </p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { mapState } from '@/libs/store';
+
+export default {
+  data () {
+    return {
+      tavernLinks: {
+        faqLink: '<a href="/static/faq/tavern-and-guilds">',
+        homeLink: '<a href="/">',
+        linkClose: '</a>',
+      },
+    };
+  },
+  computed: {
+    ...mapState(['isUserLoggedIn']),
+    retiredChatPage () {
+      return this.$route.fullPath.indexOf('/groups') !== -1;
+    },
+  },
+};
+</script>
+
+<style lang="scss" scoped>
+@import '@/assets/scss/colors.scss';
+
+h1, .static-wrapper h1 {
+  color: $purple-200;
+  line-height: 1.33;
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+}
+
+p {
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.image-404 {
+  margin-top: 104px;
+}
+
+</style>

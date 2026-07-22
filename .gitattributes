@@ -1,0 +1,7 @@
+# Scripts copied into Linux containers must always use LF line endings,
+# regardless of the cloning machine's core.autocrlf setting. Without this,
+# a Windows checkout with autocrlf=true silently reintroduces CRLF, breaking
+# any such script at container startup (e.g. "exec .../docker-entrypoint.sh:
+# no such file or directory", "./gradlew: not found").
+*.sh text eol=lf
+gradlew text eol=lf

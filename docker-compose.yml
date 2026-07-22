@@ -1,0 +1,425 @@
+name: priam-bankofanthos
+services:
+  actor:
+    # Fixed, project-name-independent image tag: built once and reused
+    # across every case study, since PRIAM's own services don't change per
+    # integration (playbook §5, non-negotiable "0 lines changed in PRIAM").
+    # Without this, Compose auto-tags the build as <project name>-actor,
+    # forcing a full rebuild under a new tag every time `name:` above
+    # changes for a different case study, even though nothing in
+    # PRIAM-Actor-service actually changed.
+    image: priam-actor-ms:latest
+    container_name: priam-actor-ms
+    build:
+      context: ./PRIAM-Services/PRIAM-Actor-service
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-actor?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - 8082:8082
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+      - shared_net
+    healthcheck:
+      test: ["CMD", "/bin/curl", "actor:8082"]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  consent:
+    # Same rationale as `actor` above — fixed tag shared across case studies.
+    image: priam-consent-ms:latest
+    container_name: priam-consent-ms
+    build:
+      context: ./PRIAM-Services/PRIAM-Consent-Service
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-consent?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - 8089:8089
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+      - shared_net
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "consent:8089" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  data:
+    # Same rationale as `actor` above — fixed tag shared across case studies.
+    image: priam-data-ms:latest
+    container_name: priam-data-ms
+    build:
+      context: ./PRIAM-Services/PRIAM-Data-service
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-data?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      actor:
+        condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+      - shared_net
+    ports:
+      - 8081:8081
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "data:8081" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  eureka:
+    # Same rationale as `actor` above — fixed tag shared across case studies.
+    image: priam-eureka:latest
+    container_name: priam-eureka
+    build:
+      context: ./PRIAM-Services/PRIAM-Eureka
+    env_file:
+      - ".env"
+    ports:
+      - 8761:8761
+    networks:
+      - eureka-to-ms
+    healthcheck:
+      test: ["CMD", "/bin/curl", "eureka:8761"]
+      retries: 10
+      interval: 3s
+      timeout: 60s
+
+  right:
+    # Same rationale as `actor` above — fixed tag shared across case studies.
+    image: priam-right-ms:latest
+    container_name: priam-right-ms
+    build:
+      context: ./PRIAM-Services/PRIAM-Right-service
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-right?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - 8083:8083
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+      - shared_net
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "right:8083" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+
+  provider:
+    # Same rationale as `actor` above — fixed tag shared across case studies.
+    # (This is PRIAM's own generic Provider microservice, not the per-app
+    # Provider bridge implemented in each case study's own codebase.)
+    image: priam-provider-ms:latest
+    container_name: priam-provider-ms
+    build:
+      context: ./PRIAM-Services/Provider-microservice
+    env_file:
+      - ".env"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/priam-right?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - 8086:8086
+    depends_on:
+      eureka:
+        condition: service_healthy
+      #mysqldb:
+        #condition: service_healthy
+    networks:
+      - ms-to-db-server
+      - eureka-to-ms
+      - gateway_to_ms
+      - shared_net
+    healthcheck:
+      test: [ "CMD", "/bin/curl", "provider:8086" ]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+  #####################################################################################################
+  #                                        Notification SERVICE                                       #
+  #####################################################################################################
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - ms-to-kafka
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+    networks:
+      - ms-to-kafka
+    healthcheck:
+      test: [ "CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  notification-service:
+    build: ./PRIAM-Services/PRIAM-Notification-Service
+    image: registry.gitlab.com/priam3/priam-microservice/notification-ms
+    container_name: priam-notification-ms
+    ports:
+      - "8084:8080"
+    depends_on:
+      - kafka
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - ms-to-kafka
+
+  #####################################################################################################
+  #                                     BREACHES MICROSERVICE                                         #
+  #####################################################################################################
+  priam-breach-service:
+    build: ./PRIAM-Services/PRIAM-Breaches-Service
+    image: registry.gitlab.com/priam3/priam-microservice/breach-ms
+    container_name: priam-breach-ms
+    ports:
+      - "8087:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=mysqldb
+      - DB_PORT=3306
+      - DB_USER=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - mysqldb
+    networks:
+      - ms-to-db-server
+  #####################################################################################################
+  gateway:
+    # Node gateway doesn't self-register with Eureka yet (needed for Actor/
+    # Data/Right's Feign clients to resolve "gateway"), so using the Java
+    # image for now. Switch back once the Node gateway has a Eureka client.
+    #image: registry.gitlab.com/priam3/priam-microservice/api-gateway
+    # Same rationale as `actor` above — fixed tag shared across case studies.
+    image: priam-api-gateway:latest
+    build:
+      context: ./PRIAM-Services/PRIAM-Gateway
+    container_name: priam-api-gateway
+    healthcheck:
+      test: curl http://gateway:8090/health
+      retries: 10
+      interval: 3s
+      timeout: 30s
+    depends_on:
+      - actor
+      - right
+      - data
+      - provider
+      - consent
+      - eureka
+    env_file:
+      - ".env"
+    ports:
+      - 8090:8090
+    networks:
+      - gateway_to_ms
+      - eureka-to-ms
+      - shared_net
+
+  frontuser:
+    # Deliberately NO fixed `image:` here, unlike the services above:
+    # TARGET_APP_URL below is baked into this build via a Docker build arg
+    # (Angular build-time config), so the built image genuinely differs per
+    # case study. Always rebuild (`--build`) when switching case studies —
+    # a fixed tag here would risk silently reusing a stale image pointing at
+    # the previous case study's app.
+    container_name: priam-frontend
+    build:
+      context: ./PRIAM-Services/PRIAM-Frontend
+      args:
+        # All host-published, since this runs ng serve and is fetched by the
+        # browser, not by other containers. OIDC_ISSUER must match the `iss`
+        # claim on tokens (i.e. whatever address the browser itself reaches
+        # Keycloak/the issuer through) — see Docs/PRIAM-AUTH-OIDC.md.
+        API_DATA: localhost:8090/data
+        API_RIGHT: localhost:8090/right
+        API_ACTOR: localhost:8090/actor
+        API_PROVIDER: localhost:8090/provider
+        API_CONSENT: localhost:8090/cdp
+        GATEWAY_ORIGIN: localhost:8090
+        OIDC_ISSUER: localhost:8080/realms/priam-realm
+        OIDC_CLIENT_ID: Data-client
+        # Case-study-specific browser-facing origin of the target app (matches
+        # its own ROOT_URL / PRIAM_FRONTEND_URL). Set via the root .env's
+        # TARGET_APP_URL, not hardcoded here - every other per-case-study
+        # value already lives in .env, and this one used to be the sole
+        # exception, easy for a developer (or an AI assistant working from
+        # this file alone) to miss when switching case studies. Leave .env's
+        # value empty to hide the Home page's "back to the app" button
+        # entirely - see Docs/PRIAM-INTEGRATION-PLAYBOOK.md §4ter.
+        TARGET_APP_URL: ${TARGET_APP_URL}
+    ports:
+      - 4200:4200
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - shared_net
+
+  frontprovider:
+    # Same rationale as `actor` above — fixed tag shared across case studies
+    # (unlike `frontuser` above, none of this service's build args are
+    # case-study-specific).
+    image: priam-frontend-provider:latest
+    container_name: priam-frontend-provider
+    build:
+      context: ./PRIAM-Services/PRIAM-Frontend-Provider
+      args:
+        API_DATA: localhost:8090/data
+        API_RIGHT: localhost:8090/right
+        API_ACTOR: localhost:8090/actor
+        API_PROVIDER: localhost:8090/provider
+        API_CONSENT: localhost:8090/cdp
+        GATEWAY_ORIGIN: localhost:8090
+        OIDC_ISSUER: localhost:8080/realms/priam-realm
+        OIDC_CLIENT_ID: Provider-client
+    ports:
+      - 4000:4000
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - shared_net
+
+  # Concrete example IdP (Docs/PRIAM-AUTH-OIDC.md §5) - not a hard PRIAM
+  # dependency (Gateway fails open, both frontends accept any standards-
+  # compliant issuer), added here so PRIAM-Frontend can actually resolve an
+  # `idReference` claim and render its pages against the Habitica case study.
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: priam-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      # Fixes the issuer Keycloak stamps on every token to a single, stable
+      # value, instead of deriving it per-request from whichever host/path
+      # reached it. Needed for any OIDC *server-side* client (confidential
+      # client doing its own code->token exchange from a backend container,
+      # e.g. Mastodon's omniauth-openid-connect - see
+      # case-studies/Mastodon/priam-integration/INTEGRATION-REPORT.md,
+      # Family 3 test): without this, a token issued during a browser-driven
+      # /auth call (seen via localhost:8080) still carries
+      # iss=http://localhost:8080/..., but Keycloak's own /userinfo endpoint
+      # rejects that same token when called from a container over
+      # keycloak:8080 ("iss"/host mismatch, evaluated per endpoint call) -
+      # confirmed by manually decoding tokens and calling /userinfo both ways
+      # during this session. Purely additive/no-op for every already-working
+      # browser-only OIDC flow (PRIAM-Frontend, PRIAM-Frontend-Provider),
+      # which only ever talks to Keycloak via localhost:8080 in the first
+      # place - this just makes that address the fixed, explicit truth
+      # instead of an incidental default.
+      KC_HOSTNAME: localhost
+    ports:
+      - 8080:8080
+    volumes:
+      - ./Keycloak:/opt/keycloak/data/import
+    networks:
+      - shared_net
+
+  mysqldb:
+    # Deliberately NO fixed `image:` here, unlike the PRIAM microservices
+    # above: `./Databases` contains `db_insertion_script.sql`, which is
+    # rewritten per case study (playbook §1). The built image's init script
+    # genuinely differs per case study. Always rebuild (`--build`) and start
+    # from a virgin `db-volume/` when switching case studies — a fixed tag
+    # here would risk silently reusing a stale image with the previous case
+    # study's SQL annotation baked in.
+    container_name: priam-databases
+    build:
+      context: ./Databases
+    networks:
+      - ms-to-db-server
+    env_file:
+      - .env
+    ports:
+      - 3308:3306  #- 3307:3306
+    volumes:
+      #- ./Databases/init.sh:/docker-entrypoint-initdb.d/init.sh
+      - ./db-volume:/var/lib/mysql
+    healthcheck:
+      # Unauthenticated ping fails on current mysql:9-oracle: root is scoped
+      # to 'root'@'localhost' only, so a ping over TCP to its own hostname
+      # (-h mysqldb) needs real credentials, not just server reachability -
+      # see Docs/PRIAM-INTEGRATION-PLAYBOOK.md §8.9.
+      test: ["CMD-SHELL", "mysqladmin ping -h mysqldb -uroot -p\"$$MYSQL_ROOT_PASSWORD\""]
+      retries: 20
+      interval: 3s
+      timeout: 60s
+    pull_policy: always
+
+volumes:
+  db-volume:
+  kafka_data:
+
+networks:
+  ms-to-db-server:
+  eureka-to-ms:
+  gateway_to_ms:
+  ms-to-kafka:
+  shared_net:
+      external: true
+      name: common_network
+
