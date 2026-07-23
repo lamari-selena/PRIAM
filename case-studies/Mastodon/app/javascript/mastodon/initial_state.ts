@@ -25,6 +25,7 @@ interface InitialStateMeta {
   me?: string;
   moved_to_account_id?: string;
   owner?: string;
+  priam_frontend_url?: string;
   profile_directory: boolean;
   registrations_open: boolean;
   reduce_motion: boolean;
@@ -124,6 +125,7 @@ export const mascot = getMeta('mascot');
 export const me = getMeta('me');
 export const movedToAccountId = getMeta('moved_to_account_id');
 export const owner = getMeta('owner');
+export const priamFrontendUrl = getMeta('priam_frontend_url');
 export const profile_directory = getMeta('profile_directory');
 export const reduceMotion = getMeta('reduce_motion');
 export const registrationsOpen = getMeta('registrations_open');

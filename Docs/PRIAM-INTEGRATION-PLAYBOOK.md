@@ -14,16 +14,14 @@
 > message queue) at every step — not just reviewed or documented. Generic OIDC
 > authentication (Gateway + both Angular frontends) has also been validated
 > end-to-end against a real IdP (Keycloak), including from a real browser. Every
-> pitfall in §8 below and in `PRIAM-Services/PRIAM-INTERNAL-FIXES.md` was
-> encountered and fixed during real tests, not anticipated in theory. If you find
-> one of these bugs on a copy of the repository, your copy is out of date — do not
-> fix it a second time without first checking whether the relevant file already
-> contains the fix. **Both catalogs grow with every new integration** — if you
-> discover a new one, add it to the right thematic group in the right file (§8 of
-> the playbook if the fix stays on the target-application side,
-> `PRIAM-Services/PRIAM-INTERNAL-FIXES.md` if the bug and its fix live entirely in
-> PRIAM's own code) rather than documenting it elsewhere (§4bis in particular notes
-> a still-fresh race condition found during the Ghostfolio integration).
+> pitfall in §8 below was encountered and fixed during real tests, not
+> anticipated in theory. If you find one of these bugs on a copy of the
+> repository, your copy is out of date — do not fix it a second time without
+> first checking whether §8 already contains the fix. **This catalog grows
+> with every new integration** — if you discover a new one, add it to the
+> right thematic group in §8 rather than documenting it elsewhere (§4bis in
+> particular notes a still-fresh race condition found during the Ghostfolio
+> integration).
 
 ## How to use this document
 
@@ -36,9 +34,6 @@
   at the top of the section: one line per pitfall, grouped by the PRIAM component
   concerned. Only open the detail of the group(s) relevant to what you are doing
   (e.g., writing the SQL script → read only the "SQL annotation / seed" group).
-  `PRIAM-Services/PRIAM-INTERNAL-FIXES.md` (bugs already fixed in PRIAM's own
-  code) does not need to be read at all for a normal integration — only for
-  diagnostics if an already-cataloged symptom reappears.
 - **The final checklist** is the sequential thread — every step links back to the
   matching detailed section.
 
@@ -697,14 +692,10 @@ real bug (correct API response, no real effect).
     reached, and the failure has nothing to do with PRIAM.
 - **Test at least once from a real browser, not just curl** — CORS, the
   `OPTIONS` preflight, token expiry, and the rendering of the Consent/Access
-  Request pages only fully show themselves in a browser (several bugs already
-  fixed on PRIAM's side in these exact areas, see
-  `PRIAM-Services/PRIAM-INTERNAL-FIXES.md` §8.7/§8.8 if a symptom of this kind
-  reappears anyway).
+  Request pages only fully show themselves in a browser.
 - **Test with a non-numeric `idRef`** (a UUID or a free-form string), not
   just a simple auto-incremented id — a numeric `idRef` can coincidentally
-  collide with PRIAM's internal id and mask certain bugs (several already
-  fixed on PRIAM's side, `PRIAM-Services/PRIAM-INTERNAL-FIXES.md` §8.2/§8.8).
+  collide with PRIAM's internal id and mask certain bugs.
 
 ## 8. Catalog of known pitfalls
 
@@ -715,13 +706,10 @@ you can reproduce yourself while writing the SQL annotation (§8.1), and the
 only two pitfalls that still require action on the target-application side on
 top of a fix already in place on PRIAM's side (§8.2.f, §8.6).
 
-**Bugs that lived in PRIAM's own code** (the generic Provider bridge,
-`PRIAM-Right-service`, `PRIAM-Data-service`, `PRIAM-Consent-Service`,
-`PRIAM-Actor-service`, the Gateway, both Angular frontends) are **already
-fixed once and for all** in this repository — PRIAM is generic (§0), you have
-nothing to learn about them to integrate a new application. They remain
-cataloged separately, for provenance or diagnosing an apparent regression
-only, in **`PRIAM-Services/PRIAM-INTERNAL-FIXES.md`**.
+PRIAM itself is assumed correct and generic (§0): bugs that once lived in its
+own code (the Provider bridge, the microservices, both Angular frontends)
+have already been fixed once and for all in this repository — there is
+nothing to learn about them to integrate a new application.
 
 ### Quick index
 
@@ -730,8 +718,11 @@ only, in **`PRIAM-Services/PRIAM-INTERNAL-FIXES.md`**.
 | 8.1.a | SQL annotation | Wrong case for `processing_type` / `purpose_type` | Hibernate `IllegalArgumentException: No enum constant...` |
 | 8.1.b | SQL annotation | Missing `processed_data` bookkeeping | `IllegalArgumentException: Subject not found` on consent withdrawal |
 | 8.1.c | SQL annotation | Missing primary key (one-to-many table) | `404 Record not found` on rectification |
+| 8.1.d | SQL annotation / PRIAM-Frontend (fixed on PRIAM's side) | `MANDATORY` processings never rendered on the consent page | A seeded `MANDATORY` processing (e.g. a KYC/legal-obligation field) silently never appears under "Necessary processing", even though it is correctly disabled/non-revocable once shown |
 | 8.2.f | Provider bridge (to write on the target-application side) | 4th endpoint `dataValue`, absent from the Right-service DTOs so easy to miss | `404` on the rectification/erasure detail page of the Provider dashboard |
 | 8.6 | Registration (to sequence on the target-application side) | Race condition between `register_data_subject` and `idRef→id` resolution if misordered | `404` on `GET /api/DataSubjectId/{idRef}` right after sign-up |
+| 8.7 | Registration / Keycloak provisioning (to sequence on the target-application side) | Forced-consent redirect fires before the user can copy a one-time-only credential shown on the same sign-up screen | The app navigates away from its own registration wizard mid-flow, before the security token/password is ever saved |
+| 8.8 | Keycloak provisioning (to surface on the target-application side) | The Keycloak `username` synced by `provision_keycloak_user()` is never shown anywhere in the target application's own UI | User has no way to know what to type on Keycloak's login screen for "Manage on PRIAM" |
 | 8.9 | Environment | Docker VPN DNS / parallel builds / resource limits / dev-mode hot reload | See the detailed group |
 
 ### 8.1 SQL annotation / seed
@@ -790,15 +781,39 @@ request has already been accepted); add the matching `data_usage` +
 `"id"` field on the target application's Provider bridge (§2, whitelist of
 allowed attributes).
 
+**d. `MANDATORY` processings never rendered on the consent page — a real
+generic PRIAM bug, found and fixed during the Bank of Anthos integration.**
+§1 point 6 documents 4 `processing_type` values and states that `NECESSARY`
+and `MANDATORY` get the same UI treatment (pre-checked, disabled,
+non-revocable). `PRIAM-Frontend/src/app/pages/consent/consent.component.ts`'s
+`isDisable()` does correctly treat both types identically — but the
+`necessaryList` array that the template actually iterates over
+(`consent.component.html`) was filtered with
+`a.processingType === ProcessingType.NECESSARY` only, silently dropping every
+`MANDATORY` processing from the list before `isDisable()` is ever consulted.
+Every case study integrated before this one only used `NECESSARY`/`OPTIONAL`/
+`DEFAULT`, so nothing had exercised this path. Symptom: a seeded `MANDATORY`
+processing (Bank of Anthos: `"Identity Verification"`, the KYC/SSN legal-
+obligation processing) is completely invisible on `/consent` — not disabled,
+not greyed out, simply absent, easy to mistake for a missing SQL annotation
+rather than a frontend filter bug (confirmed present in the `processing`
+table via direct SQL query first, which is what pointed at the frontend
+rather than the annotation). Fixed
+(`consent.component.ts`'s `getProcessings()`):
+`this.necessaryList = this.dataList.filter((a) => a.processingType === ProcessingType.NECESSARY || a.processingType === ProcessingType.MANDATORY)`.
+Verified end-to-end in a real browser: before the fix, `/consent` for a
+freshly registered subject showed only "Account Management" under "Necessary
+processing"; after the fix (image rebuilt), the same page shows both
+"Account Management" and "Identity Verification", the latter correctly
+pre-checked and disabled.
+
 ### 8.2 Provider bridge — the 4th endpoint, `dataValue`
 
 The other historical pitfalls of this bridge (bare-object response instead
 of an array, incorrectly resolved internal `idRef`, inconsistent field
-contract, badly encoded `attributes`, column misalignment — formerly §8.2.a
-through §8.2.e) are bugs that lived on PRIAM's side, already fixed once and
-for all: see `PRIAM-Services/PRIAM-INTERNAL-FIXES.md` §8.2 if useful for
-diagnostics, otherwise there is nothing to do here. The only point still
-actionable on the target-application side:
+contract, badly encoded `attributes`, column misalignment) are bugs that
+lived on PRIAM's side, already fixed once and for all — there is nothing to
+do here. The only point still actionable on the target-application side:
 
 **f. The Provider bridge's 4th endpoint, never documented or implemented
 anywhere — `dataValue`.** `PRIAM-Frontend-Provider` (the
@@ -844,14 +859,77 @@ the caller still needs to follow the ordering documented in §4bis (the fix
 makes the failure clean, it does not remove the need to sequence the two
 calls).
 
+### 8.7 Forced-consent redirect racing the target application's own post-signup navigation
+
+Encountered during the Ghostfolio integration, under real conditions (a real
+user, not an automated test): Ghostfolio's registration wizard shows a
+security token exactly once, right after `POST /api/v1/user` returns, with an
+explicit warning that it will never be shown again. The client-side redirect
+described in §4bis (`if (priamConsentRequired) window.location.href =
+'{PRIAM_FRONTEND_URL}/consent'`) is normally wired into whatever
+`stateChanged`/"current user" event already exists in the target
+application — but that same event **also** fires the instant the sign-up
+call returns, before the user has had any chance to see or copy the
+credential. A naive, synchronous redirect check on that event fires
+immediately, blowing away the registration wizard mid-flow with a full-page
+navigation — the user loses the one-time credential before ever seeing it,
+with no error, no warning, nothing recoverable.
+
+A second, subtler failure mode of the naive fix ("just skip the redirect
+while on the registration route"): checking `window.location`/the router's
+current URL **synchronously inside the same event handler** races the
+target application's own post-signup navigation (e.g. `router.navigate(...)`
+called just after the same event fires) — the check reads the *old* route
+before that navigation has resolved, permanently skips the redirect, and
+nothing re-triggers it afterward if that "current user" event does not fire
+again once the wizard closes. Symptom: the forced-consent redirect never
+happens at all for a freshly registered subject, the opposite failure from
+the one being fixed.
+
+**Fix**: do not gate the redirect on the state-change event's own,
+synchronous read of the current route. Trigger it instead from the
+application's route-change events (e.g. Angular's `NavigationEnd`), checking
+at that point whether the user is still on the registration route and
+whether the last known `priamConsentRequired` value is true. This fires
+exactly once the user has genuinely left the registration flow — however
+long that takes — using the freshest consent-required flag already known,
+without depending on a second "current user" fetch that may never happen.
+Generic lesson for any target application with a similar "reveal a secret
+once, then redirect" step: never redirect on the same event that also
+delivers the one-time secret; trigger the redirect from actual navigation
+away from that step instead.
+
+### 8.8 Keycloak username never surfaced in the target application's own UI
+
+Encountered during the Ghostfolio integration, reported by a real user
+testing the "Manage on PRIAM" link (§4ter) after `provision_keycloak_user()`
+(§4bis) was wired up. The Keycloak `username` synced at sign-up is
+necessarily *synthesized* by the integration (§4bis already documents using
+the target application's own primary id or email, since many target
+applications have no email/password concept a human would use as a Keycloak
+login) — but nothing in the target application's own screens ever shows this
+synthesized value to the user. The user only sees Keycloak's login form
+(username + password) with no way to know what username was actually
+provisioned for them, since it is not the handle/email they signed up with
+in the target application.
+
+Fix (target-application side, not PRIAM): surface the synthesized Keycloak
+username next to wherever the target application already shows the
+credential used as the synced password (e.g. right next to a one-time
+security-token reveal step, or in account settings alongside the "Manage on
+PRIAM" link, §4ter) — a plain read-only field is enough, no new backend
+endpoint required if the value is deterministically derived from data the
+client already has (e.g. `{userId}@ghostfolio.local`). Generalizes to any
+target application whose local sign-up has no human-chosen username/email
+of its own.
+
 ### 8.9 Docker / Windows environment
 
 Generic environment pitfalls, unrelated to PRIAM's code or to any particular
 target application's code — relevant to any container you run. (An adjacent
-subset, specific to PRIAM's own `Dockerfile`s/build scripts and already
-fixed in this repository — CRLF, `gradle build` vs. `assemble`, building the
-Gateway from source, the BuildKit heredoc issue — lives in
-`PRIAM-Services/PRIAM-INTERNAL-FIXES.md` §8.9-P if useful for diagnostics.)
+subset, specific to PRIAM's own `Dockerfile`s/build scripts, is already fixed
+in this repository — CRLF, `gradle build` vs. `assemble`, building the
+Gateway from source, the BuildKit heredoc issue.)
 
 - **Unstable Docker Desktop DNS behind a VPN (Windows/WSL2)**: if `docker
   pull`/build fails intermittently with `dial tcp: lookup <host>: no such
@@ -975,7 +1053,9 @@ Gateway from source, the BuildKit heredoc issue — lives in
     already in place on PRIAM's side).
 14. [ ] Test at least once **from a real browser**, not just curl (§7) — in
     particular, check that the Consent/Access Request/My Requests pages
-    show real data for a **non-numeric** `idRef` (§7).
+    show real data for a **non-numeric** `idRef` (§7). If you are an AI agent
+     and cannot test from a real browser, explicitly state that frontend 
+     validation has not been performed and do not claim end-to-end validation.
 15. [ ] Set `TARGET_APP_URL` in the root `.env` (§4ter) to show a link back
     to the target application on PRIAM-Frontend's Home page — easy to
     forget when switching case studies, not optional if you want the link

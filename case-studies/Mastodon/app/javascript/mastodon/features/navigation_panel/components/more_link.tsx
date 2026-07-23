@@ -7,6 +7,7 @@ import { openModal } from 'mastodon/actions/modal';
 import { Dropdown } from 'mastodon/components/dropdown_menu';
 import { Icon } from 'mastodon/components/icon';
 import { useIdentity } from 'mastodon/identity_context';
+import { priamFrontendUrl } from 'mastodon/initial_state';
 import type { MenuItem } from 'mastodon/models/dropdown_menu';
 import { canManageReports, canViewAdminDashboard } from 'mastodon/permissions';
 import { useAppDispatch } from 'mastodon/store';
@@ -84,6 +85,15 @@ export const MoreLink: React.FC = () => {
         text: intl.formatMessage(messages.importExport),
       },
     ];
+
+    // Bidirectional PRIAM navigation (Docs/PRIAM-INTEGRATION-PLAYBOOK.md
+    // §4ter) - hidden unless PRIAM_FRONTEND_URL is configured.
+    if (priamFrontendUrl) {
+      arr.push({
+        href: priamFrontendUrl,
+        text: 'Manage on PRIAM',
+      });
+    }
 
     if (canManageReports(permissions)) {
       arr.push(null, {

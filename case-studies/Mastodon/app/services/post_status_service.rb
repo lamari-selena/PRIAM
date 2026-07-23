@@ -60,6 +60,10 @@ class PostStatusService < BaseService
     unless scheduled?
       postprocess_status!
       bump_potential_friendship!
+      # §4bis, "the most frequently forgotten point of the entire
+      # integration": report every newly created personal record, not just
+      # sign-up, so the Access Request page reflects it.
+      Priam.report_processed_data(@account.username, Priam::STATUS_DATA_IDS)
     end
 
     @status

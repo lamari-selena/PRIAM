@@ -31,6 +31,14 @@ Rails.application.configure do
     config.hosts << host if host.present?
     config.hosts << web_host if web_host.present?
     config.hosts.concat(alternate_domains) if alternate_domains.present?
-    config.host_authorization = { exclude: ->(request) { request.path == '/health' } }
+    # PRIAM Provider bridge (Docs/PRIAM-INTEGRATION-PLAYBOOK.md §2): called
+    # machine-to-machine by PRIAM-Gateway via its internal Docker service
+    # name/IP (Host header e.g. "web:3000" or an ephemeral container IP),
+    # neither of which matches LOCAL_DOMAIN - ActionDispatch::HostAuthorization
+    # otherwise blocks every call with 403 "Blocked hosts" (a real bug hit
+    # during this integration, see priam-integration/INTEGRATION-REPORT.md).
+    # Excluding by path (like /health below) is robust regardless of the
+    # caller's ephemeral container IP, unlike adding it to config.hosts.
+    config.host_authorization = { exclude: ->(request) { request.path == '/health' || request.path.start_with?('/api/dataAccessRight', '/api/rectification', '/api/erasure', '/api/dataValue') } }
   end
 end

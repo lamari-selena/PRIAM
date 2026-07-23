@@ -19,6 +19,7 @@ import {
 import { loginRes } from './utils';
 import { verifyUsername } from '../user/validation';
 import { trackRegistrationEvent } from '../localAnalytics';
+import priam from '../priam';
 
 const USERNAME_LENGTH_MIN = 1;
 const USERNAME_LENGTH_MAX = 20;
@@ -189,6 +190,14 @@ async function registerLocal (req, res, { isV3 = false }) {
   }
 
   const savedUser = await newUser.save();
+
+  if (!existingUser) {
+    // §4bis: register the new PRIAM data_subject and report the default
+    // tasks created by the pre-save hook above, in that order (§8.6 race).
+    const defaultTaskCount = ['habits', 'dailys', 'todos', 'rewards']
+      .reduce((sum, key) => sum + savedUser.tasksOrder[key].length, 0);
+    priam.onUserRegistered(savedUser._id, defaultTaskCount, savedUser.auth.local.email, password);
+  }
 
   let userToJSON;
   if (isV3) {

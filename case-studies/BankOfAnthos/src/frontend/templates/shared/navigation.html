@@ -24,6 +24,9 @@
                   </span>
                 </a>
                 <div class="dropdown-menu" aria-labelledby="accountDropdown">
+                  {% if priam_frontend_url %}
+                    <a class="dropdown-item" href="{{ priam_frontend_url }}" target="_blank" rel="noopener">Manage on PRIAM<i class="fa-icon-spacer fas fa-external-link-alt"></i></a>
+                  {% endif %}
                   <form id="logout-form" method="POST" action="/logout">
                     <a class="dropdown-item" onclick="document.querySelector('#logout-form').submit();">Sign out<i class="fa-icon-spacer fas fa-sign-out-alt"></i></a>
                   </form>

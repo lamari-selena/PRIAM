@@ -17,6 +17,7 @@
         <user-id-row />
         <user-data-row />
         <privacy-preferences-row />
+        <priam-row />
         <tr>
           <td colspan="3">
           </td>
@@ -50,6 +51,7 @@ import PrivacyPreferencesRow from '@/pages/settings/siteDataRows/privacyPreferen
 import ApiRow from '@/pages/settings/siteDataRows/apiRow.vue';
 import WebhooksRow from '@/pages/settings/siteDataRows/webhooksRow.vue';
 import DeveloperModeRow from '@/pages/settings/siteDataRows/developerModeRow.vue';
+import PriamRow from '@/pages/settings/siteDataRows/priamRow.vue';
 
 export default {
   components: {
@@ -59,6 +61,7 @@ export default {
     UserDataRow,
     UserIdRow,
     PrivacyPreferencesRow,
+    PriamRow,
   },
   mounted () {
     this.$store.dispatch('common:setTitle', {

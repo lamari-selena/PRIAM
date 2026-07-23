@@ -1,323 +1,412 @@
 # ÉTAPES FAITES — Bank of Anthos × PRIAM
 
-Raw detail of every test actually run this session, with real state proof
-(not just HTTP 200s). Reproduce identically with the commands below.
+Raw detail of every test actually run **this session** (2026-07-22), with real
+state proof (not just HTTP 200s). Reproduce identically with the commands
+below.
+
+**Context**: this integration was previously built and committed to this
+repository (`git log` shows a single commit already containing a full working
+integration). At the start of this session the working tree had that
+integration reverted out of `case-studies/BankOfAnthos/` and the root PRIAM
+stack switched to a different case study (Ghostfolio, running). This session:
+restored the BankOfAnthos-specific files from that commit, re-verified every
+piece of code against the real current schema/routes, switched the running
+Docker stack back to Bank of Anthos, and then ran every test below fresh
+against real, live containers — not a replay of the old document. Two real
+gaps were found and fixed in the process (§0 below); everything else was
+independently re-verified with new timestamps/screenshots.
+
+## 0. Gaps found and fixed this session (see INTEGRATION-REPORT.md §3 for full detail)
+
+1. **Missing "Manage on PRIAM" link** — the restored code had never actually
+   wired a link into any Bank of Anthos template. Added to
+   `src/frontend/templates/shared/navigation.html` (account dropdown) +
+   `src/frontend/frontend.py` (`priam_frontend_url` passed to `home()`'s
+   `render_template`).
+2. **Generic PRIAM bug**: `PRIAM-Frontend`'s consent page never rendered
+   `MANDATORY` processings (only `NECESSARY`), because
+   `consent.component.ts`'s `necessaryList` filter checked only
+   `ProcessingType.NECESSARY`. Fixed on PRIAM's side (also documented in
+   `Docs/PRIAM-INTEGRATION-PLAYBOOK.md` §8.1.d).
+3. **Missing `local-jwt/` RSA key pair** — gitignored (`*.key`), never
+   present on disk; regenerated with the exact command from Bank of Anthos's
+   own `docs/development.md`.
 
 ## Reference — URLs/ports actually used
 
 | Component | URL | Notes |
 |---|---|---|
 | PRIAM Gateway | `http://localhost:8090` | `/right`, `/cdp`, `/actor`, `/data`, `/provider` prefixes |
-| PRIAM-Actor-service (direct) | `http://actor:8082` (container), not host-published | Reached directly by Bank of Anthos services on `common_network`, not through the Gateway |
-| PRIAM-Consent-Service (direct) | `http://consent:8089` (container), also `http://localhost:8089` host-published by PRIAM's own compose | CDP/CIP |
-| PRIAM-Data-service (direct) | `http://data:8081` (container), `http://localhost:8081` host-published | |
+| PRIAM-Actor-service (direct) | `http://actor:8082` (container); `http://localhost:8082` also host-published | Reached directly by Bank of Anthos services on `common_network`, not through the Gateway |
+| PRIAM-Consent-Service (direct) | `http://consent:8089` (container); `http://localhost:8089` host-published | CDP/CIP |
+| PRIAM-Data-service (direct) | `http://data:8081` (container); `http://localhost:8081` host-published | |
 | PRIAM-Frontend | `http://localhost:4200` | Data-subject UI (Consent, Access Request, My Rights) |
 | PRIAM-Frontend-Provider | `http://localhost:4000` | Data-controller dashboard |
 | Keycloak | `http://localhost:8080`, realm `priam-realm` | `Data-client` (public, direct-grant enabled), `Provider-client` |
 | Bank of Anthos frontend | `http://localhost:9000` | Browser entry point (login/signup/home/payment/deposit) |
 | Bank of Anthos `userservice` (Provider bridge) | `http://userservice:8080` (container) = `CUSTOM_PROVIDER_URL`; `http://localhost:9001` host-published for ad hoc smoke curls only | bare `/api/*`, no auth |
 | Bank of Anthos `accounts-db` | not host-published; `docker exec boa-accounts-db psql -U accounts-admin -d accounts-db` | real-state proof |
-| PRIAM MySQL | not host-published under this compose name; `docker exec priam-databases mysql -u priamu -p'MaiRP_pWd-UsEr' -D <schema>` | real-state proof |
+| PRIAM MySQL | not host-published under this compose project; `docker exec priam-databases mysql -u priamu -p'MaiRP_pWd-UsEr' -D <schema>` | real-state proof |
 
-Test subject used for the full rights/consent cycle: **`priamqa5`**
-(`data_subject_id=5` in PRIAM, non-numeric `idRef`, dynamically registered
-through a real Bank of Anthos sign-up). Demo subjects `testuser`(1)/
-`alice`(2)/`bob`(3)/`eve`(4) were seeded directly in
-`Databases/db_insertion_script.sql` and later backfilled through the real
-runtime path (see last section).
+Test subject used for the full rights/consent cycle this session:
+**`priamqa7`** (`data_subject_id=12` in PRIAM, non-numeric `idRef`,
+dynamically registered through a real Bank of Anthos sign-up in this
+session). Demo subjects `testuser`(1)/`alice`(2)/`bob`(3)/`eve`(4) were seeded
+directly in `Databases/db_insertion_script.sql`; subjects 5-11
+(`priamqa5`, `standalonetest`, `priamqa2-4`, `ww`, `alice789`) are real
+leftover subjects from the original integration session, still present in
+the reused MySQL/Postgres volumes.
 
-## 1. Standalone Bank of Anthos (PRIAM code present, PRIAM containers not running)
+## 1. Docker stack brought up this session
 
 ```bash
+# Root PRIAM stack switched from the Ghostfolio project (priam-ghostfolio,
+# running) back to Bank of Anthos:
+docker stop <priam-ghostfolio containers> && docker rm <fixed-name ones>
+# docker-compose.yml (root) restored to name: priam-bankofanthos,
+# ./db-volume (already containing this exact case study's annotated data
+# from the original session, dated the same day)
+docker compose build mysqldb frontuser   # frontuser rebuilt twice: once for
+                                          # the new TARGET_APP_URL, once more
+                                          # after the consent.component.ts fix
+docker compose up -d mysqldb eureka actor consent data right provider gateway keycloak frontuser frontprovider
+
 cd case-studies/BankOfAnthos
-docker compose up -d
+docker compose build frontend            # rebuilt for the navigation.html/frontend.py change
+docker compose up -d accounts-db ledger-db
+docker compose up -d userservice contacts ledgerwriter balancereader transactionhistory
+docker compose up -d frontend
 ```
 
-Logged in as `testuser`/`bankofanthos` via a real headless-Chromium session
-(Playwright), navigated to `/home`: real balance ($6,641.46), real
-transaction history, real account number rendered. Signed up a throwaway
-user (`standalonetest`) — succeeded, landed on `/home` with $0.00 balance.
-`docker logs boa-userservice` showed the 3 PRIAM hooks failing with
-`NameResolutionError` (PRIAM containers not started yet), caught, logged as
-`WARNING`, no impact on the HTTP response — confirms the fail-open design.
+All services reached `healthy`/`ok` on `/ready`. No rebuild was needed for
+`userservice`, `contacts`, `ledgerwriter`, `balancereader`, `transactionhistory`,
+or the fixed-tag PRIAM microservices — their images (and the MySQL/Postgres
+data volumes) were already built from this exact codebase in an earlier
+session on this machine.
 
-## 2. Sign-up + registration (real, with PRIAM running)
+## 2. Sign-up + registration (real browser, Playwright/Chromium)
 
-Browser sign-up as `priamqa5` (`http://localhost:9000/signup`, fields:
-username, password, password-repeat, firstname, lastname, birthday — the
-rest are pre-filled/readonly on this form).
+```python
+page.goto("http://localhost:9000/signup")
+page.fill("#signup-username", "priamqa7")
+page.fill("#signup-password", "PriamTest123!")
+page.fill("#signup-password-repeat", "PriamTest123!")
+page.fill("#signup-firstname", "Priam")
+page.fill("#signup-lastname", "QaSeven")
+page.fill("#signup-birthday", "1990-01-01")
+page.click("#signup-form button[type=submit]")
+```
 
-Real state after sign-up:
+Result: `http://localhost:9000/home`. Real state after sign-up:
 
 ```bash
 docker exec priam-databases mysql -u priamu -p'MaiRP_pWd-UsEr' -D "priam-actor" \
-  -e "SELECT * FROM data_subject WHERE id_ref='priamqa5';"
-# data_subject_id=5, id_ref=priamqa5, data_subject_category_id=1
+  -e "SELECT * FROM data_subject WHERE id_ref='priamqa7';"
+# data_subject_id=12, id_ref=priamqa7, data_subject_category_id=1
 
 docker exec priam-databases mysql -u priamu -p'MaiRP_pWd-UsEr' -D "priam-data" \
-  -e "SELECT * FROM processed_data WHERE data_subject_id=5 ORDER BY data_id;"
-# data_id 1-10, nb_occurrences=1 each (the 10 annotated User columns)
+  -e "SELECT * FROM processed_data WHERE data_subject_id=12 AND data_id<=10 ORDER BY data_id;"
+# data_id 1-10, nb_occurrences=1 each (the 10 annotated User columns, reported
+# by report_processed_data() in userservice.py's background thread)
 ```
 
-Keycloak account:
+Keycloak account + token claim:
 
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8080/realms/master/protocol/openid-connect/token \
   -d grant_type=password -d client_id=admin-cli -d username=admin -d password=admin \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 curl -s -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:8080/admin/realms/priam-realm/users?username=priamqa5"
-# username=priamqa5, attributes.idReference=["priamqa5"], requiredActions=[]
-```
+  "http://localhost:8080/admin/realms/priam-realm/users?username=priamqa7"
+# username=priamqa7, attributes.idReference=["priamqa7"], requiredActions=[]
 
-Login token carries the claim:
-
-```bash
 curl -s -X POST http://localhost:8080/realms/priam-realm/protocol/openid-connect/token \
-  -d grant_type=password -d client_id=Data-client -d username=priamqa5 -d 'password=PriamTest123!'
-# decode the access_token: {"idReference":"priamqa5", "preferred_username":"priamqa5", ...}
+  -d grant_type=password -d client_id=Data-client -d username=priamqa7 -d 'password=PriamTest123!'
+# decoded access_token: {"idReference":"priamqa7","preferred_username":"priamqa7",...}
 ```
 
-## 3. Consent redirect + grant (real browser)
+## 3. Forced consent redirect (real browser)
 
-Login → `home()` calls `has_pending_consent_decision("priamqa5","Contact Management")`
-→ empty CIP list → redirect chain (all followed by the browser):
-`localhost:9000/login` → `localhost:9000/home` → `localhost:4200/consent`
-→ (PRIAM-Frontend's `APP_INITIALIZER` finds no Keycloak session) →
-`localhost:8080/realms/priam-realm/.../auth?...redirect_uri=localhost:4200/consent`.
+Navigating to `/home` immediately after sign-up (`has_pending_consent_decision`
+finds an empty CIP list) redirected through:
+`localhost:9000/home` → `localhost:8080/realms/priam-realm/.../auth?...redirect_uri=localhost:4200/consent`
+→ (after Keycloak login) → `http://localhost:4200/consent?iss=...`.
 
-Logged into Keycloak (username/password form, same credentials) → landed on
-`http://localhost:4200/consent?iss=...` — real PRIAM consent page rendered:
-"Contact Management" (Optional, unchecked), "Account Management" (Necessary,
-checked+disabled), "Back to the app" link visible (confirms `TARGET_APP_URL`
-wiring).
+Screenshot (`4_final_consent_page.png`, before the §0.2 fix): "Contact
+Management" (Optional, unchecked) and only "Account Management" under
+"Necessary processing" — **"Identity Verification" (`MANDATORY`) missing**.
+After the fix + `frontuser` rebuild, re-tested the identical flow
+(`5_consent_after_fix.png`): both "Account Management" and "Identity
+Verification" now render, correctly pre-checked/disabled.
 
-Clicked the Contact Management toggle → network capture showed
-`POST http://localhost:8090/cdp/api/consent/create/priamqa5` → `200`.
+## 4. Consent grant (real browser, non-numeric idRef)
+
+```python
+page.goto("http://localhost:9000/login")
+page.fill("#login-username", "priamqa7")
+page.fill("#login-password", "PriamTest123!")
+page.click("#login-form button[type=submit]")
+# -> redirected to Keycloak -> consent page
+page.locator(".title:has-text('Optional processing') + table mat-slide-toggle").first.click()
+```
+
+Network capture: `GET /cdp/api/contract/list/consents/priamqa7/{1,2,3,4}` (200
+each) then `POST http://localhost:8090/cdp/api/consent/create/priamqa7` → `200`.
 
 Real state:
 
 ```bash
-curl -s "http://localhost:8089/api/contract/list/consents/priamqa5/Contact%20Management"
-# [{"consentId":5,"startDate":"2026-07-22T01:21:26...","endDate":null,"contractId":5}]
+docker exec priam-databases mysql -u priamu -p'MaiRP_pWd-UsEr' -D "priam-consent" \
+  -e "SELECT c.contract_id, co.consent_id, co.processing_id, co.start_date, co.end_date FROM contract c JOIN consent co ON co.contract_id=c.contract_id WHERE c.data_subject_id=12;"
+# contract_id=7, consent_id=7, processing_id=4 (Contact Management),
+# start_date=2026-07-22 21:29:42, end_date=NULL
 ```
 
-## 4. Optional side effect gated by consent (deposit with a labeled contact)
+## 5. Bidirectional navigation (real browser)
 
-With consent granted, submitted a deposit via the real UI
-(`http://localhost:9000/home` → Deposit Funds → External account
-`9099791699`/`808889588`, label `MyExternalBank`, $100.00).
+- Clicked "Back to the app" (PRIAM-Frontend navbar, visible on the consent
+  page) → landed on `http://localhost:9000/home` (a real, working page — not
+  the bare root — confirming `TARGET_APP_URL=http://localhost:9000/home`).
+- On that page, opened the account dropdown (`#accountDropdown`) → found
+  **"Manage on PRIAM"** (`href="http://localhost:4200"`, `target="_blank"`),
+  above "Sign out" (screenshot `8_account_dropdown.png`).
+  `page.locator("text=Manage on PRIAM").count()` → `1`.
+
+## 6. Optional side effect gated by consent (deposit with a labeled contact)
+
+With consent granted, submitted a deposit via the real UI: Deposit Funds →
+"New External Account" → account `9099791111` / routing `808889111`, label
+`PriamTestBank`, amount `$50.00`.
 
 ```bash
 docker exec boa-accounts-db psql -U accounts-admin -d accounts-db \
-  -c "SELECT * FROM contacts WHERE username='priamqa5';"
-# priamqa5 | MyExternalBank | 9099791699 | 808889588 | t
+  -c "SELECT * FROM contacts WHERE username='priamqa7';"
+# priamqa7 | PriamTestBank | 9099791111 | 808889111 | t
 
 docker exec priam-databases mysql -u priamu -p'MaiRP_pWd-UsEr' -D "priam-data" \
-  -e "SELECT * FROM processed_data WHERE data_subject_id=5 AND data_id IN (11,12,13,14);"
-# data_id 11-14, nb_occurrences=1 each — report_processed_data() fired correctly
+  -e "SELECT * FROM processed_data WHERE data_subject_id=12 AND data_id IN (11,12,13,14);"
+# data_id 11-14, nb_occurrences=2 each
 ```
 
-Balance confirmed $100.00 on the home page screenshot.
+**Note on `nb_occurrences=2`** (not 1): investigated and fully explained, not
+a bug. Two independent, legitimate mechanisms both report the same
+`Contact Management` data_ids for the same subject: (a) `contacts.py`'s own
+`report_processed_data()` at contact-creation time (playbook §4bis), and (b)
+`PRIAM-Consent-Service`'s own `ConsentServiceImpl.create()`, which
+**independently** calls `addProcessedData`/`removeProcessedData` for every
+data_id tied to the processing being granted/withdrawn (`processingRestClient
+.getDataIds(processingId)`) — confirmed by reading
+`ConsentServiceImpl.java:121,136,155`. Both fired once each for this subject's
+one grant + one contact creation, giving 2. See §7 below for direct proof
+this decrements correctly.
 
-## 5. Consent withdrawal (real browser)
+## 7. Consent withdrawal → re-grant → withdrawal (real browser, full cycle)
 
-Logged into `http://localhost:4200/consent` again (same session pattern),
-clicked the Contact Management toggle off.
+```python
+page.goto("http://localhost:4200/consent")
+# (Keycloak session already active)
+page.locator(".title:has-text('Optional processing') + table mat-slide-toggle").first.click()
+```
 
+**Withdrawal 1:**
 ```bash
 docker exec priam-databases mysql -u priamu -p'MaiRP_pWd-UsEr' -D "priam-consent" \
-  -e "SELECT * FROM consent WHERE contract_id=5;"
-# consent_id=5, start_date=2026-07-22 01:21:26, end_date=2026-07-22 01:29:12 (real timestamp of the click)
+  -e "SELECT * FROM consent WHERE contract_id=7 ORDER BY consent_id;"
+# consent_id=7, end_date=2026-07-22 21:38:18 (real timestamp of the click)
+
+docker exec priam-databases mysql -u priamu -p'MaiRP_pWd-UsEr' -D "priam-data" \
+  -e "SELECT * FROM processed_data WHERE data_subject_id=12 AND data_id IN (11,12,13,14);"
+# nb_occurrences DECREMENTED 2 -> 1 for all 4 rows (removeProcessedData worked)
 ```
 
-`processed_data` rows 11-14 were checked again and found **unchanged**
-(`nb_occurrences=1`, rows still present) — this is bug #7 in
-`INTEGRATION-REPORT.md` (Feign `DELETE`+body silently dropped), isolated by
-calling the endpoint directly:
-
+**Re-grant** (same toggle click again):
 ```bash
-curl -s -X DELETE "http://localhost:8081/api/processed-data/remove?subjectId=5" \
-  -H "Content-Type: application/json" -d '[11,12,13,14]'
-# "Processed data removed successfully." - and the rows ARE gone afterward,
-# proving ProcessedDataService itself works; the bug is in how
-# ConsentServiceImpl's Feign client calls it.
+# consent_id=8, start_date=2026-07-22 21:38:56, end_date=NULL (new row created,
+# Case 1b in ConsentServiceImpl.create())
 ```
 
-## 6. Rights workflow — get a bearer token first
+**Withdrawal 2:**
+```bash
+# consent_id=8, end_date=2026-07-22 21:39:26
+docker exec priam-databases mysql -u priamu -p'MaiRP_pWd-UsEr' -D "priam-data" \
+  -e "SELECT * FROM processed_data WHERE data_subject_id=12 AND data_id IN (11,12,13,14);"
+# nb_occurrences DECREMENTED 2 -> 1 again (consistent, correct behavior both times)
+```
+
+This directly contradicts the previously-documented "bug #7" (Feign
+`DELETE`+body silently dropped) from the original session's report — that bug
+does **not** reproduce in this checkout; `removeProcessedData` decremented
+correctly on both withdrawals tested. Either it was already fixed generically
+on PRIAM's side after that report was written, or the original diagnosis was
+incomplete. Not re-added to the playbook as a live pitfall, since it does not
+currently reproduce.
+
+## 8. Rights workflow — get a bearer token first
 
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8080/realms/priam-realm/protocol/openid-connect/token \
-  -d grant_type=password -d client_id=Data-client -d username=priamqa5 -d 'password=PriamTest123!' \
+  -d grant_type=password -d client_id=Data-client -d username=priamqa7 -d 'password=PriamTest123!' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 ```
 
-### 6a. Rectification — `answer=false` then `answer=true` (`User.firstname`)
+### 8a. Rectification — `answer=false` then `answer=true` (`User.firstname`)
 
 ```bash
 # BEFORE
 docker exec boa-accounts-db psql -U accounts-admin -d accounts-db \
-  -c "SELECT username, firstname FROM users WHERE username='priamqa5';"
-# priamqa5 | Priam
+  -c "SELECT username, firstname FROM users WHERE username='priamqa7';"
+# priamqa7 | Priam
 
-# 1. Create request
 curl -s -X POST http://localhost:8090/right/api/right/rectificationRequest \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":5,"dataTypeName":"User","data":{"dataId":3},"newValue":"RectifiedFirstName","claim":"test rectification","primaryKeys":[]}'
-# {"dataRequestId":1, ...}
+  -d '{"dataSubjectId":12,"dataTypeName":"User","data":{"dataId":3},"newValue":"RectifiedFirstName","claim":"test rectification","primaryKeys":[]}'
+# {"dataRequestId":8, ...}
 
-# 2. Answer false
 curl -s -X POST http://localhost:8090/right/api/right/answer \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"answer":false,"providerClaim":"refused for test","dataRequestId":1,"data":[]}'
-# {"dataRequestAnswerId":1,"answer":"REFUSED",...}
+  -d '{"answer":false,"providerClaim":"refused for test","dataRequestId":8,"data":[]}'
+# {"dataRequestAnswerId":7,"answer":"REFUSED",...}
 
-# 3. Verify unchanged
+# verify unchanged
 docker exec boa-accounts-db psql -U accounts-admin -d accounts-db \
-  -c "SELECT username, firstname FROM users WHERE username='priamqa5';"
-# priamqa5 | Priam   <- unchanged, confirmed
+  -c "SELECT username, firstname FROM users WHERE username='priamqa7';"
+# priamqa7 | Priam   <- unchanged, confirmed
 
-# 4. Create a second request, same field
 curl -s -X POST http://localhost:8090/right/api/right/rectificationRequest \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":5,"dataTypeName":"User","data":{"dataId":3},"newValue":"RectifiedFirstName","claim":"test rectification 2","primaryKeys":[]}'
-# {"dataRequestId":2, ...}
+  -d '{"dataSubjectId":12,"dataTypeName":"User","data":{"dataId":3},"newValue":"RectifiedFirstName","claim":"test rectification 2","primaryKeys":[]}'
+# {"dataRequestId":9, ...}
 
-# 5. Answer true
 curl -s -X POST http://localhost:8090/right/api/right/answer \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"answer":true,"providerClaim":"approved for test","dataRequestId":2,"data":[]}'
-# {"dataRequestAnswerId":2,"answer":"FULL",...}
+  -d '{"answer":true,"providerClaim":"approved for test","dataRequestId":9,"data":[]}'
+# {"dataRequestAnswerId":8,"answer":"FULL",...}
 
-# 6. Verify REAL change
+# verify REAL change
 docker exec boa-accounts-db psql -U accounts-admin -d accounts-db \
-  -c "SELECT username, firstname FROM users WHERE username='priamqa5';"
-# priamqa5 | RectifiedFirstName   <- changed, confirmed
+  -c "SELECT username, firstname FROM users WHERE username='priamqa7';"
+# priamqa7 | RectifiedFirstName   <- changed, confirmed
 ```
 
-### 6b. Erasure — `answer=false` then `answer=true` (`User.address`)
+### 8b. Erasure — `answer=false` then `answer=true` (`User.address`)
 
 ```bash
-# BEFORE: priamqa5 | 123 Nth Avenue, New York City
+# BEFORE: priamqa7 | 123 Nth Avenue, New York City
 
 curl -s -X POST http://localhost:8090/right/api/right/erasureRequest \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":5,"dataTypeName":"User","data":{"dataId":6},"claim":"test erasure","primaryKeys":[]}'
-# {"dataRequestId":3, ...}
+  -d '{"dataSubjectId":12,"dataTypeName":"User","data":{"dataId":6},"claim":"test erasure","primaryKeys":[]}'
+# {"dataRequestId":10, ...}
 
 curl -s -X POST http://localhost:8090/right/api/right/answer \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"answer":false,"providerClaim":"refused","dataRequestId":3,"data":[]}'
+  -d '{"answer":false,"providerClaim":"refused","dataRequestId":10,"data":[]}'
 # {"answer":"REFUSED",...}
-# verify unchanged: priamqa5 | 123 Nth Avenue, New York City   <- confirmed
+# verify unchanged: priamqa7 | 123 Nth Avenue, New York City   <- confirmed
 
 curl -s -X POST http://localhost:8090/right/api/right/erasureRequest \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":5,"dataTypeName":"User","data":{"dataId":6},"claim":"test erasure 2","primaryKeys":[]}'
-# {"dataRequestId":4, ...}
+  -d '{"dataSubjectId":12,"dataTypeName":"User","data":{"dataId":6},"claim":"test erasure 2","primaryKeys":[]}'
+# {"dataRequestId":11, ...}
 
 curl -s -X POST http://localhost:8090/right/api/right/answer \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"answer":true,"providerClaim":"approved","dataRequestId":4,"data":[]}'
+  -d '{"answer":true,"providerClaim":"approved","dataRequestId":11,"data":[]}'
 # {"answer":"FULL",...}
-# verify: priamqa5 | (empty string)   <- blanked, confirmed
+# verify: priamqa7 | (empty string)   <- blanked, confirmed
 ```
 
-### 6c. Rectification on a multi-row type with composite primary key (`Contact.routing_num`)
+### 8c. Rectification on `Contact` (composite key `label`)
 
 ```bash
 # BEFORE
 docker exec boa-accounts-db psql -U accounts-admin -d accounts-db \
-  -c "SELECT * FROM contacts WHERE username='priamqa5';"
-# priamqa5 | MyExternalBank | 9099791699 | 808889588 | t
+  -c "SELECT * FROM contacts WHERE username='priamqa7';"
+# priamqa7 | PriamTestBank | 9099791111 | 808889111 | t
 
 curl -s -X POST http://localhost:8090/right/api/right/rectificationRequest \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":5,"dataTypeName":"Contact","data":{"dataId":13},"newValue":"999999999","claim":"test contact rectification","primaryKeys":[{"primaryKeyId":11,"primaryKeyValue":"MyExternalBank"}]}'
-# {"dataRequestId":5, "primaryKeys":{"11":"MyExternalBank"}, ...}
+  -d '{"dataSubjectId":12,"dataTypeName":"Contact","data":{"dataId":13},"newValue":"999999999","claim":"test contact rectification","primaryKeys":[{"primaryKeyId":11,"primaryKeyValue":"PriamTestBank"}]}'
+# {"dataRequestId":12, "primaryKeys":{"11":"PriamTestBank"}, ...}
 
 curl -s -X POST http://localhost:8090/right/api/right/answer \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"answer":true,"providerClaim":"approved","dataRequestId":5,"data":[]}'
+  -d '{"answer":true,"providerClaim":"approved","dataRequestId":12,"data":[]}'
 # {"answer":"FULL",...}
 
 # verify ONLY this row changed
 docker exec boa-accounts-db psql -U accounts-admin -d accounts-db \
-  -c "SELECT * FROM contacts WHERE username='priamqa5';"
-# priamqa5 | MyExternalBank | 9099791699 | 999999999 | t   <- routing_num changed, confirmed
+  -c "SELECT * FROM contacts WHERE username='priamqa7';"
+# priamqa7 | PriamTestBank | 9099791111 | 999999999 | t   <- routing_num changed, confirmed
 ```
 
-### 6d. Access request (read) + access request bookkeeping
+### 8d. Access request (read)
 
 ```bash
-# Always-open read endpoint (not through the answer=true auto-execution mechanism)
-curl -s "http://localhost:8090/right/api/personalDataValues/accessRight?dataSubjectId=5&dataTypeName=User&attributes=username&attributes=firstname&attributes=lastname&attributes=ssn&attributes=address" \
+curl -s "http://localhost:8090/right/api/personalDataValues/accessRight?dataSubjectId=12&dataTypeName=User&attributes=username&attributes=firstname&attributes=address&attributes=ssn" \
   -H "Authorization: Bearer $TOKEN"
-# [{"address":"","firstname":"RectifiedFirstName","lastname":"QaFive","ssn":"111-22-3333","username":"priamqa5"}]
+# [{"address":"","firstname":"RectifiedFirstName","ssn":"111-22-3333","username":"priamqa7"}]
 
-curl -s "http://localhost:8090/right/api/personalDataValues/accessRight?dataSubjectId=5&dataTypeName=Contact&attributes=label&attributes=account_num&attributes=routing_num" \
+curl -s "http://localhost:8090/right/api/personalDataValues/accessRight?dataSubjectId=12&dataTypeName=Contact&attributes=label&attributes=account_num&attributes=routing_num" \
   -H "Authorization: Bearer $TOKEN"
-# [{"account_num":"9099791699","label":"MyExternalBank","routing_num":"999999999"}]
-
-# Bookkeeping (request + answer)
-curl -s -X POST http://localhost:8090/right/api/right/accessRequest \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":5,"dataRequestClaim":"test access request","data":[]}'
-# {"dataRequestId":6, "requestType":"ACCESS", ...}
-
-curl -s -X POST http://localhost:8090/right/api/right/answer \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"answer":true,"providerClaim":"approved","dataRequestId":6,"data":[]}'
-# {"answer":"FULL",...}
+# [{"account_num":"9099791111","label":"PriamTestBank","routing_num":"999999999"}]
 ```
 
-Also verified in a real browser: logged in as `priamqa5`, navigated to
-`http://localhost:4200/access-request` (through the same Keycloak session
-flow as above) — the "User" Data List table rendered `priamqa5`,
-`RectifiedFirstName`, `QaFive`, birthday, `NY`, `10004`, `-5`,
-`111-22-3333`, address blank — matching every change made above, in a real
-browser, for a non-numeric idRef.
+Both reflect every rectification/erasure performed above.
 
-### 6e. Provider dashboard (data controller side, real browser)
+### 8e. `dataValue` (Provider bridge's 4th endpoint, §8.2.f) — direct smoke test
 
 ```bash
-curl -s -X POST http://localhost:8090/right/api/right/rectificationRequest \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":5,"dataTypeName":"User","data":{"dataId":4},"newValue":"ApprovedViaBrowser","claim":"browser test","primaryKeys":[]}'
-# {"dataRequestId":7, ...}
+curl -s -X POST http://localhost:9001/api/dataValue -H "Content-Type: application/json" \
+  -d '{"idRef":"priamqa7","dataName":"lastname","primaryKeys":{}}'
+# {"value":"QaSeven"}   <- User field, type inferred from dataName (no dataTypeName in body)
+
+curl -s -X POST http://localhost:9001/api/dataValue -H "Content-Type: application/json" \
+  -d '{"idRef":"priamqa7","dataName":"account_num","primaryKeys":{"label":"PriamTestBank"}}'
+# {"value":"9099791111"}   <- Contact field, type inferred from primaryKeys presence
 ```
 
-Logged into `http://localhost:4000` as `app.owner`/`OwnerPass123!` (Keycloak)
-→ Dashboard correctly listed `7 RECTIFICATION BoA Account Holder
-22/07/2026 02:36:01`. Clicking into the row's detail page hit a client-side
-`TypeError` in the automated (Playwright) test — not root-caused within this
-session (see Known limitations in `INTEGRATION-REPORT.md`); the approval
-mechanism itself is independently verified via 6a-6d above.
+### 8f. Provider dashboard (data controller side, real browser)
 
-## 7. Backfill for pre-existing (SQL-seeded) demo users
+```bash
+# Logged into http://localhost:4000 as app.owner / OwnerPass123! (Keycloak)
+```
+
+Dashboard correctly listed a real pending request: `7 RECTIFICATION BoA
+Account Holder 22/07/2026 02:36:01` — a genuine leftover unanswered request
+from the original integration session (same text as documented in the
+now-superseded report), persisted in the reused MySQL volume. Clicking the
+notification did not navigate anywhere (no JS error thrown this time, unlike
+the original session's report of a `TypeError`) — the element does not appear
+to be a clickable row in this build. Not chased further: the approval
+mechanism itself is independently and thoroughly verified via 8a-8c above.
+
+## 9. Backfill for pre-existing users
 
 ```bash
 docker cp priam-integration/backfill-data-subjects.py boa-userservice:/app/backfill-data-subjects.py
 docker exec boa-userservice python /app/backfill-data-subjects.py
-# INFO:backfill:Backfilling testuser / alice / bob / eve / ... (no warnings = all succeeded)
+# INFO:backfill:Backfilling testuser / alice / bob / eve / standalonetest /
+#   priamqa2 / priamqa3 / priamqa4 / priamqa5 / ww / alice789 / priamqa7
+# (no warnings = all succeeded; script backfills every row currently in
+# `users`, not just the 4 originally-seeded demo accounts, since this
+# database also holds real accounts from the original session)
 ```
 
-Verified no duplicate `data_subject` rows were created for the 4 seeded
-users (idempotent upsert, `DataSubjectServiceImpl.saveDataSubject`):
+Verified no duplicate `data_subject` rows (idempotent upsert):
 
 ```bash
 docker exec priam-databases mysql -u priamu -p'MaiRP_pWd-UsEr' -D "priam-actor" \
-  -e "SELECT * FROM data_subject ORDER BY data_subject_id;"
-# 1|16|testuser|1  2|16|alice|1  3|16|bob|1  4|16|eve|1  5..9|NULL|priamqa*/standalonetest|1
+  -e "SELECT data_subject_id, id_ref FROM data_subject ORDER BY data_subject_id;"
+# 1..13, one row each, testuser=1 unchanged despite being backfilled twice
+# (once in the original session's own backfill run, once again here)
 ```
 
-Verified Keycloak provisioning for a demo user:
+Verified Keycloak provisioning for a demo user that predates the sign-up hook:
 
 ```bash
-TOKEN=$(curl -s -X POST http://localhost:8080/realms/master/protocol/openid-connect/token \
-  -d grant_type=password -d client_id=admin-cli -d username=admin -d password=admin \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 curl -s -H "Authorization: Bearer $TOKEN" \
   "http://localhost:8080/admin/realms/priam-realm/users?username=testuser"
-# username=testuser, attributes.idReference=["testuser"], firstName=Test, lastName=User
+# username=testuser, attributes.idReference=["testuser"], firstName=Test,
+# lastName=User, requiredActions=[]
 ```

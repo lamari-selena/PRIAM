@@ -429,6 +429,20 @@ router.afterEach((to, from) => {
   if (from.name === 'chatSunsetFaq') {
     document.body.style.background = '#f9f9f9';
   }
+
+  // §4bis forced consent redirect. Gated on route-change completion (not on
+  // the user-fetch resolving) so it can never race Habitica's own two-step
+  // signup navigation (§8.7) - fires at most once thanks to __priamRedirected.
+  const priamFrontendUrl = import.meta.env.PRIAM_FRONTEND_URL;
+  const { user } = store.state;
+  if (
+    priamFrontendUrl && !window.__priamRedirected
+    && to.name !== 'register' && to.name !== 'username'
+    && user.data && user.data.priamConsentRequired
+  ) {
+    window.__priamRedirected = true;
+    window.location.href = `${priamFrontendUrl}/consent`;
+  }
 });
 
 export default router;

@@ -13,6 +13,7 @@ import { model as EmailUnsubscription } from '../../models/emailUnsubscription';
 import { sendTxn as sendTxnEmail } from '../email';
 import { apiError } from '../apiError';
 import { trackRegistrationEvent } from '../localAnalytics';
+import priam from '../priam';
 
 function _passportProfile (network, accessToken) {
   return new Promise((resolve, reject) => {
@@ -152,6 +153,12 @@ export async function loginSocial (req, res) { // eslint-disable-line import/pre
 
   if (!existingUser) {
     savedUser.newUser = true;
+    // §4bis: no plaintext password to sync for a social sign-up (see priam.js
+    // provisionKeycloakUser's guard) - registration + default-task reporting
+    // still apply.
+    const defaultTaskCount = ['habits', 'dailys', 'todos', 'rewards']
+      .reduce((sum, key) => sum + savedUser.tasksOrder[key].length, 0);
+    priam.onUserRegistered(savedUser._id, defaultTaskCount, email, undefined);
   }
 
   const response = loginRes(savedUser, req, res);

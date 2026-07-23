@@ -11,6 +11,7 @@ import {
 import { model as User, schema as UserSchema } from '../../models/user';
 import { model as NewsPost } from '../../models/newsPost';
 import { stringContainsProfanity, nameContainsNewline } from './validation';
+import priam from '../priam';
 
 export async function get (req, res, { isV3 = false }) {
   const { user } = res.locals;
@@ -24,6 +25,11 @@ export async function get (req, res, { isV3 = false }) {
 
   // Remove apiToken from response TODO make it private at the user level? returned in signup/login
   delete userToJSON.apiToken;
+
+  // §4bis: force a consent decision on the OPTIONAL "Push Notifications"
+  // processing before it is ever silently skipped by the client.
+  userToJSON.priamConsentRequired = await priam
+    .hasPendingConsentDecision(user._id, priam.PUSH_NOTIFICATIONS_PROCESSING);
 
   if (!req.query.userFields) {
     const { daysMissed } = user.daysUserHasMissed(new Date(), req);

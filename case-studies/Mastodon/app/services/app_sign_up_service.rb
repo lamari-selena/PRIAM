@@ -24,6 +24,11 @@ class AppSignUpService < BaseService
     @user = User.create!(
       user_params.merge(created_by_application: @app, sign_up_ip: @remote_ip, password_confirmation: user_params[:password], account_attributes: account_params, invite_request_attributes: invite_request_params)
     )
+    # A second local-sign-up code path distinct from Auth::RegistrationsController
+    # (used by 3rd-party apps calling POST /api/v1/accounts directly) - also
+    # has the plaintext password available here only, in memory, right after
+    # create! (playbook §4bis).
+    Priam.provision_keycloak_user(@user.account&.username, @user.email, @user.password)
   end
 
   def create_access_token!

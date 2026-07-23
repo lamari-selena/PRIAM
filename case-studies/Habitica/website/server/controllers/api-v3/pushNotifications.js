@@ -3,6 +3,7 @@ import {
   NotFound,
 } from '../../libs/errors';
 import { model as PushDevice } from '../../models/pushDevice';
+import priam from '../../libs/priam';
 
 const api = {};
 
@@ -44,14 +45,20 @@ api.addPushDevice = {
       return;
     }
 
-    // Concurrency safe update
-    const pushDevice = (new PushDevice(item)).toJSON(); // Create a mongo doc
-    await user.updateOne({
-      $push: { pushDevices: pushDevice },
-    }).exec();
+    // CEP (§4): registering a device for push notifications is the only
+    // genuinely optional side effect here - the app works fully without it.
+    // No explicit else: consent refused = do nothing, respond as if a no-op.
+    if (await priam.getConsent(user._id, priam.PUSH_NOTIFICATIONS_PROCESSING)) {
+      // Concurrency safe update
+      const pushDevice = (new PushDevice(item)).toJSON(); // Create a mongo doc
+      await user.updateOne({
+        $push: { pushDevices: pushDevice },
+      }).exec();
 
-    // Update the response
-    user.pushDevices.push(pushDevice);
+      // Update the response
+      user.pushDevices.push(pushDevice);
+      priam.reportProcessedData(user._id, priam.PUSH_DEVICE_DATA_IDS);
+    }
 
     res.respond(200, user.pushDevices, res.t('pushDeviceAdded'));
   },

@@ -102,6 +102,7 @@ target/
 
 # Live database volumes — never commit binary MySQL data
 db-volume/
+db-volume-ghostfolio/
 case-studies/TeaStore/db_teastore/
 # Leftover root-owned DB volume from old TeaStore location (can only be removed with sudo)
 TeaStore\ app/

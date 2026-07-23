@@ -35,12 +35,22 @@ Rails.application.configure do
   # config.assume_ssl = true
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  config.force_ssl = true
+  # Env-gated (default true, unchanged prod behavior) so this local PRIAM
+  # integration stack - no TLS terminator, browser access over plain HTTP -
+  # can disable it via FORCE_SSL=false in .env.production without touching
+  # this file again.
+  config.force_ssl = ENV['FORCE_SSL'] != 'false'
 
-  # Skip http-to-https redirect for the default health check endpoint.
+  # Skip http-to-https redirect for the default health check endpoint, and
+  # for the PRIAM Provider bridge (Docs/PRIAM-INTEGRATION-PLAYBOOK.md §2):
+  # called machine-to-machine, over plain HTTP, by PRIAM-Gateway, which
+  # never sets X-Forwarded-Proto - force_ssl otherwise 308-redirects every
+  # call, and Feign does not follow it, surfacing as a 500 on the calling
+  # side (a real bug hit and fixed during this integration, see
+  # priam-integration/INTEGRATION-REPORT.md).
   config.ssl_options = {
     redirect: {
-      exclude: ->(request) { request.path.start_with?('/health') || request.headers['Host'].end_with?('.onion') || request.headers['Host'].end_with?('.i2p') },
+      exclude: ->(request) { request.path.start_with?('/health', '/api/dataAccessRight', '/api/rectification', '/api/erasure', '/api/dataValue') || request.headers['Host'].end_with?('.onion') || request.headers['Host'].end_with?('.i2p') },
     },
   }
 

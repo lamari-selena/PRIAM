@@ -180,7 +180,8 @@ def create_app():
                                platform=platform,
                                platform_display_name=platform_display_name,
                                pod_name=pod_name,
-                               pod_zone=pod_zone)
+                               pod_zone=pod_zone,
+                               priam_frontend_url=app.config['PRIAM_FRONTEND_URL'])
 
     def _populate_contact_labels(account_id, transactions, contacts):
         """

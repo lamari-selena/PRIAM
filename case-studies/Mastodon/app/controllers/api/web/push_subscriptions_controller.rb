@@ -3,11 +3,21 @@
 class Api::Web::PushSubscriptionsController < Api::Web::BaseController
   before_action :require_user!, except: :destroy
   before_action :set_push_subscription, only: :update
+  # CEP (Docs/PRIAM-INTEGRATION-PLAYBOOK.md §4), declared BEFORE
+  # destroy_previous_subscriptions: a real bug found in testing had the
+  # consent check placed inside the `create` action body instead - since
+  # `destroy_previous_subscriptions` is itself a before_action, it ran
+  # first regardless, silently destroying an existing (consented)
+  # subscription on every denied resubscribe attempt before the denial was
+  # ever reached. Ordering before_actions correctly keeps the whole
+  # resubscribe side effect (destroy-then-create) behind the same gate.
+  before_action :check_priam_consent!, only: :create
   before_action :destroy_previous_subscriptions, only: :create, if: :prior_subscriptions?
   after_action :update_session_with_subscription, only: :create
 
   def create
     @push_subscription = ::Web::PushSubscription.create!(web_push_subscription_params)
+    Priam.report_processed_data(current_user.account.username, Priam::PUSH_SUBSCRIPTION_DATA_IDS)
 
     render json: @push_subscription, serializer: REST::WebPushSubscriptionSerializer
   end
@@ -28,6 +38,12 @@ class Api::Web::PushSubscriptionsController < Api::Web::BaseController
 
   def active_session
     @active_session ||= current_session
+  end
+
+  def check_priam_consent!
+    return if Priam.get_consent(current_user.account.username, Priam::PUSH_NOTIFICATIONS_PROCESSING)
+
+    render json: { error: 'Consent required for Push Notifications' }, status: 403
   end
 
   def destroy_previous_subscriptions

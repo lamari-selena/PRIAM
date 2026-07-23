@@ -25,6 +25,7 @@ import {
 } from '../groupTasks';
 import shared from '../../../common';
 import { taskScoredWebhook } from '../webhook';
+import priam from '../priam';
 
 import logger from '../logger';
 
@@ -124,6 +125,14 @@ async function createTasks (req, res, options = {}) {
 
   const tasks = await Promise.all(toSave);
   tasks.splice(0, 1); // Remove user, challenge, or group promise
+
+  // §4bis: report_processed_data at every point a personal record is
+  // created, not just sign-up - here, one call per newly created task owned
+  // by a real subject (group/challenge template tasks have no data subject).
+  if (!challenge && !group) {
+    tasks.forEach(() => priam.reportProcessedData(user._id, priam.TASK_DATA_IDS));
+  }
+
   return tasks;
 }
 

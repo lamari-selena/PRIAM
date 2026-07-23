@@ -160,6 +160,8 @@
     "generateCodes": "Generate Codes",
     "generate": "Generate",
     "getCodes": "Get Codes",
+    "priamManage": "Manage my GDPR rights and consent",
+    "manageOnPriam": "Manage on PRIAM",
     "webhooks": "Webhooks",
     "webhooksInfo": "Webhooks provide a way for developers to receive notifications when a particular action is performed, such as scoring or updating a Task, or sending a message in a Group. By creating a webhook, you will be able to listen to changes in Habitica and build apps that respond to these changes.<br><br>For additional information and examples on webhooks, please visit our <%= linkOpen %>API Docs<%= linkClose %>.",
     "enabled": "Enabled",

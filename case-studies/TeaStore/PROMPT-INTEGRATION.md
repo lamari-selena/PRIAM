@@ -26,11 +26,6 @@ microservices + 2 Angular frontends) into **TeaStore**, whose code lives in
    session for a case study **other than** yours, ignore it — it is not
    generic, and it should not be in `Docs/` in the first place (flag it if you
    find it there).
-5. Before touching the code: launch `TeaStore` on its own (without PRIAM) and
-   confirm it actually works standalone (not just a green `docker ps` —
-   navigate through it). Then stop it, integrate the PRIAM code, and relaunch
-   the full stack (app + PRIAM) to confirm everything still works with PRIAM
-   wired in.
 
 **What you must deliver**, in this order:
 

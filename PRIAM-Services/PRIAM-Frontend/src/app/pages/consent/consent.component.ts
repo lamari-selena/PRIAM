@@ -50,7 +50,8 @@ export class ConsentComponent implements OnInit {
             (a) => a.processingType === ProcessingType.OPTIONAL
           );
           this.necessaryList = this.dataList.filter(
-            (a) => a.processingType === ProcessingType.NECESSARY
+            (a) => a.processingType === ProcessingType.NECESSARY ||
+              a.processingType === ProcessingType.MANDATORY
           );
           if (this.referenceId)
             for (const pro of response) {

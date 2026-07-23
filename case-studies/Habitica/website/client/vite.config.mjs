@@ -50,6 +50,12 @@ if (nconf.get('BASE_URL').indexOf('//habitica.com') !== -1) {
   envObject['import.meta.env.TIME_TRAVEL_ENABLED'] = `false`;
 }
 
+// PRIAM playbook §4ter: browser-facing PRIAM-Frontend origin, empty = the
+// "Manage on PRIAM" link/consent redirect stay hidden/disabled. Set apart
+// from envVars above so an unset value defaults to '' rather than the
+// literal string 'undefined' (falsy checks on the client rely on this).
+envObject['import.meta.env.PRIAM_FRONTEND_URL'] = `'${nconf.get('PRIAM_FRONTEND_URL') || ''}'`;
+
 // https://vitejs.dev/config/
 export default defineConfig({
   define: envObject,

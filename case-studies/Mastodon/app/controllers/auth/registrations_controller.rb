@@ -28,7 +28,13 @@ class Auth::RegistrationsController < Devise::RegistrationsController
   end
 
   def create
-    super
+    super do |user|
+      # Automatic Keycloak identity provisioning (playbook §4bis) - only
+      # local sign-up has a plaintext password to synchronize, and this
+      # controller is the only place it is still available in memory
+      # (never persisted, never logged, never queued into Sidekiq).
+      Priam.provision_keycloak_user(user.account&.username, user.email, user.password) if user.persisted?
+    end
   end
 
   def update

@@ -4,6 +4,13 @@ namespace :api, format: false do
   # OEmbed
   get '/oembed', to: 'oembed#show', as: :oembed
 
+  # PRIAM Provider bridge (Docs/PRIAM-INTEGRATION-PLAYBOOK.md §2) - bare
+  # /api, no auth, machine-to-machine only.
+  get '/dataAccessRight', to: 'priam_provider#data_access_right'
+  post '/rectification', to: 'priam_provider#rectification'
+  post '/erasure', to: 'priam_provider#erasure'
+  post '/dataValue', to: 'priam_provider#data_value'
+
   # Experimental JSON / REST API
   namespace :v1_alpha do
     resources :async_refreshes, only: :show
