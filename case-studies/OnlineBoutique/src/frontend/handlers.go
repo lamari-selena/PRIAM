@@ -59,6 +59,21 @@ var validEnvs = []string{"local", "gcp", "azure", "aws", "onprem", "alibaba"}
 func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
 	log.WithField("currency", currentCurrency(r)).Info("home")
+
+	// PRIAM forced-consent redirect (playbook §4bis): this app has no
+	// "current user" API to hook into (no sign-up/login at all - see
+	// priam_provider.go's header comment), so the root page - the first
+	// thing any new session lands on - is the equivalent hook. Fires at
+	// most once per subject: hasPendingConsentDecision becomes false as
+	// soon as a decision exists (granted or refused), so there is no
+	// redirect loop on later visits.
+	if priamFrontendURL := os.Getenv("PRIAM_FRONTEND_URL"); priamFrontendURL != "" {
+		if hasPendingConsentDecision(sessionID(r), priamRecommendationsProcessing) {
+			http.Redirect(w, r, priamFrontendURL+"/consent", http.StatusFound)
+			return
+		}
+	}
+
 	currencies, err := fe.getCurrencies(r.Context())
 	if err != nil {
 		renderHTTPError(log, r, w, errors.Wrap(err, "could not retrieve currencies"), http.StatusInternalServerError)
@@ -232,6 +247,12 @@ func (fe *frontendServer) addToCartHandler(w http.ResponseWriter, r *http.Reques
 		renderHTTPError(log, r, w, errors.Wrap(err, "failed to add to cart"), http.StatusInternalServerError)
 		return
 	}
+	// PRIAM (playbook §4bis, "the most frequently forgotten point"): a Cart
+	// row was just created/incremented for this subject - report it so it
+	// shows up in the Access Request page. Fire-and-forget: registration
+	// already completed synchronously when this session's cookie was first
+	// issued (middleware.go), so no idRef->dataSubjectId race here (§8.6).
+	go reportProcessedData(sessionID(r), priamCartDataIDs)
 	w.Header().Set("location", baseUrl + "/cart")
 	w.WriteHeader(http.StatusFound)
 }
@@ -561,6 +582,9 @@ func injectCommonTemplateData(r *http.Request, payload map[string]interface{}) m
 		"frontendMessage":   frontendMessage,
 		"currentYear":       time.Now().Year(),
 		"baseUrl":           baseUrl,
+		// PRIAM round-trip navigation (playbook §4ter) - "Manage on PRIAM",
+		// shown in header.html only when set.
+		"priamFrontendUrl": os.Getenv("PRIAM_FRONTEND_URL"),
 	}
 
 	for k, v := range payload {

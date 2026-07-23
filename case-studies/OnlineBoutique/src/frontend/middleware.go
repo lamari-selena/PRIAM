@@ -99,6 +99,15 @@ func ensureSessionID(next http.Handler) http.HandlerFunc {
 				Value:  sessionID,
 				MaxAge: cookieMaxAge,
 			})
+			// PRIAM registration (playbook §4bis) - synchronous (bounded by
+			// priamHTTPClient's timeout), not a goroutine: this is the one
+			// point in the whole request lifecycle where a later call in the
+			// same or a soon-following request could need idRef->
+			// dataSubjectId resolution (reportProcessedData, on the very
+			// first add-to-cart) - awaiting it here removes the race
+			// documented in §4bis/§8.6 by construction, at the cost of
+			// blocking only this one-time, cookie-issuing request.
+			registerDataSubject(sessionID)
 		} else if err != nil {
 			return
 		} else {

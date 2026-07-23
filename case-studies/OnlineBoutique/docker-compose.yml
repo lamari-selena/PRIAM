@@ -1,0 +1,182 @@
+# Local-dev orchestration for OnlineBoutique, added for the PRIAM
+# integration session (see priam-integration/INTEGRATION-REPORT.md).
+#
+# Upstream OnlineBoutique ships NO docker-compose.yml - it targets a real
+# GKE cluster via skaffold/kubernetes-manifests. This file reproduces the
+# same services as plain containers, using the same env var contract as
+# kubernetes-manifests/*.yaml (verified in those files, not invented), so
+# that PRIAM's own docker-compose stack can reach it over `common_network`
+# (playbook §5) without requiring a Kubernetes cluster.
+#
+# shoppingassistantservice/loadgenerator are intentionally NOT included:
+# neither is reachable from any of the flows this integration exercises
+# (frontend only dials shoppingassistantservice from /bot and /assistant,
+# neither used by the Cart/Recommendations PRIAM annotation; loadgenerator
+# is a Locust traffic generator, not part of the app itself). frontend's
+# SHOPPING_ASSISTANT_SERVICE_ADDR below is set to a non-resolvable
+# placeholder - mustMapEnv only requires it to be non-empty at startup, the
+# service itself is never dialed unless /bot is called.
+name: onlineboutique
+services:
+  redis-cart:
+    image: redis:7-alpine
+    container_name: ob-redis-cart
+    # No volume (matches kubernetes-manifests/cartservice.yaml's
+    # `emptyDir: {}` - ephemeral by design upstream too).
+    networks:
+      - ob_internal
+
+  cartservice:
+    build:
+      context: ./src/cartservice/src
+    container_name: ob-cartservice
+    environment:
+      REDIS_ADDR: redis-cart:6379
+    depends_on:
+      - redis-cart
+    networks:
+      - ob_internal
+
+  productcatalogservice:
+    build:
+      context: ./src/productcatalogservice
+    container_name: ob-productcatalogservice
+    environment:
+      PORT: "3550"
+      DISABLE_PROFILER: "1"
+    networks:
+      - ob_internal
+
+  currencyservice:
+    build:
+      context: ./src/currencyservice
+    container_name: ob-currencyservice
+    environment:
+      PORT: "7000"
+      DISABLE_PROFILER: "1"
+    networks:
+      - ob_internal
+
+  shippingservice:
+    build:
+      context: ./src/shippingservice
+    container_name: ob-shippingservice
+    environment:
+      PORT: "50051"
+      DISABLE_PROFILER: "1"
+      DISABLE_TRACING: "1"
+    networks:
+      - ob_internal
+
+  emailservice:
+    build:
+      context: ./src/emailservice
+    container_name: ob-emailservice
+    environment:
+      PORT: "8080"
+      DISABLE_PROFILER: "1"
+    networks:
+      - ob_internal
+
+  paymentservice:
+    build:
+      context: ./src/paymentservice
+    container_name: ob-paymentservice
+    environment:
+      PORT: "50051"
+      DISABLE_PROFILER: "1"
+    networks:
+      - ob_internal
+
+  recommendationservice:
+    build:
+      context: ./src/recommendationservice
+    container_name: ob-recommendationservice
+    environment:
+      PORT: "8080"
+      PRODUCT_CATALOG_SERVICE_ADDR: productcatalogservice:3550
+      DISABLE_PROFILER: "1"
+    depends_on:
+      - productcatalogservice
+    networks:
+      - ob_internal
+
+  adservice:
+    build:
+      context: ./src/adservice
+    container_name: ob-adservice
+    environment:
+      PORT: "9555"
+    networks:
+      - ob_internal
+
+  checkoutservice:
+    build:
+      context: ./src/checkoutservice
+    container_name: ob-checkoutservice
+    environment:
+      PORT: "5050"
+      PRODUCT_CATALOG_SERVICE_ADDR: productcatalogservice:3550
+      SHIPPING_SERVICE_ADDR: shippingservice:50051
+      PAYMENT_SERVICE_ADDR: paymentservice:50051
+      EMAIL_SERVICE_ADDR: emailservice:8080
+      CURRENCY_SERVICE_ADDR: currencyservice:7000
+      CART_SERVICE_ADDR: cartservice:7070
+    depends_on:
+      - productcatalogservice
+      - shippingservice
+      - paymentservice
+      - emailservice
+      - currencyservice
+      - cartservice
+    networks:
+      - ob_internal
+
+  frontend:
+    build:
+      context: ./src/frontend
+    container_name: ob-frontend
+    environment:
+      PORT: "8080"
+      PRODUCT_CATALOG_SERVICE_ADDR: productcatalogservice:3550
+      CURRENCY_SERVICE_ADDR: currencyservice:7000
+      CART_SERVICE_ADDR: cartservice:7070
+      RECOMMENDATION_SERVICE_ADDR: recommendationservice:8080
+      SHIPPING_SERVICE_ADDR: shippingservice:50051
+      CHECKOUT_SERVICE_ADDR: checkoutservice:5050
+      AD_SERVICE_ADDR: adservice:9555
+      # Not deployed in this stack (see header comment) - never dialed
+      # unless /bot is called.
+      SHOPPING_ASSISTANT_SERVICE_ADDR: shoppingassistantservice:80
+      ENV_PLATFORM: local
+      # PRIAM wiring (playbook §4/§4bis/§4ter). REDIS_ADDR: reused directly
+      # by the Provider bridge (priam_provider.go) to read/write the exact
+      # same Cart records cartservice itself manages - see that file's
+      # header comment for why (no gRPC primitive exists for a precise
+      # single-row erasure/rectification).
+      REDIS_ADDR: redis-cart:6379
+      PRIAM_ACTOR_URL: http://actor:8082
+      PRIAM_CDP_URL: http://consent:8089
+      PRIAM_DATA_URL: http://data:8081
+      PRIAM_FRONTEND_URL: http://localhost:4200
+    depends_on:
+      - productcatalogservice
+      - currencyservice
+      - cartservice
+      - recommendationservice
+      - shippingservice
+      - checkoutservice
+      - adservice
+    ports:
+      - "8080:8080"
+    networks:
+      - ob_internal
+      - common_network
+
+networks:
+  ob_internal:
+  # Owned by PRIAM's own root docker-compose.yml / created once with
+  # `docker network create common_network` (playbook §5) - must already
+  # exist before this stack starts.
+  common_network:
+    external: true

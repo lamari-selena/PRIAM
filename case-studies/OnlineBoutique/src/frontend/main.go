@@ -162,6 +162,14 @@ func main() {
 	r.HandleFunc(baseUrl+"/product-meta/{ids}", svc.getProductByID).Methods(http.MethodGet)
 	r.HandleFunc(baseUrl+"/bot", svc.chatBotHandler).Methods(http.MethodPost)
 
+	// PRIAM Provider bridge (Docs/PRIAM-INTEGRATION-PLAYBOOK.md §2) - bare
+	// /api, deliberately NOT prefixed with baseUrl: the Gateway's
+	// CUSTOM_PROVIDER_URL points directly at this service's root.
+	r.HandleFunc("/api/dataAccessRight", priamDataAccessRightHandler).Methods(http.MethodGet)
+	r.HandleFunc("/api/rectification", priamRectificationHandler).Methods(http.MethodPost)
+	r.HandleFunc("/api/erasure", priamErasureHandler).Methods(http.MethodPost)
+	r.HandleFunc("/api/dataValue", priamDataValueHandler).Methods(http.MethodPost)
+
 	var handler http.Handler = r
 	handler = &logHandler{log: log, next: handler}     // add logging
 	handler = ensureSessionID(handler)                 // add session ID

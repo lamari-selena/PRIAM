@@ -97,6 +97,14 @@ func (fe *frontendServer) getShippingQuote(ctx context.Context, items []*pb.Cart
 }
 
 func (fe *frontendServer) getRecommendations(ctx context.Context, userID string, productIDs []string) ([]*pb.Product, error) {
+	// PRIAM CEP (playbook §4): Product Recommendations is the one genuinely
+	// OPTIONAL processing in this application (personalizes suggestions
+	// from cart contents, never required for shopping/checkout to work) -
+	// gate only this optional side effect, never the mandatory Cart
+	// Management processing.
+	if !getConsent(userID, priamRecommendationsProcessing) {
+		return nil, nil
+	}
 	resp, err := pb.NewRecommendationServiceClient(fe.recommendationSvcConn).ListRecommendations(ctx,
 		&pb.ListRecommendationsRequest{UserId: userID, ProductIds: productIDs})
 	if err != nil {

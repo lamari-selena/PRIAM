@@ -1,4 +1,4 @@
-name: priam-mastodon
+name: priam-onlineboutique
 services:
   actor:
     # Fixed, project-name-independent image tag: built once and reused
