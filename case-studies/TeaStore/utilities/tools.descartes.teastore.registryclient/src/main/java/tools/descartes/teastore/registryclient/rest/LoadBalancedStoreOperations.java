@@ -94,6 +94,43 @@ public final class LoadBalancedStoreOperations {
   }
 
   /**
+   * Registers a new user account (also used as the PRIAM idRef, playbook
+   * 4bis) and logs them in.
+   *
+   * @param blob
+   *          SessionBlob
+   * @param name
+   *          username
+   * @param password
+   *          plaintext password
+   * @param email
+   *          email
+   * @param realName
+   *          real name
+   * @throws NotFoundException
+   *           If 404 was returned.
+   * @throws LoadBalancerTimeoutException
+   *           On receiving the 408 status code and on repeated load balancer
+   *           socket timeouts.
+   * @return SessionBlob with login information if registration succeeded, or
+   *         one with no SID set if the username is already taken.
+   */
+  public static SessionBlob register(SessionBlob blob, String name, String password, String email, String realName)
+      throws NotFoundException, LoadBalancerTimeoutException {
+    Response r = ServiceLoadBalancer.loadBalanceRESTOperation(Service.AUTH, "useractions",
+        Product.class,
+        client -> ResponseWrapper.wrap(HttpWrapper
+            .wrap(client.getEndpointTarget().path("register").queryParam("name", name)
+                .queryParam("password", password).queryParam("email", email)
+                .queryParam("realName", realName))
+            .post(Entity.entity(blob, MediaType.APPLICATION_JSON), Response.class)));
+    // Non-200 (409 duplicate username, 400 bad input) -> readEntityOrNull
+    // already returns null without throwing (RestUtil.java), same
+    // "handled by the caller, not an exception" contract as login() above.
+    return RestUtil.readThrowAndOrClose(r, SessionBlob.class);
+  }
+
+  /**
    * Logs user out.
    * 
    * @param blob

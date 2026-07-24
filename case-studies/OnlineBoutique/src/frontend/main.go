@@ -43,6 +43,7 @@ const (
 	cookiePrefix    = "shop_"
 	cookieSessionID = cookiePrefix + "session-id"
 	cookieCurrency  = cookiePrefix + "currency"
+	cookieUserID    = cookiePrefix + "user-id"
 )
 
 var (
@@ -110,6 +111,10 @@ func main() {
 
 	baseUrl = os.Getenv("BASE_URL")
 
+	if err := initStore(); err != nil {
+		log.Fatalf("failed to initialize account/order store: %+v", err)
+	}
+
 	if os.Getenv("ENABLE_TRACING") == "1" {
 		log.Info("Tracing enabled.")
 		initTracing(log, ctx, svc)
@@ -155,6 +160,11 @@ func main() {
 	r.HandleFunc(baseUrl+"/setCurrency", svc.setCurrencyHandler).Methods(http.MethodPost)
 	r.HandleFunc(baseUrl+"/logout", svc.logoutHandler).Methods(http.MethodGet)
 	r.HandleFunc(baseUrl+"/cart/checkout", svc.placeOrderHandler).Methods(http.MethodPost)
+	r.HandleFunc(baseUrl+"/accounts/signup", svc.signupPageHandler).Methods(http.MethodGet)
+	r.HandleFunc(baseUrl+"/accounts/signup", svc.signupHandler).Methods(http.MethodPost)
+	r.HandleFunc(baseUrl+"/accounts/login", svc.loginPageHandler).Methods(http.MethodGet)
+	r.HandleFunc(baseUrl+"/accounts/login", svc.loginHandler).Methods(http.MethodPost)
+	r.HandleFunc(baseUrl+"/accounts/orders", svc.ordersHandler).Methods(http.MethodGet)
 	r.HandleFunc(baseUrl+"/assistant", svc.assistantHandler).Methods(http.MethodGet)
 	r.PathPrefix(baseUrl + "/static/").Handler(http.StripPrefix(baseUrl+"/static/", http.FileServer(http.Dir("./static/"))))
 	r.HandleFunc(baseUrl+"/robots.txt", func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, "User-agent: *\nDisallow: /") })

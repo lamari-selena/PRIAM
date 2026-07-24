@@ -22,6 +22,10 @@
 							</tr>
 						</tbody>
 					</table>
+					<c:if test="${not empty priamFrontendUrl}">
+						<a class="btn" href="${priamFrontendUrl}/consent" target="_blank"
+							rel="noopener">Manage on PRIAM</a>
+					</c:if>
 				</div>
 			</div>
 

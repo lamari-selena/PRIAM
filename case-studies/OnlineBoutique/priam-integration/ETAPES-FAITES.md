@@ -1,475 +1,577 @@
-# PRIAM ↔ OnlineBoutique — Detailed test log (ÉTAPES FAITES)
+# ETAPES-FAITES — raw test log
 
-Every test actually run this session, with the exact command, the HTTP
-response, and the real backend state checked afterward (playbook §7 — a
-`200`/`FULL` proves nothing by itself). Reproducible end-to-end by a human
-or an AI with no prior context: run the commands in order, from the repo
-root, with both stacks up (§0 below).
+Every test actually run this session, with the exact command, the real
+response, and the real database state observed afterward. Written so a
+human or another AI with no prior context can reproduce each test
+identically. See `INTEGRATION-REPORT.md` for the summary/bugs/LOC.
 
-## 0. Reference: ports/URLs actually used
+## 0. Reference — URLs/ports actually used
 
 | Component | Address | Notes |
 |---|---|---|
-| PRIAM Gateway | `http://localhost:8090` | `/right/**`, `/cdp/**`, `/actor/**`, `/data/**`, `/provider/**`, `/eureka/**` (path rewritten, prefix stripped) |
-| PRIAM-Right-service | via Gateway `/right/api/right/...`, `/right/api/personalDataValues/...`, `/right/api/isAccepted` | direct container port 8083, not published needed for these tests |
-| PRIAM-Consent-Service (CDP/CIP) | via Gateway `/cdp/api/decision/...`, `/cdp/api/contract/list/consents/...`, `/cdp/api/consent/create/...` | direct container port 8089 |
-| PRIAM-Actor-service | via Gateway `/actor/api/DataSubject...` | direct container port 8082 |
-| PRIAM-Data-service | via Gateway `/data/api/processed-data/...` | direct container port 8081 |
-| OnlineBoutique frontend (Provider bridge host) | `http://localhost:8080` | bare `/api/{dataAccessRight,rectification,erasure,dataValue}`; also the real app (`/`, `/cart`, `/cart/checkout`, ...) |
-| OnlineBoutique Redis (cart store) | `docker exec ob-redis-cart redis-cli ...` | not published to the host, internal `ob_internal` network only |
-| MySQL (PRIAM DB) | `localhost:3308` (mapped from container port 3306) | `mysql -upriamu -p'MaiRP_pWd-UsEr' -h127.0.0.1 -P3308`, or `docker exec priam-databases mysql -upriamu -p'MaiRP_pWd-UsEr'` |
-| PRIAM-Frontend | `http://localhost:4200` | built/started; `/consent` is the forced-redirect target |
-| PRIAM-Frontend-Provider | `http://localhost:4000` | built/started; renders the `dataValue` detail pages |
-| Keycloak | not started this session | port 8080 collision with OnlineBoutique's own frontend; also out of scope (see INTEGRATION-REPORT.md §2) |
+| PRIAM Gateway | `http://localhost:8090` | `/right`, `/cdp`, `/actor`, `/data`, `/provider` prefixes, per playbook §0 |
+| PRIAM-Actor-service (direct) | `http://localhost:8082` | used directly by `priam.go`/backfill script, bypasses Gateway |
+| PRIAM-Data-service (direct) | `http://localhost:8081` | same |
+| PRIAM-Consent-Service (direct) | `http://localhost:8089` | same — `PRIAM_CDP_URL` in `docker-compose.yml` |
+| PRIAM-Right-service | via Gateway only (`/right/**`) | human-facing, JWT required |
+| PRIAM-Frontend | `http://localhost:4200` | `PRIAM_FRONTEND_URL` |
+| PRIAM-Frontend-Provider | `http://localhost:4000` | |
+| Keycloak | `http://localhost:8080`, realm `priam-realm` | |
+| MySQL (`priam-databases`) | `localhost:3308` (host) / `mysqldb:3306` (Docker) | root pw `MaiRP_pWd-ToOr` (`.env` `MYSQL_ROOT_PASSWORD`) |
+| **OnlineBoutique frontend** | `http://localhost:9090` | container-internal port 8080; host port moved to 9090 because 8080/8081 collide with PRIAM's Keycloak/Data-service — see INTEGRATION-REPORT.md bug #4 |
+| OnlineBoutique Provider bridge | same origin, bare `/api/*` (e.g. `http://localhost:9090/api/dataAccessRight`) — reached by PRIAM via `CUSTOM_PROVIDER_URL=http://frontend:8080` on `common_network` | |
+| OnlineBoutique SQLite file | `onlineboutique-db-volume/onlineboutique.db` (repo root, bind-mounted) | read directly with a throwaway `keinos/sqlite3` container for proof |
 
-Seed data subject: `data_subject_id=1`, `id_ref='207acaaf-a999-4ede-9ca6-7e1eeaaedda5'`
-(a real `shop_session-id` cookie value captured from a real running
-container this session — non-numeric UUID, satisfying playbook §7's
-non-numeric-idRef requirement for every test below).
+Seed subject: `idRef = 245060b7-c7a8-42e9-b2da-c35dc80ecaac` (real UUID,
+captured from a real `POST /accounts/signup`, non-numeric per playbook §7),
+`data_subject_id = 1`, email `priam-seed@example.com`.
 
-## 1. Environment setup (one-time, this session)
+## 1. Environment setup
 
-```sh
-# Docker Desktop started; confirmed a leftover Mastodon stack (case-studies/
-# Mastodon, project "mastodon") was running from a prior session - stopped
-# it (docker compose -p mastodon stop) to free resources, per playbook §8.9.
+### 1.1 Preserve concurrent TeaStore session state
 
-# Stale db-volume held Mastodon's initialized MySQL data - wiped (user
-# confirmed) before switching case study, per playbook §5.
-rm -rf db-volume && mkdir -p db-volume
+The shared `Databases/db_insertion_script.sql` and root `docker-compose.yml`
+were, at the start of this session, mid-way through an uncommitted TeaStore
+integration. Per explicit user direction, the TeaStore SQL annotation was
+copied aside before being overwritten:
 
-# root docker-compose.yml: name: priam-mastodon -> name: priam-onlineboutique
-# root .env: CUSTOM_PROVIDER_URL -> http://frontend:8080
-#            CUSTOM_OIDC_ISSUER_URI / CUSTOM_OIDC_JWK_SET_URI -> blank (OAuth2 N/A)
-#            TARGET_APP_URL -> http://localhost:8080/
-
-docker compose build mysqldb
-docker compose up -d --no-build mysqldb        # waits healthy
-docker compose up -d --no-build eureka         # waits healthy
-docker compose build actor consent data right provider gateway   # sequentially, not in one command (§8.9)
-docker compose up -d --no-build actor
-docker compose up -d --no-build consent data
-docker compose up -d --no-build right provider
-docker compose up -d --no-build gateway
-curl -s http://localhost:8090/health   # returns a JPEG (GatewayApplication's placeholder healthcheck route) - confirms Gateway is up
+```
+cp Databases/db_insertion_script.sql case-studies/TeaStore/priam-integration/db_insertion_script.sql
+cp .env case-studies/TeaStore/priam-integration/dot-env-snapshot.txt
+mv db-volume db-volume-teastore-backup   # real ~200MB MySQL data dir, preserved
+mkdir db-volume                           # fresh, virgin volume for OnlineBoutique
 ```
 
-```sh
+### 1.2 Verify the account-persistence code actually compiles
+
+No local Go toolchain was available; used a throwaway container instead
+(the pre-existing code had never been built — its own doc said so):
+
+```
+MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd):/src" -w /src golang:1.26.4-alpine \
+  sh -c "go get modernc.org/sqlite@latest && go mod tidy"
+MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd):/src" -w /src -e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=amd64 \
+  golang:1.26.4-alpine sh -c "go build -o /tmp/frontend . && echo BUILD_OK && ls -la /tmp/frontend"
+```
+Result: `modernc.org/sqlite` was missing from `go.mod`/`go.sum` (the prior
+session had written code importing it but never run `go mod tidy`) — added
+it, then a real build succeeded: `BUILD_OK`, `-rwxr-xr-x ... 33748987 ...
+/tmp/frontend`.
+
+### 1.3 Bring up OnlineBoutique's own stack
+
+```
 cd case-studies/OnlineBoutique
-docker compose up -d redis-cart
-docker compose build productcatalogservice currencyservice shippingservice \
-  emailservice paymentservice recommendationservice adservice cartservice \
-  checkoutservice frontend   # sequentially, one at a time (§8.9)
-# currencyservice and paymentservice each needed one retry (transient
-# `npm install`/module-proxy network failures - see INTEGRATION-REPORT.md §3 bug 1)
-docker compose up -d --no-build
+docker compose build          # all 10 services, including frontend with the new PRIAM code
+docker compose up -d
 ```
+All 10 containers reached `Up`.
 
-All 10 containers (`ob-redis-cart`, `ob-productcatalogservice`,
-`ob-currencyservice`, `ob-shippingservice`, `ob-emailservice`,
-`ob-paymentservice`, `ob-recommendationservice`, `ob-adservice`,
-`ob-cartservice`, `ob-checkoutservice`, `ob-frontend`) confirmed `Up` via
-`docker ps`.
+### 1.4 Capture a real, non-numeric seed idRef
 
-## 2. Seed session capture
-
-```sh
-curl -i -s http://localhost:8080/
 ```
-Response (first request, no cookie):
+curl -s -i -c cookies.txt -X POST http://localhost:8080/accounts/signup \
+  -d "email=priam-seed@example.com&password=SuperSecret123&confirm_password=SuperSecret123"
+```
+Response:
 ```
 HTTP/1.1 302 Found
-Content-Type: text/html; charset=utf-8
-Location: http://localhost:4200/consent
-Set-Cookie: shop_session-id=207acaaf-a999-4ede-9ca6-7e1eeaaedda5; Max-Age=172800
+Location: /
+Set-Cookie: shop_session-id=ead8231c-8dae-44e7-be3c-e0f0b0b53467; Max-Age=172800
+Set-Cookie: shop_user-id=245060b7-c7a8-42e9-b2da-c35dc80ecaac; Max-Age=172800
 ```
-The `302` to `/consent` is itself the first proof of the forced-consent
-redirect (playbook §4bis): a brand-new, undecided subject is redirected
-immediately.
+→ real UUID captured: `245060b7-c7a8-42e9-b2da-c35dc80ecaac`.
 
-A real product was added to this session's cart through the application's
-own endpoint:
-```sh
-SEED=207acaaf-a999-4ede-9ca6-7e1eeaaedda5
-curl -s -i -b "shop_session-id=$SEED" -X POST http://localhost:8080/cart \
-  --data-urlencode "product_id=OLJCESPC7Z" --data-urlencode "quantity=2"
-# -> HTTP/1.1 302 Found, Location: /cart
+**Bug found here** (see INTEGRATION-REPORT.md #1): the `shop_user-id`
+cookie above has no `Path` attribute, so it defaulted to `Path=/accounts`
+— confirmed by re-running with a home-page visit first:
 ```
-
-Real Redis proof (independent of any PRIAM/bridge code — raw `redis-cli`):
-```sh
-docker exec ob-redis-cart redis-cli TYPE 207acaaf-a999-4ede-9ca6-7e1eeaaedda5
-# -> hash
-docker exec ob-redis-cart redis-cli HGETALL 207acaaf-a999-4ede-9ca6-7e1eeaaedda5
-# -> absexp / -1 / sldexp / -1 / data / <protobuf bytes containing "207acaaf-...OLJCESPC7Z">
+curl -s -i -c cookies2.txt http://localhost:8080/
+curl -s -i -b cookies2.txt -c cookies2.txt -X POST http://localhost:8080/accounts/login \
+  -d "email=priam-seed@example.com&password=SuperSecret123"
 ```
-This confirms `Microsoft.Extensions.Caching.StackExchangeRedis` stores the
-cache entry as a Redis hash with fields `absexp`/`sldexp`/`data` — the
-design assumption `priam_provider.go` is built on, verified against real
-state before trusting it.
-
-`Databases/db_insertion_script.sql`'s `__SEED_SESSION_ID__` placeholder was
-then replaced with this exact value, and `mysqldb` rebuilt from a wiped
-`db-volume/` (same commands as §1) so the seeded `data_subject`/`consent`/
-`processed_data` rows reference this real idRef. `actor`, `consent`, `data`,
-`right`, `provider` were restarted against the fresh database.
-
-Verification after reinit:
-```sh
-curl -s http://localhost:8090/actor/api/DataSubjectId/207acaaf-a999-4ede-9ca6-7e1eeaaedda5
-# -> 1
-curl -s "http://localhost:8090/cdp/api/contract/list/consents/207acaaf-a999-4ede-9ca6-7e1eeaaedda5/Product%20Recommendations"
-# -> [{"consentId":1,"startDate":"2026-07-23T13:37:25.000+00:00","endDate":null,"processing":null,"contractId":1}]
+→ `Set-Cookie: shop_user-id=245060b7-c7a8-42e9-b2da-c35dc80ecaac; Path=/accounts; Max-Age=172800`
+(before fix). After adding `Path: "/"` to both cookie-setting calls in
+`accounts_handlers.go`, rebuilding (`docker compose build frontend &&
+docker compose up -d frontend`) and re-running the same login: `Path=/`.
+Confirmed on the cart page (outside `/accounts`):
 ```
-Confirms the seed subject resolves to `data_subject_id=1` with the
-pre-granted OPTIONAL consent from the SQL script (§1 point 9 of the
-playbook).
-
-## 3. SQL annotation — real state check
-
-```sh
-docker exec priam-databases mysql -upriamu -p'MaiRP_pWd-UsEr' -e "
-SELECT * FROM \`priam-actor\`.data_subject_category;
-SELECT * FROM \`priam-data\`.data_type;
-SELECT data_id,data_name,is_primary_key,is_personal,data_type_id,personal_data_category_id FROM \`priam-data\`.data;
-SELECT processing_id,processing_name,processing_type,processing_category FROM \`priam-data\`.processing;
-SELECT * FROM \`priam-data\`.data_usage;
-SELECT * FROM \`priam-consent\`.contract;
-SELECT * FROM \`priam-consent\`.consent;
-SELECT * FROM \`priam-data\`.processed_data;"
+curl -s -b cookies3.txt http://localhost:8080/cart | grep -o "Log Out\|Log In\|Manage on PRIAM"
 ```
-Output (abridged, full output captured during the session):
+→ `Log Out` / `Manage on PRIAM` (before the fix this printed `Log In`/`Sign Up`
+for an already-logged-in account).
+
+### 1.5 Place a real order for the seed account (needed for Order-type tests)
+
 ```
-data_subject_category_id  data_subject_category_name  location_id
-1                          Shopper                      NULL
+curl -s -i -c c.txt http://localhost:8080/
+curl -s -i -b c.txt -c c.txt -X POST http://localhost:8080/accounts/login \
+  -d "email=priam-seed@example.com&password=SuperSecret123"
+curl -s -i -b c.txt -c c.txt -X POST http://localhost:8080/cart -d "product_id=OLJCESPC7Z&quantity=2"
+curl -s -i -b c.txt -c c.txt -X POST http://localhost:8080/cart/checkout \
+  -d "email=priam-seed@example.com&street_address=42+Rue+de+la+Paix&zip_code=75002&city=Paris&state=IDF&country=France&credit_card_number=4432801561520454&credit_card_expiration_month=1&credit_card_expiration_year=2030&credit_card_cvv=672"
+```
+→ `HTTP/1.1 200 OK`, log line `"message":"order placed","order":"7d2ba0d6-8705-11f1-a78d-2a682942c216"`.
 
-data_type_id  data_type_name
-1             Cart
+Real DB proof:
+```
+docker run --rm -v "<repo>/onlineboutique-db-volume:/data:ro" keinos/sqlite3 sqlite3 /data/onlineboutique.db \
+  "SELECT id, email FROM users; SELECT order_id, user_id, email, street_address, city, state, zip_code, country FROM orders; SELECT order_id, product_id, quantity FROM order_items;"
+```
+```
+245060b7-c7a8-42e9-b2da-c35dc80ecaac|priam-seed@example.com
+7d2ba0d6-8705-11f1-a78d-2a682942c216|245060b7-c7a8-42e9-b2da-c35dc80ecaac|priam-seed@example.com|42 Rue de la Paix|Paris|IDF|75002|France
+7d2ba0d6-8705-11f1-a78d-2a682942c216|OLJCESPC7Z|2
+```
+(At this point PRIAM wasn't up yet — `reportProcessedData` logged a
+connection failure to `actor:8082`, expected/fail-safe, and correctly
+harmless: `priam: reportProcessedData(245060b7...) id lookup failed: dial
+tcp: lookup actor on 127.0.0.11:53: no such host`.)
 
-data_id  data_name    is_primary_key  is_personal  data_type_id  personal_data_category_id
-1        product_id   1               1            1             7
-2        quantity     0               1            1             7
+### 1.6 Finalize the SQL annotation with the real idRef, bring up PRIAM
 
-processing_id  processing_name           processing_type  processing_category
-1              Cart Management           NECESSARY        CONSENT_CONTRACT
-2              Product Recommendations   OPTIONAL         CONSENT_CONTRACT
+`Databases/db_insertion_script.sql`'s seed `data_subject` row was set to
+the real captured UUID. Then, sequentially (playbook §8.9 — one service at
+a time):
+```
+docker compose build mysqldb
+docker compose up -d mysqldb eureka          # wait for healthy
+docker compose up -d actor                   # wait
+docker compose up -d consent data provider   # wait
+docker compose up -d right gateway           # wait
+docker compose up -d keycloak
+docker compose up -d frontuser frontprovider
+```
+Two stale-state issues hit along the way (both environment, not PRIAM
+bugs — see INTEGRATION-REPORT.md #3/#4): fixed container names left over
+from the earlier TeaStore session (`docker rm` on the *stopped* containers,
+after explicit user confirmation since it's a destructive action); a host
+port collision on 8080/8081 (OnlineBoutique's `frontend` republished on
+9090 instead). Final state: all 10 PRIAM containers `healthy`/`Up`, all 10
+OnlineBoutique containers `Up`.
 
-data_usage_id  personal_status  c  r  u  d  data_id  processing_id
-1              1                1  1  1  1  1        1
-2              1                1  1  1  1  2        1
-3              1                0  1  0  0  1        2
+Real DB proof the annotation loaded correctly:
+```
+docker exec priam-databases mysql -uroot -p'MaiRP_pWd-ToOr' -e \
+  "SELECT * FROM \`priam-actor\`.data_subject; SELECT data_id,data_name,data_type_id,is_primary_key FROM \`priam-data\`.data; SELECT processing_id,processing_name,processing_type FROM \`priam-data\`.processing; SELECT * FROM \`priam-data\`.processed_data;"
+```
+```
+data_subject_id  age  id_ref                                data_subject_category_id
+1                16   245060b7-c7a8-42e9-b2da-c35dc80ecaac  1
 
-contract_id  signature_date  expiration_date  data_subject_id
-1            2026-07-23      NULL             1
+data_id  data_name       data_type_id  is_primary_key
+1        email           1             0
+2        order_id        2             1
+3        email           2             0
+4        street_address  2             0
+5        city            2             0
+6        state           2             0
+7        zip_code        2             0
+8        country         2             0
 
-consent_id  start_date            end_date  processing_id  contract_id
-1           2026-07-23 12:37:24   NULL      2              1
+processing_id  processing_name           processing_type
+1              Account Management        NECESSARY
+2              Order Fulfillment          NECESSARY
+3              Product Recommendations    OPTIONAL
 
 data_id  data_subject_id  nb_occurrences
-1        1                1
-2        1                1
-```
-`processing_type`/`processing_category` are exact uppercase — no Hibernate
-`IllegalArgumentException` on any subsequent call (§8.1.a checked).
-
-## 4. Provider bridge smoke test (direct + through Gateway)
-
-```sh
-SEED=207acaaf-a999-4ede-9ca6-7e1eeaaedda5
-curl -s "http://localhost:8080/api/dataAccessRight?idRef=$SEED&dataTypeName=Cart&attributes=product_id,quantity"
-# -> [{"product_id":"OLJCESPC7Z","quantity":"2"}]
-curl -s "http://localhost:8090/provider/api/dataAccessRight?idRef=$SEED&dataTypeName=Cart&attributes=product_id,quantity"
-# -> [{"product_id":"OLJCESPC7Z","quantity":"2"}]   (identical, confirms Gateway's /provider/** rewrite + CUSTOM_PROVIDER_URL wiring)
+1..8     1                1   (one row per data_id, from the seed script's processed_data inserts)
 ```
 
-## 5. Rights workflow — via PRIAM-Right-service (not direct Provider calls)
+### 1.7 Provision a Keycloak test account bound to the seed idRef
 
-### 5.1 Access request
+Automatic Keycloak provisioning was deliberately not implemented this
+session (see INTEGRATION-REPORT.md §5) — this account was created manually,
+purely to obtain a real JWT for testing the authenticated `/right`/`/cdp`
+Gateway routes.
 
-```sh
-curl -s -X POST http://localhost:8090/right/api/right/accessRequest \
-  -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":1,"dataRequestClaim":"I want to see my cart data","data":[{"dataId":1},{"dataId":2}]}'
-# -> {"dataRequestId":1, ... "response":false, ...}
+```
+ADMIN_TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
+  -d "client_id=admin-cli" -d "username=admin" -d "password=admin" -d "grant_type=password" \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+
+curl -s -H "Authorization: Bearer $ADMIN_TOKEN" "http://localhost:8080/admin/realms/priam-realm/users/profile" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print([a['name'] for a in d['attributes']])"
+# -> ['username', 'email', 'firstName', 'lastName', 'idReference']  (already declared by an earlier case study)
+
+curl -s -o /dev/null -w "create user -> HTTP %{http_code}\n" \
+  -X POST "http://localhost:8080/admin/realms/priam-realm/users" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{
+    "username": "priam-seed@example.com",
+    "email": "priam-seed@example.com",
+    "firstName": "priam-seed@example.com",
+    "lastName": "priam-seed@example.com",
+    "enabled": true, "emailVerified": true,
+    "credentials": [{"type": "password", "value": "SuperSecret123", "temporary": false}],
+    "attributes": {"idReference": ["245060b7-c7a8-42e9-b2da-c35dc80ecaac"]}
+  }'
+# -> create user -> HTTP 201
 ```
 
-Answer `false`:
-```sh
-curl -s -X POST http://localhost:8090/right/api/right/answer \
-  -H "Content-Type: application/json" \
-  -d '{"dataRequestId":1,"answer":false,"providerClaim":"denied for test","data":[]}'
-# -> {"dataRequestAnswerId":1,"answer":"REFUSED","dataRequestClaim":"denied for test"}
-curl -s http://localhost:8090/right/api/right/answer/1
-# -> {"dataRequestAnswerId":1,"answer":"REFUSED","dataRequestClaim":"denied for test"}
+Obtain and decode a real token:
+```
+TOKEN=$(curl -s -X POST "http://localhost:8080/realms/priam-realm/protocol/openid-connect/token" \
+  -d "client_id=Data-client" -d "username=priam-seed@example.com" -d "password=SuperSecret123" -d "grant_type=password" \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+```
+Decoded payload (base64url of the middle JWT segment):
+```
+idReference: 245060b7-c7a8-42e9-b2da-c35dc80ecaac
+preferred_username: priam-seed@example.com
+iss: http://localhost:8080/realms/priam-realm
+```
+`Data-client` is `publicClient: true, directAccessGrantsEnabled: true`
+(`Keycloak/priam-realm-realm.json`) — Direct Grant works without a client
+secret.
+
+## 2. Consent workflow (grant / withdraw / re-grant), real proof
+
+Baseline sanity check of the CEP/CIP endpoints, called the same way
+`priam.go` calls them (directly against `PRIAM-Consent-Service`, bypassing
+the Gateway — these are the machine-to-machine calls, not the
+human-facing `/cdp` Gateway route):
+```
+curl -s "http://localhost:8089/api/decision/Product%20Recommendations?idRefList=245060b7-c7a8-42e9-b2da-c35dc80ecaac"
+# -> {}   (empty = no decision yet = getConsent() returns false, fail-closed)
+curl -s "http://localhost:8089/api/contract/list/consents/245060b7-c7a8-42e9-b2da-c35dc80ecaac/Product%20Recommendations"
+# -> []   (empty = hasPendingConsentDecision() returns true)
 ```
 
-Always-open read (playbook §3, point 3 — independent of the answer):
-```sh
-curl -s "http://localhost:8090/right/api/personalDataValues/accessRight?dataSubjectId=1&dataTypeName=Cart&attributes=product_id&attributes=quantity"
-# -> [{"product_id":"OLJCESPC7Z","quantity":"2"}]   (unaffected by the REFUSED answer, as documented)
+### 2.1 Baseline: no consent decision yet → recommendations must not show
+
+```
+curl -s -c c.txt http://localhost:9090/
+curl -s -b c.txt -c c.txt -X POST http://localhost:9090/accounts/login -d "email=priam-seed@example.com&password=SuperSecret123"
+curl -s -b c.txt -c c.txt -X POST http://localhost:9090/cart -d "product_id=66VCHSJNUP&quantity=1"
+curl -s -b c.txt http://localhost:9090/cart | grep -o "You May Also Like"
+# -> (no output: absent, as expected)
 ```
 
-Re-answering the same request is blocked:
-```sh
-curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:8090/right/api/right/answer \
-  -H "Content-Type: application/json" -d '{"dataRequestId":1,"answer":true,"providerClaim":"retry","data":[]}'
-# -> 409
+### 2.2 Grant (real API, real JWT, as the human-facing Gateway route)
+
+```
+curl -s -X POST "http://localhost:8090/cdp/api/consent/create/245060b7-c7a8-42e9-b2da-c35dc80ecaac" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"processingId":"Product Recommendations"}'
+```
+Response: `{"consentId":1,"startDate":"2026-07-24T02:47:30.981+00:00","endDate":null,"processing":null,"contractId":1}`
+
+Real DB proof:
+```
+docker exec priam-databases mysql -uroot -p'MaiRP_pWd-ToOr' -e \
+  "SELECT * FROM \`priam-consent\`.contract; SELECT * FROM \`priam-consent\`.consent;"
+```
+```
+contract_id  signature_date  expiration_date  data_subject_id
+1            2026-07-24      NULL             1
+
+consent_id  start_date           end_date  processing_id  contract_id
+1           2026-07-24 02:47:31  NULL      3              1
 ```
 
-A second access request, answered with the correct `data` array
-(ACCESS-type answers are accepted by *which* `dataId`s are listed in `data`,
-not by the `answer` boolean alone — `DataRequestServiceImpl.
-saveRequestAnswer`, confirmed by reading the code after an
-initial answer=true/data=[] call unexpectedly came back `REFUSED`):
-```sh
-curl -s -X POST http://localhost:8090/right/api/right/accessRequest \
-  -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":1,"dataRequestClaim":"third access request","data":[{"dataId":1},{"dataId":2}]}'
+Observable side effect, not just the API response:
+```
+curl -s "http://localhost:8089/api/decision/Product%20Recommendations?idRefList=245060b7-c7a8-42e9-b2da-c35dc80ecaac"
+# -> {"245060b7-c7a8-42e9-b2da-c35dc80ecaac":true}
+curl -s -b c.txt http://localhost:9090/cart | grep -o "You May Also Like"
+# -> You May Also Like   (PRESENT)
+```
+
+### 2.3 Withdraw
+
+Same endpoint — `ConsentServiceImpl.create` toggles the existing
+open-ended consent (`endDate == null`) to closed:
+```
+curl -s -X POST "http://localhost:8090/cdp/api/consent/create/245060b7-c7a8-42e9-b2da-c35dc80ecaac" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"processingId":"Product Recommendations"}'
+# -> {"consentId":1,"startDate":"...","endDate":"2026-07-24T02:47:51.534+00:00","processing":null,"contractId":1}
+```
+```
+docker exec priam-databases mysql -uroot -p'MaiRP_pWd-ToOr' -e "SELECT * FROM \`priam-consent\`.consent;"
+# -> consent_id=1, end_date=2026-07-24 02:47:52 (was NULL)
+curl -s "http://localhost:8089/api/decision/Product%20Recommendations?idRefList=245060b7-c7a8-42e9-b2da-c35dc80ecaac"
+# -> {"245060b7-c7a8-42e9-b2da-c35dc80ecaac":false}
+curl -s -b c.txt http://localhost:9090/cart | grep -o "You May Also Like"
+# -> (no output: absent, correct)
+```
+
+### 2.4 Re-grant
+
+```
+curl -s -X POST "http://localhost:8090/cdp/api/consent/create/245060b7-c7a8-42e9-b2da-c35dc80ecaac" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"processingId":"Product Recommendations"}'
+# -> {"consentId":2,"startDate":"...","endDate":null,"processing":null,"contractId":1}
+```
+A **new** `consent_id=2` row (matches `ConsentServiceImpl.create`'s
+documented case-1b path: prior consent already had a non-null `endDate`, so
+a fresh row is created rather than reusing the old one).
+```
+docker exec priam-databases mysql -uroot -p'MaiRP_pWd-ToOr' -e "SELECT * FROM \`priam-consent\`.consent;"
+```
+```
+consent_id  start_date           end_date              processing_id  contract_id
+1           2026-07-24 02:47:31  2026-07-24 02:47:52   3              1
+2           2026-07-24 02:48:01  NULL                  3              1
+```
+```
+curl -s -b c.txt http://localhost:9090/cart | grep -o "You May Also Like"
+# -> You May Also Like   (PRESENT, correct)
+```
+
+## 3. Rights workflow, real proof (via PRIAM-Right-service, never the Provider bridge directly)
+
+`dataSubjectId` (internal numeric id) resolved once:
+```
+curl -s "http://localhost:8082/api/DataSubjectId/245060b7-c7a8-42e9-b2da-c35dc80ecaac"
+# -> 1
+```
+
+### 3.1 Rectification — `answer=false`, then `answer=true`
+
+```
+# BEFORE
+docker run --rm -v "<repo>/onlineboutique-db-volume:/data:ro" keinos/sqlite3 sqlite3 /data/onlineboutique.db \
+  "SELECT order_id, street_address FROM orders;"
+# -> 7d2ba0d6-8705-11f1-a78d-2a682942c216|42 Rue de la Paix
+
+# 1) create request
+curl -s -X POST "http://localhost:8090/right/api/right/rectificationRequest" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"dataSubjectId":1,"dataTypeName":"Order","data":{"dataId":4},"newValue":"99 Avenue du Test","claim":"please fix my street address","primaryKeys":[{"primaryKeyId":2,"primaryKeyValue":"7d2ba0d6-8705-11f1-a78d-2a682942c216"}]}'
+# -> {"dataRequestId":1, ...}
+
+# 2) answer=false
+curl -s -X POST "http://localhost:8090/right/api/right/answer" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"dataRequestId":1,"answer":false,"providerClaim":"refused for test","data":[]}'
+# -> {"dataRequestAnswerId":1,"answer":"REFUSED","dataRequestClaim":"refused for test"}
+
+# AFTER answer=false: unchanged
+docker run --rm -v "<repo>/onlineboutique-db-volume:/data:ro" keinos/sqlite3 sqlite3 /data/onlineboutique.db \
+  "SELECT order_id, street_address FROM orders;"
+# -> 7d2ba0d6-8705-11f1-a78d-2a682942c216|42 Rue de la Paix   (unchanged, correct)
+
+# 3) new request + answer=true
+curl -s -X POST "http://localhost:8090/right/api/right/rectificationRequest" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"dataSubjectId":1,"dataTypeName":"Order","data":{"dataId":4},"newValue":"99 Avenue du Test","claim":"please fix my street address","primaryKeys":[{"primaryKeyId":2,"primaryKeyValue":"7d2ba0d6-8705-11f1-a78d-2a682942c216"}]}'
+# -> {"dataRequestId":2, ...}
+curl -s -X POST "http://localhost:8090/right/api/right/answer" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"dataRequestId":2,"answer":true,"providerClaim":"approved for test","data":[{"dataId":4}]}'
+# -> {"dataRequestAnswerId":2,"answer":"FULL","dataRequestClaim":"approved for test"}
+
+# AFTER answer=true: real change
+docker run --rm -v "<repo>/onlineboutique-db-volume:/data:ro" keinos/sqlite3 sqlite3 /data/onlineboutique.db \
+  "SELECT order_id, street_address FROM orders;"
+# -> 7d2ba0d6-8705-11f1-a78d-2a682942c216|99 Avenue du Test   (CHANGED — real, automatic Provider bridge call)
+```
+
+### 3.2 Access request
+
+```
+curl -s -X POST "http://localhost:8090/right/api/right/accessRequest" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"dataSubjectId":1,"dataRequestClaim":"please show me my data","data":[{"dataId":1}]}'
 # -> {"dataRequestId":3, ...}
-curl -s -X POST http://localhost:8090/right/api/right/answer \
-  -H "Content-Type: application/json" \
-  -d '{"dataRequestId":3,"answer":true,"providerClaim":"approved for real","data":[{"dataId":1},{"dataId":2}]}'
-# -> {"dataRequestAnswerId":3,"answer":"FULL","dataRequestClaim":"approved for real"}
-curl -s "http://localhost:8090/right/api/isAccepted?dataSubjectId=1&dataId=1"   # -> true
-curl -s "http://localhost:8090/right/api/isAccepted?dataSubjectId=1&dataId=2"   # -> true
+
+curl -s "http://localhost:8090/right/api/isAccepted?dataSubjectId=1&dataId=1"
+# -> false   (before answer)
+
+curl -s -X POST "http://localhost:8090/right/api/right/answer" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"dataRequestId":3,"answer":true,"providerClaim":"approved","data":[{"dataId":1}]}'
+# -> {"dataRequestAnswerId":3,"answer":"FULL","dataRequestClaim":"approved"}
+
+curl -s "http://localhost:8090/right/api/isAccepted?dataSubjectId=1&dataId=1"
+# -> true   (after answer=true)
+
+curl -s -G "http://localhost:8090/right/api/personalDataValues/accessRight" \
+  -H "Authorization: Bearer $TOKEN" \
+  --data-urlencode "dataSubjectId=1" --data-urlencode "dataTypeName=User" --data-urlencode "attributes=email"
+# -> [{"email":"priam-seed@example.com"}]   (the real, always-open read endpoint, per playbook §3 point 3)
 ```
 
-### 5.2 Rectification (`quantity` 2 → 5)
+### 3.3 Erasure — the bug (INTEGRATION-REPORT.md #2) and its fix
 
-Before:
-```sh
-curl -s "http://localhost:8080/api/dataAccessRight?idRef=207acaaf-a999-4ede-9ca6-7e1eeaaedda5&dataTypeName=Cart&attributes=quantity"
-# -> [{"quantity":"2"}]
+A second, disposable order was created first so this test didn't consume
+the main seed order used above:
 ```
+curl -s -c c2.txt http://localhost:9090/
+curl -s -b c2.txt -c c2.txt -X POST http://localhost:9090/accounts/login -d "email=priam-seed@example.com&password=SuperSecret123"
+curl -s -b c2.txt -c c2.txt -X POST http://localhost:9090/cart -d "product_id=1YMWWN1N4O&quantity=1"
+curl -s -b c2.txt -c c2.txt -X POST http://localhost:9090/cart/checkout \
+  -d "email=priam-seed@example.com&street_address=1+Throwaway+St&zip_code=10001&city=Testville&state=NY&country=USA&credit_card_number=4432801561520454&credit_card_expiration_month=1&credit_card_expiration_year=2030&credit_card_cvv=672"
+```
+→ new order `5aec5516-870a-11f1-a78d-2a682942c216`. Confirmed `reportProcessedData`
+fired for real this time (PRIAM was up): `nb_occurrences` for `data_id`
+2–8 went from 1 → 2 in `priam-data.processed_data`.
 
-Request + `answer=false`:
-```sh
-curl -s -X POST http://localhost:8090/right/api/right/rectificationRequest \
-  -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":1,"dataTypeName":"Cart","data":{"dataId":2},"newValue":"5","claim":"fix quantity","primaryKeys":[{"primaryKeyId":1,"primaryKeyValue":"OLJCESPC7Z"}]}'
+`answer=false` cycle (correct — no deletion):
+```
+curl -s -X POST "http://localhost:8090/right/api/right/erasureRequest" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"dataSubjectId":1,"dataTypeName":"Order","data":{"dataId":8},"claim":"please delete this order","primaryKeys":[{"primaryKeyId":2,"primaryKeyValue":"5aec5516-870a-11f1-a78d-2a682942c216"}]}'
 # -> {"dataRequestId":4, ...}
-curl -s -X POST http://localhost:8090/right/api/right/answer \
-  -H "Content-Type: application/json" \
-  -d '{"dataRequestId":4,"answer":false,"providerClaim":"not this time","data":[]}'
+curl -s -X POST "http://localhost:8090/right/api/right/answer" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"dataRequestId":4,"answer":false,"providerClaim":"refused for test","data":[]}'
 # -> {"dataRequestAnswerId":4,"answer":"REFUSED",...}
-curl -s "http://localhost:8080/api/dataAccessRight?idRef=207acaaf-a999-4ede-9ca6-7e1eeaaedda5&dataTypeName=Cart&attributes=quantity"
-# -> [{"quantity":"2"}]   (UNCHANGED after refusal - confirmed)
+docker run --rm -v "<repo>/onlineboutique-db-volume:/data:ro" keinos/sqlite3 sqlite3 /data/onlineboutique.db \
+  "SELECT order_id FROM orders WHERE order_id='5aec5516-870a-11f1-a78d-2a682942c216';"
+# -> 5aec5516-870a-11f1-a78d-2a682942c216   (still exists, correct)
 ```
 
-New request, `answer=true`:
-```sh
-curl -s -X POST http://localhost:8090/right/api/right/rectificationRequest \
-  -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":1,"dataTypeName":"Cart","data":{"dataId":2},"newValue":"5","claim":"fix quantity take 2","primaryKeys":[{"primaryKeyId":1,"primaryKeyValue":"OLJCESPC7Z"}]}'
+`answer=true` cycle — **this is where the bug surfaced**:
+```
+curl -s -X POST "http://localhost:8090/right/api/right/erasureRequest" ... (same body)
 # -> {"dataRequestId":5, ...}
-curl -s -X POST http://localhost:8090/right/api/right/answer \
-  -H "Content-Type: application/json" \
+curl -s -X POST "http://localhost:8090/right/api/right/answer" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"dataRequestId":5,"answer":true,"providerClaim":"approved","data":[]}'
-# -> {"dataRequestAnswerId":5,"answer":"FULL",...}
-curl -s "http://localhost:8080/api/dataAccessRight?idRef=207acaaf-a999-4ede-9ca6-7e1eeaaedda5&dataTypeName=Cart&attributes=quantity"
-# -> [{"quantity":"5"}]
+# -> {"timestamp":"2026-07-24T02:50:42.758+00:00","status":500,"error":"Internal Server Error","path":"/api/right/answer"}
+docker run --rm -v "<repo>/onlineboutique-db-volume:/data:ro" keinos/sqlite3 sqlite3 /data/onlineboutique.db \
+  "SELECT COUNT(*) FROM orders WHERE order_id='5aec5516-870a-11f1-a78d-2a682942c216'; SELECT COUNT(*) FROM order_items WHERE order_id='5aec5516-870a-11f1-a78d-2a682942c216';"
+# -> 1 / 1   (NOT deleted — the 500 was real, not a red herring)
+```
+Direct Provider-bridge call to isolate the failure (the one intentional
+direct call in this session, used only to diagnose):
+```
+curl -s -X POST "http://localhost:9090/api/erasure" -H "Content-Type: application/json" \
+  -d '{"idRef":"245060b7-c7a8-42e9-b2da-c35dc80ecaac","dataTypeName":"Order","dataName":"country","primaryKeys":{"order_id":"5aec5516-870a-11f1-a78d-2a682942c216"}}'
+# -> {"error":"constraint failed: FOREIGN KEY constraint failed (787)"}
+```
+`docker logs priam-right-ms` showed a Java stack trace from the failed
+downstream call; `docker logs ob-frontend` showed the `POST /api/erasure`
+request completing with a `500`. Root cause and fix: INTEGRATION-REPORT.md
+bug #2 (`priamEraseOrder` deleted `orders` before `order_items`). After
+fixing, rebuilding (`docker compose build frontend && docker compose up -d
+frontend`), the direct call succeeded:
+```
+curl -s -X POST "http://localhost:9090/api/erasure" ... (same body)
+# -> {"success":true}
+docker run ... "SELECT COUNT(*) FROM orders WHERE order_id='5aec5516-...'; SELECT COUNT(*) FROM order_items WHERE order_id='5aec5516-...';"
+# -> 0 / 0
 ```
 
-**Independent proof, raw Redis bytes** (not through the Provider bridge's
-own code):
-```sh
-docker exec ob-redis-cart redis-cli HGET 207acaaf-a999-4ede-9ca6-7e1eeaaedda5 data | xxd
-# 00000000: 0a24 3230 3761 6361 6166 2d61 3939 392d  .$207acaaf-a999-
-# 00000010: 3465 6465 2d39 6361 362d 3765 3165 6561  4ede-9ca6-7e1eea
-# 00000020: 6165 6464 6135 120e 0a0a 4f4c 4a43 4553  aedda5....OLJCES
-# 00000030: 5043 375a 1005 0a                        PC7Z...
+**Full re-verification through the real workflow** (since the fix above
+was confirmed via a direct call, not the real cycle) — a third disposable
+order (`e212ffe3-870a-11f1-a78d-2a682942c216`) was created and put through
+the complete `answer=false`→`answer=true` cycle again. The JWT had expired
+by this point (~5 minutes, matching the playbook's documented session
+lifetime — `WWW-Authenticate: Bearer error="invalid_token",
+error_description="Jwt expired at 2026-07-24T02:50:53Z"`), so a fresh token
+was obtained first:
 ```
-Trailing bytes `10 05` = protobuf field 2 (`quantity`, tag `0x10` = field
-2 << 3 | varint), value `5` — hand-decoded confirmation the rectification
-genuinely landed in the real Redis-stored protobuf, not just in the
-Provider bridge's JSON response.
+TOKEN=$(curl -s -X POST "http://localhost:8080/realms/priam-realm/protocol/openid-connect/token" \
+  -d "client_id=Data-client" -d "username=priam-seed@example.com" -d "password=SuperSecret123" -d "grant_type=password" \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
 
-### 5.3 Erasure (single-row precision, §8.1.c pattern)
-
-A second product added first, so erasure of one row can be shown to leave
-the other intact:
-```sh
-curl -s -i -b "shop_session-id=207acaaf-a999-4ede-9ca6-7e1eeaaedda5" -X POST http://localhost:8080/cart \
-  --data-urlencode "product_id=66VCHSJNUP" --data-urlencode "quantity=1"
-curl -s "http://localhost:8080/api/dataAccessRight?idRef=207acaaf-a999-4ede-9ca6-7e1eeaaedda5&dataTypeName=Cart&attributes=product_id,quantity"
-# -> [{"product_id":"OLJCESPC7Z","quantity":"5"},{"product_id":"66VCHSJNUP","quantity":"1"}]
-```
-
-Request + `answer=false`:
-```sh
-curl -s -X POST http://localhost:8090/right/api/right/erasureRequest \
-  -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":1,"dataTypeName":"Cart","data":{"dataId":1},"claim":"erase this item","primaryKeys":[{"primaryKeyId":1,"primaryKeyValue":"OLJCESPC7Z"}]}'
+curl -s -X POST "http://localhost:8090/right/api/right/erasureRequest" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"dataSubjectId":1,"dataTypeName":"Order","data":{"dataId":8},"claim":"please delete this order","primaryKeys":[{"primaryKeyId":2,"primaryKeyValue":"e212ffe3-870a-11f1-a78d-2a682942c216"}]}'
 # -> {"dataRequestId":6, ...}
-curl -s -X POST http://localhost:8090/right/api/right/answer \
-  -H "Content-Type: application/json" \
-  -d '{"dataRequestId":6,"answer":false,"providerClaim":"not yet","data":[]}'
-# -> {"dataRequestAnswerId":6,"answer":"REFUSED",...}
-curl -s "http://localhost:8080/api/dataAccessRight?idRef=207acaaf-a999-4ede-9ca6-7e1eeaaedda5&dataTypeName=Cart&attributes=product_id,quantity"
-# -> [{"product_id":"OLJCESPC7Z","quantity":"5"},{"product_id":"66VCHSJNUP","quantity":"1"}]   (BOTH still present)
-```
+curl -s -X POST "http://localhost:8090/right/api/right/answer" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"dataRequestId":6,"answer":false,"providerClaim":"refused","data":[]}'
+# -> {"dataRequestAnswerId":5,"answer":"REFUSED",...}
+docker run ... "SELECT COUNT(*) FROM orders WHERE order_id='e212ffe3-...';"
+# -> 1   (still exists, correct)
 
-New request, `answer=true`:
-```sh
-curl -s -X POST http://localhost:8090/right/api/right/erasureRequest \
-  -H "Content-Type: application/json" \
-  -d '{"dataSubjectId":1,"dataTypeName":"Cart","data":{"dataId":1},"claim":"erase this item take 2","primaryKeys":[{"primaryKeyId":1,"primaryKeyValue":"OLJCESPC7Z"}]}'
+curl -s -X POST "http://localhost:8090/right/api/right/erasureRequest" ... (same body)
 # -> {"dataRequestId":7, ...}
-curl -s -X POST http://localhost:8090/right/api/right/answer \
-  -H "Content-Type: application/json" \
+curl -s -X POST "http://localhost:8090/right/api/right/answer" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"dataRequestId":7,"answer":true,"providerClaim":"approved","data":[]}'
-# -> {"dataRequestAnswerId":7,"answer":"FULL",...}
-curl -s "http://localhost:8080/api/dataAccessRight?idRef=207acaaf-a999-4ede-9ca6-7e1eeaaedda5&dataTypeName=Cart&attributes=product_id,quantity"
-# -> [{"product_id":"66VCHSJNUP","quantity":"1"}]   (only OLJCESPC7Z removed)
-```
-Independent raw proof:
-```sh
-docker exec ob-redis-cart redis-cli --no-raw HGET 207acaaf-a999-4ede-9ca6-7e1eeaaedda5 data
-# -> "\n$207acaaf-a999-4ede-9ca6-7e1eeaaedda5\x12\x0e\n\n66VCHSJNUP\x10\x01"
-```
-Only `66VCHSJNUP` (quantity 1) remains in the raw protobuf — confirmed.
-
-### 5.4 `dataValue` (4th Provider endpoint, §8.2.f)
-
-```sh
-curl -s -X POST http://localhost:8090/provider/api/dataValue \
-  -H "Content-Type: application/json" \
-  -d '{"idRef":"207acaaf-a999-4ede-9ca6-7e1eeaaedda5","dataName":"quantity","primaryKeys":{"product_id":"66VCHSJNUP"}}'
-# -> {"value":"1"}
-curl -s -X POST http://localhost:8090/provider/api/dataValue \
-  -H "Content-Type: application/json" \
-  -d '{"idRef":"207acaaf-a999-4ede-9ca6-7e1eeaaedda5","dataName":"product_id","primaryKeys":{"product_id":"66VCHSJNUP"}}'
-# -> {"value":"66VCHSJNUP"}
-```
-No `dataTypeName` in either request body — type inferred correctly from
-`dataName` alone (only one DataType, `Cart`, exists in this integration).
-
-## 6. Consent workflow — grant / withdraw / re-grant
-
-Before touching consent, confirmed the observable side effect (recommended
-products rendered on the cart page) actually happens when consent is
-granted (playbook §7 — test the side effect exists before testing
-withdrawal):
-```sh
-SEED=207acaaf-a999-4ede-9ca6-7e1eeaaedda5
-curl -s "http://localhost:8090/cdp/api/decision/Product%20Recommendations?idRefList=$SEED"
-# -> {"207acaaf-a999-4ede-9ca6-7e1eeaaedda5":true}
-curl -s -b "shop_session-id=$SEED" http://localhost:8080/cart | awk '/class="recommendations"/,/<\/section>/' | grep -oE 'href="/product/[^"]*"'
-# -> href="/product/0PUK6V6EV0"
-#    href="/product/L9ECAV7KIM"
-#    href="/product/LS4PSXUNUM"
-#    href="/product/9SIQT8TOJO"
+# -> {"dataRequestAnswerId":6,"answer":"FULL","dataRequestClaim":"approved"}
+docker run ... "SELECT COUNT(*) FROM orders WHERE order_id='e212ffe3-...'; SELECT COUNT(*) FROM order_items WHERE order_id='e212ffe3-...';"
+# -> 0 / 0   (real erasure, through the real workflow, post-fix)
 ```
 
-Withdraw:
-```sh
-curl -s -X POST "http://localhost:8090/cdp/api/consent/create/$SEED" \
-  -H "Content-Type: application/json" -d '{"processingId":"Product Recommendations"}'
-# -> {"consentId":1,"startDate":"2026-07-23T13:37:25.000+00:00","endDate":"2026-07-23T13:46:55.405+00:00","contractId":1}
+## 4. Registration + forced-redirect, real-time (not backfill)
+
+```
+curl -s -c cn.txt http://localhost:9090/
+curl -s -i -b cn.txt -c cn.txt -X POST http://localhost:9090/accounts/signup \
+  -d "email=priam-redirect-test@example.com&password=SuperSecret123&confirm_password=SuperSecret123"
+```
+```
+HTTP/1.1 302 Found
+Location: http://localhost:4200/consent
+Set-Cookie: shop_user-id=82fb7d5e-b965-4192-bad8-5be23b03dfd1; Path=/; Max-Age=172800
 ```
 Real DB proof:
-```sh
-docker exec priam-databases mysql -upriamu -p'MaiRP_pWd-UsEr' -e "SELECT * FROM \`priam-consent\`.consent WHERE contract_id=1;"
-# consent_id  start_date            end_date              processing_id  contract_id
-# 1           2026-07-23 13:37:25   2026-07-23 13:46:55   2              1
-docker exec priam-databases mysql -upriamu -p'MaiRP_pWd-UsEr' -e "SELECT * FROM \`priam-data\`.processed_data WHERE data_subject_id=1;"
-# data_id  data_subject_id  nb_occurrences
-# 1        1                1     <- decremented from 2 (Product Recommendations only reads product_id, data_usage row 3)
-# 2        1                2     <- untouched (quantity is not read by Product Recommendations)
-curl -s "http://localhost:8090/cdp/api/decision/Product%20Recommendations?idRefList=$SEED"
-# -> {"207acaaf-a999-4ede-9ca6-7e1eeaaedda5":false}
-curl -s -b "shop_session-id=$SEED" http://localhost:8080/cart | awk '/class="recommendations"/,/<\/section>/' | grep -oE 'href="/product/[^"]*"'
-# -> (no output - recommendations correctly suppressed)
 ```
-`data_id=1`'s occurrence count going 2→1 (not 0→ removed row) rather than
-`data_id=2` changing at all confirms `ConsentServiceImpl`'s own
-`addProcessedData`/`removeProcessedData` bookkeeping is scoped precisely to
-the `data_usage` rows tied to the processing being toggled — same
-"double-bookkeeping" behavior already documented and confirmed harmless in
-the Bank of Anthos/Mastodon integration reports (PRIAM's own consent
-mechanism manages `processed_data` independently of this application's
-explicit `reportProcessedData` calls).
+docker exec priam-databases mysql -uroot -p'MaiRP_pWd-ToOr' -e \
+  "SELECT * FROM \`priam-actor\`.data_subject WHERE id_ref='82fb7d5e-b965-4192-bad8-5be23b03dfd1';"
+# -> data_subject_id=2, id_ref=82fb7d5e-b965-4192-bad8-5be23b03dfd1, category 1
 
-Re-grant:
-```sh
-curl -s -X POST "http://localhost:8090/cdp/api/consent/create/$SEED" \
-  -H "Content-Type: application/json" -d '{"processingId":"Product Recommendations"}'
-# -> {"consentId":2,"startDate":"2026-07-23T13:47:34.171+00:00","endDate":null,"contractId":1}
-docker exec priam-databases mysql -upriamu -p'MaiRP_pWd-UsEr' -e "SELECT * FROM \`priam-consent\`.consent WHERE contract_id=1 ORDER BY consent_id;"
-# consent_id  start_date            end_date              processing_id  contract_id
-# 1           2026-07-23 13:37:25   2026-07-23 13:46:55   2              1
-# 2           2026-07-23 13:47:34   NULL                  2              1   <- new row, not an update of row 1
-curl -s "http://localhost:8090/cdp/api/decision/Product%20Recommendations?idRefList=$SEED"
-# -> {"207acaaf-a999-4ede-9ca6-7e1eeaaedda5":true}
-curl -s -b "shop_session-id=$SEED" http://localhost:8080/cart | awk '/class="recommendations"/,/<\/section>/' | grep -oE 'href="/product/[^"]*"'
-# -> href="/product/2ZYFJ3GM2N"
-#    href="/product/1YMWWN1N4O"
-#    href="/product/0PUK6V6EV0"
-#    href="/product/L9ECAV7KIM"
-```
-(Different product set than before withdrawal — confirms a live
-recommendation call, not a cached/stale render.)
-
-## 7. No-redirect-loop confirmation
-
-```sh
-curl -s "http://localhost:8090/cdp/api/contract/list/consents/207acaaf-a999-4ede-9ca6-7e1eeaaedda5/Product%20Recommendations"
-# -> 2 rows (non-empty)
-curl -s -o /dev/null -w "%{http_code}\n" -b "shop_session-id=207acaaf-a999-4ede-9ca6-7e1eeaaedda5" http://localhost:8080/
-# -> 200   (no more redirect, since a decision now exists)
-```
-A brand-new session (no cookie) still redirects correctly:
-```sh
-curl -s -i http://localhost:8080/ | head -5
-# HTTP/1.1 302 Found
-# Location: http://localhost:4200/consent
-# Set-Cookie: shop_session-id=3cfe623f-3ba8-4d99-ac56-b65cc48051e1; Max-Age=172800
+docker exec priam-databases mysql -uroot -p'MaiRP_pWd-ToOr' -e \
+  "SELECT ds.id_ref, pd.data_id, pd.nb_occurrences FROM \`priam-data\`.processed_data pd JOIN \`priam-actor\`.data_subject ds ON ds.data_subject_id=pd.data_subject_id WHERE ds.id_ref='82fb7d5e-...';"
+# -> 82fb7d5e-...  |  1  |  1     (User.email reported, no ordering race — §8.6)
 ```
 
-## 8. Backfill script
+## 5. Round-trip navigation (§4ter)
 
-```sh
-sh case-studies/OnlineBoutique/priam-integration/backfill-data-subjects.sh
-# Scanning ob-redis-cart for existing session_id keys...
-# --- backfilling idRef=207acaaf-a999-4ede-9ca6-7e1eeaaedda5 ---
-#   register_data_subject -> HTTP 200
-#   dataSubjectId=1
-#   report_processed_data -> HTTP 200
-# Backfill complete.
 ```
-Real state proof of idempotency (run against a database that already had
-this idRef registered via the normal runtime hooks, simulating a re-run):
-```sh
-docker exec priam-databases mysql -upriamu -p'MaiRP_pWd-UsEr' -e "SELECT * FROM \`priam-actor\`.data_subject;"
-# data_subject_id=1 still the only row for id_ref='207acaaf-...' - no duplicate created
-docker exec priam-databases mysql -upriamu -p'MaiRP_pWd-UsEr' -e "SELECT * FROM \`priam-data\`.processed_data;"
-# data_id=1: nb_occurrences=3, data_id=2: nb_occurrences=3 (incremented from the re-run's
-# report_processed_data call, on top of the consent re-grant's own increment - expected,
-# non-destructive double-bookkeeping, same as §6 above)
+curl -s -b <logged-in cookie jar> http://localhost:9090/ | grep -o 'href="[^"]*" class="cart-link" title="Manage on PRIAM"'
+# -> href="http://localhost:4200" class="cart-link" title="Manage on PRIAM"
 ```
-This session had **no other pre-existing users** to backfill: the Redis
-cart store is freshly created (no volume persistence in this compose
-setup, matching upstream's own `emptyDir: {}` for `redis-cart`), and the
-only key present was the one this same session's own testing created.
-Confirmed via `redis-cli --scan` returning exactly one key. The script is
-provided and genuinely exercised (idempotency verified above), even though
-there was nothing "pre-existing" to catch up on in this specific run.
+PRIAM-Frontend's own bundle (**note**: this required a rebuild — see
+INTEGRATION-REPORT.md bug #3, the stale-image pitfall found here):
+```
+curl -s http://localhost:4200/main.js | grep -o "localhost:9090[a-zA-Z0-9/:.]*"
+# -> localhost:9090/
+```
 
-## 9. Real-browser testing — not performed, why
+## 6. Backfill script
 
-No browser-automation tool (Playwright, Puppeteer, or similar) is available
-in this environment — checked via `ToolSearch` for `browser|playwright|
-screenshot|puppeteer|chrome`, returning only `WebFetch` (a text-summarizing
-fetcher that does not render JavaScript/SPAs, cannot click, and cannot
-authenticate against Keycloak). `PRIAM-Frontend` (`localhost:4200`) and
-`PRIAM-Frontend-Provider` (`localhost:4000`) were built and started, and
-confirmed to serve `HTTP 200` (Angular "Compiled successfully", no crash
-loop in `docker logs priam-frontend`) — but no DOM interaction, no login,
-and no visual confirmation of the Consent/Access-Request pages was
-performed. Per playbook §7 point 14, this is stated explicitly rather than
-claimed as done: **frontend visual validation was not performed this
-session.** Everything needed for a manual follow-up pass is left running:
-seed idRef `207acaaf-a999-4ede-9ca6-7e1eeaaedda5` (a decision already
-exists for it — to see the forced-redirect UI freshly, use a new browser
-with no `shop_session-id` cookie, or the `3cfe623f-...` session captured in
-§7 above, which still has a pending decision).
+```
+MSYS_NO_PATHCONV=1 DB_VOLUME="<repo>/onlineboutique-db-volume" \
+  sh case-studies/OnlineBoutique/priam-integration/backfill-data-subjects.sh
+```
+```
+Reading users from <repo>/onlineboutique-db-volume/onlineboutique.db ...
+--- backfilling idRef=245060b7-c7a8-42e9-b2da-c35dc80ecaac ---
+  registerDataSubject -> HTTP 200
+  dataSubjectId=1
+  reportProcessedData(User) -> HTTP 200
+  1 pre-existing order(s)
+  reportProcessedData(Order) -> HTTP 200
+--- backfilling idRef=82fb7d5e-b965-4192-bad8-5be23b03dfd1 ---
+  registerDataSubject -> HTTP 200
+  dataSubjectId=2
+  reportProcessedData(User) -> HTTP 200
+  0 pre-existing order(s)
+Backfill complete.
+```
+Exit code 0. See INTEGRATION-REPORT.md bug #5 for the `set -e` issue hit
+(and fixed) while developing this. Since both accounts were already
+registered in real time by the sign-up hook before this ran, the real
+effect is idempotent bookkeeping (`nb_occurrences` incremented again — the
+script's own doc comment already discloses it is not perfectly idempotent
+for that counter), not new subjects appearing — there were no genuinely
+pre-hook accounts in this integration to catch up on.
+
+## 7. Final real state snapshot (end of session)
+
+```
+docker exec priam-databases mysql -uroot -p'MaiRP_pWd-ToOr' -e \
+  "SELECT * FROM \`priam-actor\`.data_subject;"
+```
+```
+data_subject_id  age   id_ref                                 data_subject_category_id
+1                16    245060b7-c7a8-42e9-b2da-c35dc80ecaac   1
+2                NULL  82fb7d5e-b965-4192-bad8-5be23b03dfd1   1
+3                NULL  0ed3bbe9-9630-4f9a-9f44-5a1fffaae58d   1
+```
+`data_subject_id=3` was **not** created by any command in this session —
+its `idRef` resolves to a real account `lam@gmail.com` in
+`onlineboutique.db`. This is consistent with independent real browser
+traffic against the running stack (e.g. the user testing manually) during
+this session, though it was not something this agent drove or can take
+credit for — see INTEGRATION-REPORT.md §4's "Real browser interaction"
+note.

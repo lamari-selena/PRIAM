@@ -1,4 +1,4 @@
-name: priam-onlineboutique
+name: priam-ghostfolio
 services:
   actor:
     # Fixed, project-name-independent image tag: built once and reused

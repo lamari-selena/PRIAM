@@ -25,4 +25,14 @@ public final class BCryptProvider {
   public static boolean checkPassword(String password, String password2) {
     return BCrypt.checkpw(password, password2);
   }
+
+  /**
+   * Hash a plaintext password for storage, same scheme as DataGenerator's
+   * seeded accounts (BCrypt).
+   * @param password plaintext password.
+   * @return the BCrypt hash.
+   */
+  public static String hashPassword(String password) {
+    return BCrypt.hashpw(password, BCrypt.gensalt());
+  }
 }

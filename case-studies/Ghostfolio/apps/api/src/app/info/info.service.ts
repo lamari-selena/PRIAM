@@ -129,7 +129,9 @@ export class InfoService {
       baseCurrency: DEFAULT_CURRENCY,
       currencies: this.exchangeRateDataService.getCurrencies(),
       fearAndGreedStocksMarketPrice:
-        latestFearAndGreedStocksMarketData?.marketPrice
+        latestFearAndGreedStocksMarketData?.marketPrice,
+      // §4ter round-trip navigation - undefined (link hidden) unless wired up.
+      priamFrontendUrl: process.env.PRIAM_FRONTEND_URL || undefined
     };
   }
 

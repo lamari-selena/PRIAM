@@ -88,8 +88,15 @@
                     </a>
                     {{ end }}
 
+                    {{ if $.logged_in }}
+                    <a href="{{ $.baseUrl }}/accounts/orders" class="cart-link">My Orders</a>
                     {{ if $.priamFrontendUrl }}
                     <a href="{{ $.priamFrontendUrl }}" class="cart-link" title="Manage on PRIAM">Manage on PRIAM</a>
+                    {{ end }}
+                    <a href="{{ $.baseUrl }}/logout" class="cart-link">Log Out</a>
+                    {{ else }}
+                    <a href="{{ $.baseUrl }}/accounts/login" class="cart-link">Log In</a>
+                    <a href="{{ $.baseUrl }}/accounts/signup" class="cart-link">Sign Up</a>
                     {{ end }}
 
                     <a href="{{ $.baseUrl }}/cart" class="cart-link">

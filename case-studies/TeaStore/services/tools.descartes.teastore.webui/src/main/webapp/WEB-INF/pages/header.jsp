@@ -25,6 +25,8 @@
 					<c:otherwise>
 						<li><a href="<c:url value="/login" />" >Sign
 								in</a></li>
+						<li><a href="<c:url value="/register" />" >Sign
+								up</a></li>
 					</c:otherwise>
 				</c:choose>
 				<li><a href="<c:url value="/cart"/>"><span

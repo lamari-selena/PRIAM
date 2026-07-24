@@ -2,6 +2,7 @@ import { AccountBalanceService } from '@ghostfolio/api/app/account-balance/accou
 import { PortfolioChangedEvent } from '@ghostfolio/api/events/portfolio-changed.event';
 import { WHERE_ACCOUNT_NOT_EXCLUDED } from '@ghostfolio/api/helper/account.helper';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
+import { ACCOUNT_DATA_IDS, PriamService } from '@ghostfolio/api/services/priam/priam.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { TagService } from '@ghostfolio/api/services/tag/tag.service';
 import { DATE_FORMAT } from '@ghostfolio/common/helper';
@@ -30,6 +31,7 @@ export class AccountService {
     private readonly accountBalanceService: AccountBalanceService,
     private readonly eventEmitter: EventEmitter2,
     private readonly exchangeRateDataService: ExchangeRateDataService,
+    private readonly priamService: PriamService,
     private readonly prismaService: PrismaService,
     private readonly tagService: TagService
   ) {}
@@ -151,6 +153,10 @@ export class AccountService {
       date: format(new Date(), DATE_FORMAT),
       userId: aUserId
     });
+
+    // PRIAM bookkeeping (§4bis/§8.1.b) - every later Account, not just the
+    // one created alongside sign-up, must also report its data_ids.
+    this.priamService.reportProcessedData(aUserId, ACCOUNT_DATA_IDS);
 
     this.eventEmitter.emit(
       PortfolioChangedEvent.getName(),

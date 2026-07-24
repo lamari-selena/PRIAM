@@ -13,6 +13,9 @@ export interface InfoItem {
   globalPermissions: string[];
   isDataGatheringEnabled?: string;
   isReadOnlyMode?: boolean;
+  // Docs/PRIAM-INTEGRATION-PLAYBOOK.md §4ter - drives the "Manage on PRIAM"
+  // link and the forced-consent redirect target; undefined = PRIAM not wired up.
+  priamFrontendUrl?: string;
   statistics: Statistics;
   subscriptionOffer?: SubscriptionOffer;
 }

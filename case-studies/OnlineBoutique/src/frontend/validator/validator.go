@@ -56,6 +56,17 @@ type SetCurrencyPayload struct {
 	Currency string `validate:"required,iso4217"`
 }
 
+type SignupPayload struct {
+	Email           string `validate:"required,email"`
+	Password        string `validate:"required,min=8"`
+	ConfirmPassword string `validate:"required,eqfield=Password"`
+}
+
+type LoginPayload struct {
+	Email    string `validate:"required,email"`
+	Password string `validate:"required"`
+}
+
 // Implementations of the 'Payload' interface.
 func (ad *AddToCartPayload) Validate() error {
 	return validate.Struct(ad)
@@ -67,6 +78,14 @@ func (po *PlaceOrderPayload) Validate() error {
 
 func (sc *SetCurrencyPayload) Validate() error {
 	return validate.Struct(sc)
+}
+
+func (sp *SignupPayload) Validate() error {
+	return validate.Struct(sp)
+}
+
+func (lp *LoginPayload) Validate() error {
+	return validate.Struct(lp)
 }
 
 // Reusable error response function.

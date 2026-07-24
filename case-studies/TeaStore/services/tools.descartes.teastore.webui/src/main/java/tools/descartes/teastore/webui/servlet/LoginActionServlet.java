@@ -34,6 +34,11 @@ public class LoginActionServlet extends AbstractUIServlet {
 	private static final long serialVersionUID = 1L;
 
 	/**
+	 * PRIAM-Frontend's consent page (playbook 4bis) - empty = feature disabled.
+	 */
+	private static final String PRIAM_FRONTEND_URL = System.getenv("PRIAM_FRONTEND_URL");
+
+	/**
 	 * @see HttpServlet#HttpServlet()
 	 */
 	public LoginActionServlet() {
@@ -65,6 +70,13 @@ public class LoginActionServlet extends AbstractUIServlet {
 
 			if (login) {
 				saveSessionBlob(blob, response);
+				// Forced consent (playbook 4bis): fires at most once per
+				// subject - priamConsentRequired becomes false as soon as a
+				// decision exists, so this never loops on a later login.
+				if (blob.isPriamConsentRequired() && PRIAM_FRONTEND_URL != null && !PRIAM_FRONTEND_URL.isEmpty()) {
+					response.sendRedirect(PRIAM_FRONTEND_URL + "/consent");
+					return;
+				}
 				if (request.getParameter("referer") != null
 						&& request.getParameter("referer").contains("tools.descartes.teastore.webui/cart")) {
 					redirect("/cart", response, MESSAGECOOKIE, SUCESSLOGIN);

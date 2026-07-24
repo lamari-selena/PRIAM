@@ -9,6 +9,7 @@ import { BenchmarkService } from '@ghostfolio/api/services/benchmark/benchmark.s
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { MarketDataService } from '@ghostfolio/api/services/market-data/market-data.service';
+import { ORDER_DATA_IDS, PriamService } from '@ghostfolio/api/services/priam/priam.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { DataGatheringService } from '@ghostfolio/api/services/queues/data-gathering/data-gathering.service';
 import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
@@ -61,6 +62,7 @@ export class ActivitiesService {
     private readonly eventEmitter: EventEmitter2,
     private readonly exchangeRateDataService: ExchangeRateDataService,
     private readonly marketDataService: MarketDataService,
+    private readonly priamService: PriamService,
     private readonly prismaService: PrismaService,
     private readonly symbolProfileService: SymbolProfileService,
     private readonly tagService: TagService
@@ -274,6 +276,11 @@ export class ActivitiesService {
       },
       include: { SymbolProfile: true }
     });
+
+    // PRIAM bookkeeping (§4bis "not just sign-up... any later creation of a
+    // record of a data_type with several rows per subject") - the most
+    // frequently forgotten point of the whole integration (§4bis).
+    this.priamService.reportProcessedData(userId, ORDER_DATA_IDS);
 
     if (updateAccountBalance === true) {
       let amount = new Big(data.unitPrice).mul(data.quantity);

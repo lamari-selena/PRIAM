@@ -104,6 +104,10 @@ target/
 db-volume/
 db-volume-ghostfolio/
 case-studies/TeaStore/db_teastore/
+db-volume-onlineboutique-backup/
+db-volume-onlineboutique-backup2/
+db-volume-teastore-backup/
+onlineboutique-db-volume/
 # Leftover root-owned DB volume from old TeaStore location (can only be removed with sudo)
 TeaStore\ app/
 github_access_token.txt

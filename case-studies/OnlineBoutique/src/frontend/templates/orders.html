@@ -1,0 +1,63 @@
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+{{ define "orders" }}
+    {{ template "header" . }}
+
+    <div {{ with $.platform_css }} class="{{.}}" {{ end }}>
+        <span class="platform-flag">
+            {{$.platform_name}}
+        </span>
+    </div>
+
+    <main role="main" class="cart-sections">
+        <section class="container">
+            <div class="row">
+                <div class="col-12">
+                    <h3>My Orders</h3>
+                </div>
+            </div>
+
+            {{ if eq (len $.orders) 0 }}
+            <div class="row">
+                <div class="col-12">
+                    <p>You have no past orders yet.</p>
+                    <a class="cymbal-button-primary" href="{{ $.baseUrl }}/" role="button">Continue Shopping</a>
+                </div>
+            </div>
+            {{ else }}
+            {{ range $.orders }}
+            <div class="row border-bottom-solid padding-y-24">
+                <div class="col-md-3">
+                    <strong>Order #{{ .OrderID }}</strong><br>
+                    {{ .PlacedAt.Format "2006-01-02 15:04" }}
+                </div>
+                <div class="col-md-5">
+                    {{ .StreetAddress }}, {{ .City }}, {{ .State }} {{ .ZipCode }}, {{ .Country }}
+                </div>
+                <div class="col-md-4">
+                    {{ range .Items }}
+                    <div>{{ .Quantity }} &times; {{ .ProductID }}</div>
+                    {{ end }}
+                </div>
+            </div>
+            {{ end }}
+            {{ end }}
+        </section>
+    </main>
+
+    {{ template "footer" . }}
+{{ end }}

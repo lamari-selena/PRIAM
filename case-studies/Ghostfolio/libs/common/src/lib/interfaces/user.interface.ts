@@ -16,6 +16,8 @@ export interface User {
   dateOfFirstActivity: Date;
   id: string;
   permissions: string[];
+  // Docs/PRIAM-INTEGRATION-PLAYBOOK.md §4bis "Flag insertion point".
+  priamConsentRequired?: boolean;
   referralPartners?: ReferralPartner[];
   settings: UserSettings;
   systemMessage?: SystemMessage;

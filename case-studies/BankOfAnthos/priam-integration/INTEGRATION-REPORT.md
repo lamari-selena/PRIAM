@@ -202,9 +202,29 @@ forward unchanged from the original integration and is not re-derived).
 | Docker-network (`.env` case-study switch, net) | 6 | 0 | 0 | 6 |
 | **Total (this session)** | **11** | **0** | **0** | **11** |
 
-**Combined total (already-committed baseline + this session)**: 574+11=585
-code, 304 comment, 79 blank = **968 lines**, across the categories above
-(Annotation 212, Rights-API 149, Consent 250, OAuth2 64, Docker-network 293).
+**OAuth2 = 0 is not an omission**: nothing in `provision_keycloak_user()`,
+the Keycloak service block in `docker-compose.yml`, or the realm config was
+touched this session — it was already correct in the restored, previously
+committed integration (verified live: Keycloak login, the `idReference`
+token claim, and the User Profile fix all worked without any code change —
+see §4). Zero new lines is the accurate count for zero new work, not a
+category left unmeasured.
+
+### Combined breakdown (already-committed baseline + this session)
+
+The baseline (everything unchanged from the committed integration, listed as
+"unchanged" in the per-file table above) carries forward its own original
+code/comment/blank accounting; this session's 11 new lines (table above) are
+added on top, per category:
+
+| Category | Baseline code | +session | Total code | Baseline comment | +session | Total comment | Baseline blank | +session | Total blank | Total |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Annotation | 73 | 0 | 73 | 124 | 0 | 124 | 15 | 0 | 15 | 212 |
+| Rights-API | 110 | 0 | 110 | 27 | 0 | 27 | 12 | 0 | 12 | 149 |
+| Consent | 119 | 5 | 124 | 86 | 0 | 86 | 40 | 0 | 40 | 250 |
+| OAuth2 | 49 | 0 | 49 | 13 | 0 | 13 | 2 | 0 | 2 | 64 |
+| Docker-network | 223 | 6 | 229 | 54 | 0 | 54 | 10 | 0 | 10 | 293 |
+| **Total** | **574** | **11** | **585** | **304** | **0** | **304** | **79** | **0** | **79** | **968** |
 
 ### PRIAM's own LOC (this session's generic fix)
 

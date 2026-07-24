@@ -1,0 +1,84 @@
+KEYCLOAK_AUTH_SERVER_URL=
+
+EUREKA_URL=http://eureka:8761
+
+CUSTOM_KEYCLOAK_URL=
+
+CUSTOM_DATA_URL=http://data:8081
+
+CUSTOM_ACTOR_URL=http://actor:8082
+
+CUSTOM_RIGHT_URL=http://right:8083
+
+# TeaStore implements the Provider bridge directly in its Java webui service
+# (case-studies/TeaStore/services/tools.descartes.teastore.webui/.../servlet/
+# PriamProviderServlet.java, mounted at /api/* under this service's own
+# context path), bare /api once the Gateway re-prefixes the path component of
+# this URL back on for every /provider/** call (see GatewayApplication.java's
+# providerBaseUri()/prefixPath handling). Reachable on common_network via its
+# service name "webui", port 8080 (case-studies/TeaStore/docker-compose.yml).
+CUSTOM_PROVIDER_URL=http://webui:8080/tools.descartes.teastore.webui
+
+CUSTOM_EUREKA_URL=http://eureka:8761
+
+CUSTOM_CDP_URL=http://consent:8089
+
+KEYCLOAK_URL=
+
+KEYCLOAK_REALM=
+
+KEYCLOAK_CLIENT_ID=
+
+KEYCLOAK_CLIENT_SECRET=
+
+GATEWAY_PORT=8090
+
+DB_USERNAME=priamu
+
+DB_PASSWORD=<redacted>
+
+DB_HOST=mysqldb
+DB_PORT=3306
+
+TEADB_USERNAME=teauser
+
+TEADB_PASSWORD=teapassword
+
+JAEGER_ENDPOINT=http://192.168.48.2:4317
+
+# CUSTOM_KEYCLOAK_URL=
+
+# CUSTOM_DATA_URL=http://localhost:8081
+
+# CUSTOM_ACTOR_URL=http://localhost:8082
+
+# CUSTOM_RIGHT_URL=http://localhost:8083
+
+# CUSTOM_PROVIDER_URL=http://localhost:8086
+
+# CUSTOM_EUREKA_URL=http://localhost:8761
+
+# CUSTOM_CDP_URL=http://localhost:8089
+
+# TeaStore's own local sign-up (added by this integration - see
+# priam-integration/INTEGRATION-REPORT.md) has no OIDC/SSO of its own, so
+# Keycloak becomes PRIAM's IdP with credentials synced at sign-up
+# (provision_keycloak_user(), playbook §4bis) - same pattern as Bank of
+# Anthos/Habitica. Browser-facing address (must match the `iss` claim seen by
+# the browser, not Docker's internal DNS - Docs/PRIAM-AUTH-OIDC.md §4).
+CUSTOM_OIDC_ISSUER_URI=http://localhost:8080/realms/priam-realm
+CUSTOM_OIDC_JWK_SET_URI=http://keycloak:8080/realms/priam-realm/protocol/openid-connect/certs
+
+CUSTOM_FRONTEND_ORIGINS=http://localhost:4200,http://localhost:4000
+
+# Browser-facing origin of the target app for this case study - drives the
+# "Back to the app" button on PRIAM-Frontend's Home page (playbook §4ter).
+# Leave empty to hide the button. Case-study-specific: change this when
+# switching which app PRIAM is integrated with (Ghostfolio: 3333, Habitica:
+# 5173, Mastodon: 3000, Bank of Anthos: 9000, TeaStore: 9100, ...).
+# Points at TeaStore's real storefront home page (category/product listing),
+# not just the bare host:port root - satisfies playbook §4ter "a real,
+# working page ... not just its default root URL" even though "/" itself
+# also happens to redirect there (webui's own Dockerfile CMD, ROOT/index.jsp
+# trick) - see priam-integration/INTEGRATION-REPORT.md.
+TARGET_APP_URL=http://localhost:9100/tools.descartes.teastore.webui/

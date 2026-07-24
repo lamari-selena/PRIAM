@@ -59,21 +59,6 @@ var validEnvs = []string{"local", "gcp", "azure", "aws", "onprem", "alibaba"}
 func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
 	log.WithField("currency", currentCurrency(r)).Info("home")
-
-	// PRIAM forced-consent redirect (playbook §4bis): this app has no
-	// "current user" API to hook into (no sign-up/login at all - see
-	// priam_provider.go's header comment), so the root page - the first
-	// thing any new session lands on - is the equivalent hook. Fires at
-	// most once per subject: hasPendingConsentDecision becomes false as
-	// soon as a decision exists (granted or refused), so there is no
-	// redirect loop on later visits.
-	if priamFrontendURL := os.Getenv("PRIAM_FRONTEND_URL"); priamFrontendURL != "" {
-		if hasPendingConsentDecision(sessionID(r), priamRecommendationsProcessing) {
-			http.Redirect(w, r, priamFrontendURL+"/consent", http.StatusFound)
-			return
-		}
-	}
-
 	currencies, err := fe.getCurrencies(r.Context())
 	if err != nil {
 		renderHTTPError(log, r, w, errors.Wrap(err, "could not retrieve currencies"), http.StatusInternalServerError)
@@ -190,7 +175,7 @@ func (fe *frontendServer) productHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// ignores the error retrieving recommendations since it is not critical
-	recommendations, err := fe.getRecommendations(r.Context(), sessionID(r), []string{id})
+	recommendations, err := fe.getRecommendations(r.Context(), sessionID(r), []string{id}, currentUserID(r))
 	if err != nil {
 		log.WithField("error", err).Warn("failed to get product recommendations")
 	}
@@ -247,12 +232,6 @@ func (fe *frontendServer) addToCartHandler(w http.ResponseWriter, r *http.Reques
 		renderHTTPError(log, r, w, errors.Wrap(err, "failed to add to cart"), http.StatusInternalServerError)
 		return
 	}
-	// PRIAM (playbook §4bis, "the most frequently forgotten point"): a Cart
-	// row was just created/incremented for this subject - report it so it
-	// shows up in the Access Request page. Fire-and-forget: registration
-	// already completed synchronously when this session's cookie was first
-	// issued (middleware.go), so no idRef->dataSubjectId race here (§8.6).
-	go reportProcessedData(sessionID(r), priamCartDataIDs)
 	w.Header().Set("location", baseUrl + "/cart")
 	w.WriteHeader(http.StatusFound)
 }
@@ -284,7 +263,7 @@ func (fe *frontendServer) viewCartHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// ignores the error retrieving recommendations since it is not critical
-	recommendations, err := fe.getRecommendations(r.Context(), sessionID(r), cartIDs(cart))
+	recommendations, err := fe.getRecommendations(r.Context(), sessionID(r), cartIDs(cart), currentUserID(r))
 	if err != nil {
 		log.WithField("error", err).Warn("failed to get product recommendations")
 	}
@@ -395,8 +374,25 @@ func (fe *frontendServer) placeOrderHandler(w http.ResponseWriter, r *http.Reque
 	}
 	log.WithField("order", order.GetOrder().GetOrderId()).Info("order placed")
 
+	// Durably persist the order (unlike the rest of this application's
+	// checkout PII, which is otherwise discarded once this response is
+	// sent) — see "changes for data persistence.md". Best-effort: a
+	// storage failure here must not fail an already-completed checkout.
+	if err := saveOrder(order.GetOrder(), currentUserID(r), payload.Email, payload.StreetAddress, payload.City,
+		payload.State, payload.Country, int32(payload.ZipCode), currentCurrency(r)); err != nil {
+		log.WithField("error", err).Error("failed to persist order")
+	} else if uid := currentUserID(r); uid != "" {
+		// PRIAM (playbook §4bis, "the most frequently forgotten point"): an
+		// Order row was just created for this registered subject - report it
+		// so it shows up in the Access Request page. Fire-and-forget:
+		// registration already completed synchronously at signup time, long
+		// before any order can be placed, so there is no idRef->
+		// dataSubjectId race here (§8.6).
+		go reportProcessedData(uid, priamOrderDataIDs)
+	}
+
 	order.GetOrder().GetItems()
-	recommendations, _ := fe.getRecommendations(r.Context(), sessionID(r), nil)
+	recommendations, _ := fe.getRecommendations(r.Context(), sessionID(r), nil, currentUserID(r))
 
 	totalPaid := *order.GetOrder().GetShippingCost()
 	for _, v := range order.GetOrder().GetItems() {
@@ -572,6 +568,12 @@ func renderHTTPError(log logrus.FieldLogger, r *http.Request, w http.ResponseWri
 func injectCommonTemplateData(r *http.Request, payload map[string]interface{}) map[string]interface{} {
 	data := map[string]interface{}{
 		"session_id":        sessionID(r),
+		"logged_in":         currentUserID(r) != "",
+		// PRIAM round-trip navigation (playbook §4ter) - "Manage on PRIAM",
+		// shown in header.html only for a logged-in (registered) subject:
+		// PRIAM only knows about accounts that went through
+		// registerDataSubject (accounts_handlers.go), not anonymous guests.
+		"priamFrontendUrl": os.Getenv("PRIAM_FRONTEND_URL"),
 		"request_id":        r.Context().Value(ctxKeyRequestID{}),
 		"user_currency":     currentCurrency(r),
 		"platform_css":      plat.css,
@@ -582,9 +584,6 @@ func injectCommonTemplateData(r *http.Request, payload map[string]interface{}) m
 		"frontendMessage":   frontendMessage,
 		"currentYear":       time.Now().Year(),
 		"baseUrl":           baseUrl,
-		// PRIAM round-trip navigation (playbook §4ter) - "Manage on PRIAM",
-		// shown in header.html only when set.
-		"priamFrontendUrl": os.Getenv("PRIAM_FRONTEND_URL"),
 	}
 
 	for k, v := range payload {

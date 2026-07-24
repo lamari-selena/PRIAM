@@ -18,6 +18,13 @@ public class SessionBlob {
 	private Order order;
 	private List<OrderItem> orderItems = new LinkedList<OrderItem>();
 	private String message;
+	// PRIAM integration (Docs/PRIAM-INTEGRATION-PLAYBOOK.md 4bis): idRef
+	// (userName, not the numeric uid) carried alongside uid so every service
+	// that already receives a SessionBlob can reach PRIAM without an extra
+	// lookup, plus the "pending consent decision" flag surfaced on this
+	// already-existing "current user" response (4bis "flag insertion point").
+	private String userName;
+	private boolean priamConsentRequired;
 	
 	/**
 	 * Constructor, creates an empty order.
@@ -120,5 +127,38 @@ public class SessionBlob {
 	 */
 	public void setOrderItems(List<OrderItem> orderItems) {
 		this.orderItems = orderItems;
+	}
+
+	/**
+	 * Getter for the PRIAM idRef (the userName).
+	 * @return userName
+	 */
+	public String getUserName() {
+		return userName;
+	}
+
+	/**
+	 * Setter for the PRIAM idRef (the userName).
+	 * @param userName userName
+	 */
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	/**
+	 * Getter for whether this subject still has an unanswered OPTIONAL
+	 * consent decision pending on PRIAM (playbook 4bis).
+	 * @return priamConsentRequired
+	 */
+	public boolean isPriamConsentRequired() {
+		return priamConsentRequired;
+	}
+
+	/**
+	 * Setter for the pending-consent-decision flag.
+	 * @param priamConsentRequired priamConsentRequired
+	 */
+	public void setPriamConsentRequired(boolean priamConsentRequired) {
+		this.priamConsentRequired = priamConsentRequired;
 	}
 }

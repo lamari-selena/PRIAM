@@ -1,172 +1,199 @@
 -- ============================================================================
--- PRIAM annotation for OnlineBoutique (Google's microservices-demo -
--- polyglot e-commerce demo: Go frontend/checkout/shipping/productcatalog,
--- C# cartservice, Node currency/payment, Python email/recommendation/
--- shoppingassistant). See Docs/PRIAM-INTEGRATION-PLAYBOOK.md §1.
+-- PRIAM annotation for Ghostfolio (open-source personal wealth/portfolio
+-- tracker - NestJS/Prisma/PostgreSQL API + Angular client, served from the
+-- same process on :3333). See Docs/PRIAM-INTEGRATION-PLAYBOOK.md §1.
 --
 -- ----------------------------------------------------------------------------
--- Real schema referenced (not invented) - verified directly in the target
--- app's source, case-studies/OnlineBoutique/src/:
+-- Real schema referenced (not invented) - verified directly in
+-- case-studies/Ghostfolio/prisma/schema.prisma:
 --
---   - This application has NO sign-up/login/account of any kind (grep for
---     "signup|login|register|account|auth" across src/frontend returns zero
---     hits in application code; no "users"/"customers" table exists
---     anywhere in the whole src/ tree). The only durable-ish identity
---     concept is `session_id`: an anonymous UUID cookie minted by
---     frontend/middleware.go:85-110 (`ensureSessionID`, cookie name
---     `shop_session-id`), never tied to any name/email. It is used
---     everywhere as the "user id" (frontend/handlers.go:362
---     `UserId: sessionID(r)` in the checkout gRPC call, cartservice/src/
---     protos/Cart.proto `Cart.user_id`).
---   - Checkout PII (email, street address, credit card - collected in
---     frontend/handlers.go:324-370 `placeOrderHandler`) is purely
---     TRANSIENT: checkoutservice/main.go's PlaceOrder (lines 230-280) never
---     persists it anywhere - paymentservice/charge.js only logs the last 4
---     card digits, shippingservice hashes the address into a tracking id
---     without storing it, emailservice's DummyEmailService just logs the
---     address to stdout (email_server.py:108-111, dummy_mode=true is what's
---     actually wired, the real SMTP class is dead code raising
---     NotImplemented). There is no order-history table anywhere. This PII is
---     therefore NOT annotated below (nothing to genuinely access/rectify/
---     erase after the fact) - see priam-integration/INTEGRATION-REPORT.md
---     "Scope decisions" for the documented reasoning instead of fabricating
---     a fake backing store for it.
---   - The only durably-stored personal data in the whole application is the
---     shopping cart: cartservice/src/cartstore/RedisCartStore.cs
---     (AddItemAsync/GetCartAsync/EmptyCartAsync), backed by
---     Microsoft.Extensions.Caching.StackExchangeRedis, keyed by `userId`
---     (= session_id), holding a serialized `Hipstershop.Cart` protobuf
---     (cartservice/src/protos/Cart.proto:27-48: `CartItem{product_id,
---     quantity}`, `Cart{user_id, items}`) in the Redis hash field `data`
---     (the standard field name this library stores its payload under -
---     confirmed empirically against the real redis-cart container during
---     this session, see priam-integration/ETAPES-FAITES.md). Several rows
---     per subject (one per product in the cart) - `is_primary_key=1` on
---     `product_id` below (playbook §1 point 5 / §8.1.c).
---   - The one genuinely OPTIONAL processing found in this application's own
---     code: frontend/rpc.go:99-117 `getRecommendations()` (called from
---     home/product/cart pages, frontend/handlers.go) reads the cart's
---     product_ids and calls recommendationservice.ListRecommendations to
---     personalize which other products are shown - the app's core shopping/
---     checkout flow works perfectly without it (confirmed by reading every
---     call site: recommendations are rendered into a template block,
---     ignored on error, never required for add-to-cart/checkout to
---     succeed). Gated by get_consent() (playbook §4) - see
---     frontend/rpc.go's modified getRecommendations.
+--   - idRef = User.id (Prisma `String @id @default(uuid())`, Postgres table
+--     "User") - always a non-numeric UUID by construction (playbook §7 "non-
+--     numeric idRef" requirement satisfied for every real subject, not just a
+--     specially crafted one). Ghostfolio's User model carries NO email and NO
+--     password at all (see UserService.createUser,
+--     apps/api/src/app/user/user.service.ts) - identity is either an opaque,
+--     hashed `accessToken` (anonymous sign-up) or `provider`/`thirdPartyId`
+--     (Google/OIDC sign-in). This shapes the whole annotation below: there is
+--     no "contact data" category to add, and rectification/erasure of
+--     enum-typed or system-managed fields (User.role, User.provider,
+--     Order.type, every *.id primary key, every required timestamp) is
+--     deliberately left access-only - see the Provider bridge's own MUTABLE
+--     whitelist (apps/api/src/app/provider-bridge/provider-bridge.controller.ts),
+--     which this script's data_usage c/r/u/d flags mirror exactly so PRIAM's
+--     UI never offers a rectify/erase action that the bridge would 400 on.
+--   - `User` data_type (Postgres table "User", exactly one row per subject):
+--     id, provider, thirdPartyId, createdAt.
+--   - `Account` data_type (table "Account", several rows per subject -
+--     composite Prisma PK `[id, userId]`, but the Provider bridge only needs
+--     `id` to disambiguate since `idRef` already scopes to the subject's own
+--     userId): id, name, currency, balance. UserService.createUser() always
+--     creates one default Account transactionally alongside the User row
+--     itself - the "processed data reported right at sign-up" case the
+--     playbook's §4bis race-condition warning (§8.6) is about.
+--   - `Order` data_type (table "Order", activities/transactions, several rows
+--     per subject): id, type, currency, quantity, unitPrice, fee, date,
+--     comment. Created by ActivitiesService.createActivity
+--     (apps/api/src/app/activities/activities.service.ts).
+--   - `Analytics` data_type (table "Analytics", exactly one row per subject,
+--     1:1 PK = userId): country, activityCount, lastRequestAt. This is the one
+--     genuinely OPTIONAL processing found in Ghostfolio's own code:
+--     JwtStrategy.validate/ApiKeyStrategy.validate
+--     (apps/api/src/app/auth/{jwt,api-key}.strategy.ts) only upsert this row
+--     when `ENABLE_FEATURE_SUBSCRIPTION` is on, and core authentication works
+--     identically whether or not it runs - confirmed by reading every call
+--     site (the upsert result is never used to gate the rest of `validate()`).
+--     Gated by get_consent() (playbook §4) in both strategy files.
+--   - No "financial data" category exists among the 10 defaults
+--     (Databases/db_creation_script.sql) - added below (id 11) per playbook
+--     §1 point 3, used for Account.currency/balance and every Order money
+--     field. "identification data" (4) and "Profil data" (7, existing
+--     defaults) cover the rest.
 --
--- idRef: `session_id` (the `shop_session-id` cookie value) - always a
--- non-numeric UUID string by construction (frontend/middleware.go:94
--- `uuid.NewRandom()`), satisfying the playbook §7 "non-numeric idRef" test
--- requirement for every real test run against this integration, not just a
--- specially-crafted one.
+-- idRef non-numeric proof: a real account was created through the running
+-- application's own POST /api/v1/user (anonymous sign-up) before finalizing
+-- this script - see priam-integration/ETAPES-FAITES.md, "Seed account
+-- capture" for the exact request/response. The id_ref seeded below is that
+-- real, observed UUID, not a placeholder.
 --
--- No MANDATORY processing annotated: unlike Bank of Anthos (SSN/KYC,
--- Art. 6.1.c), nothing in OnlineBoutique's own code is processed under a
--- distinct legal obligation rather than contract necessity or consent - not
--- invented here for the sake of covering all 4 processing_type values
--- (playbook §1 point 6 lists them as available, not mandatory to use all).
--- No personal_data_transfer/secondary_actor either (playbook §1 point 12):
--- Cart Management and Product Recommendations both stay entirely internal
--- to this application's own microservices (cartservice/recommendationservice),
--- no external third party ever receives this data.
+-- No MANDATORY processing annotated: nothing in Ghostfolio's own code is
+-- processed under a distinct legal obligation rather than contract necessity
+-- or consent - not invented here for the sake of covering all 4
+-- processing_type values (playbook §1 point 6 lists them as available, not
+-- mandatory to use all).
 --
--- Seed subject: no default/demo session ships with a fresh OnlineBoutique
--- checkout (session_id is minted fresh per browser on first visit). A real
--- session was obtained by curling the running frontend once
--- (`curl -i http://localhost:8080/` and reading the `Set-Cookie:
--- shop_session-id=...` response header) before writing this script - see
--- priam-integration/ETAPES-FAITES.md for the exact command and captured
--- value - then a real product was added to that same session's cart via the
--- application's own UI/API so the seeded processed_data/consent rows below
--- reflect a real, observable Redis state, not a placeholder.
+-- No personal_data_transfer/secondary_actor (§1 point 12): within the scope
+-- annotated here, Ghostfolio never sends User/Account/Order/Analytics data to
+-- an external third party - market-data providers (Yahoo, Alpha Vantage, ...)
+-- only ever receive security symbols/dates, never anything modeled as
+-- personal data below. Subscription (Stripe billing) is deliberately NOT
+-- annotated in this pass - out of scope for this integration session, to be
+-- added (with its own personal_data_transfer row, since Stripe is a genuine
+-- external processor) if/when Subscription-related rights are exercised.
+--
+-- No consent pre-granted for Usage Analytics (the OPTIONAL processing): unlike
+-- a NECESSARY/DEFAULT processing, seeding a fake "already granted" state here
+-- would require also faking an Analytics row and its processed_data
+-- bookkeeping (§8.1.b) that does not actually exist yet for a subject who has
+-- never made an authenticated request. This integration instead tests the
+-- full, real cycle (grant -> verify Analytics upserts -> withdraw -> verify it
+-- stops -> re-grant -> verify it resumes) - see priam-integration/
+-- ETAPES-FAITES.md - a stronger proof than pre-seeding, and the same
+-- deliberate choice already made in case-studies/OnlineBoutique's own
+-- db_insertion_script.sql for its own OPTIONAL processing.
 -- ============================================================================
 
 USE `priam-actor`;
 
 INSERT INTO data_subject_category (data_subject_category_id, data_subject_category_name, location_id)
-VALUES (1, 'Shopper', NULL);
+VALUES (1, 'Ghostfolio Investor', NULL);
 
 USE `priam-data`;
+
+INSERT INTO personal_data_category (personal_data_category_id, personal_data_category_name) VALUES
+  (11, 'financial data');
 
 INSERT INTO data_type (data_type_id, data_type_name) VALUES
-  (1, 'Cart');
+  (1, 'User'),
+  (2, 'Account'),
+  (3, 'Order'),
+  (4, 'Analytics');
 
--- data: the only 2 columns cartservice's Redis-backed store genuinely
--- holds (Cart.proto CartItem{product_id, quantity}). is_primary_key=1 on
--- product_id (playbook §1 point 5 / §8.1.c): Cart has several rows per
--- subject (one per product), and product_id is the only column that
--- distinguishes one row from another for a given idRef - the Provider
--- bridge resolves a specific cart row via (idRef=session_id,
--- primaryKeys['product_id']). personal_data_category 7 ('Profil data',
--- the closest of the 10 default categories - see db_creation_script.sql -
--- to "behavioral/preference data revealing what a subject shops for").
+-- data: is_primary_key=1 on Account.id/Order.id (playbook §1 point 5 /
+-- §8.1.c) - both have several rows per subject; User/Analytics have exactly
+-- one row per subject (primaryKeys stays empty {} for those two types,
+-- matching §2's "the subject table itself" case). is_primary_key columns are
+-- access-only below (data_usage c/u/d=0) - not exposed for rectification/
+-- erasure by the Provider bridge (mutating a row's own id would break FK
+-- relations, e.g. Order.accountId -> Account.id), same scope decision as
+-- Habitica's Task.id in this repository's own prior integration.
 INSERT INTO data (data_id, data_name, `source`, source_details, is_personal, is_portable, is_primary_key, data_type_id, personal_data_category_id, data_subject_category_id) VALUES
-  (1, 'product_id', 'DIRECT', 'cartservice Redis-backed store (RedisCartStore.cs AddItemAsync/GetCartAsync), key=session_id, StackExchangeRedis hash field "data", protobuf Cart.items[].product_id (Cart.proto:28)', 1, 1, 1, 1, 7, 1),
-  (2, 'quantity',   'DIRECT', 'same Redis-backed Cart record, protobuf Cart.items[].quantity (Cart.proto:29)',                                                                                                  1, 1, 0, 1, 7, 1);
+  (1,  'id',            'DIRECT', 'Postgres "User".id (primary key, uuid, = idRef itself)',                         1, 0, 0, 1, 4,  1),
+  (2,  'provider',      'DIRECT', 'Postgres "User".provider (enum ANONYMOUS/GOOGLE/OIDC/INTERNET_IDENTITY)',        1, 1, 0, 1, 4,  1),
+  (3,  'thirdPartyId',  'DIRECT', 'Postgres "User".thirdPartyId (external OAuth subject id, nullable)',             1, 1, 0, 1, 4,  1),
+  (4,  'createdAt',     'DIRECT', 'Postgres "User".createdAt',                                                      1, 1, 0, 1, 7,  1),
+  (5,  'id',            'DIRECT', 'Postgres "Account".id (several rows per subject, composite PK with userId)',     1, 0, 1, 2, 4,  1),
+  (6,  'name',          'DIRECT', 'Postgres "Account".name (user-chosen label, e.g. the default "My Account")',     1, 1, 0, 2, 7,  1),
+  (7,  'currency',      'DIRECT', 'Postgres "Account".currency',                                                    1, 1, 0, 2, 11, 1),
+  (8,  'balance',       'DIRECT', 'Postgres "Account".balance',                                                     1, 1, 0, 2, 11, 1),
+  (9,  'id',            'DIRECT', 'Postgres "Order".id (several rows per subject, one per placed activity)',        1, 0, 1, 3, 4,  1),
+  (10, 'type',          'DIRECT', 'Postgres "Order".type (enum BUY/SELL/FEE/INTEREST/LIABILITY/...)',               1, 1, 0, 3, 11, 1),
+  (11, 'currency',      'DIRECT', 'Postgres "Order".currency',                                                      1, 1, 0, 3, 11, 1),
+  (12, 'quantity',      'DIRECT', 'Postgres "Order".quantity',                                                      1, 1, 0, 3, 11, 1),
+  (13, 'unitPrice',     'DIRECT', 'Postgres "Order".unitPrice',                                                     1, 1, 0, 3, 11, 1),
+  (14, 'fee',           'DIRECT', 'Postgres "Order".fee',                                                           1, 1, 0, 3, 11, 1),
+  (15, 'date',          'DIRECT', 'Postgres "Order".date',                                                          1, 1, 0, 3, 11, 1),
+  (16, 'comment',       'DIRECT', 'Postgres "Order".comment (free-text note, nullable)',                            1, 1, 0, 3, 7,  1),
+  (17, 'country',       'DIRECT', 'Postgres "Analytics".country (derived from the request timezone header)',       1, 1, 0, 4, 7,  1),
+  (18, 'activityCount', 'DIRECT', 'Postgres "Analytics".activityCount',                                             1, 1, 0, 4, 7,  1),
+  (19, 'lastRequestAt', 'DIRECT', 'Postgres "Analytics".lastRequestAt',                                             1, 1, 0, 4, 7,  1);
 
--- processing: playbook §1 point 6 - only the 2 types genuinely justified by
--- this application's own code (see header comment above for why no
--- MANDATORY/DEFAULT is invented). processing_type/processing_category in
--- exact UPPERCASE (§8.1.a) - the CHECK constraint's TitleCase literals
--- ('Necessary','Optional',...) are collation-insensitive in MySQL but
--- crash Hibernate with IllegalArgumentException at read time.
+-- processing: playbook §1 point 6 - only the types genuinely justified by
+-- this application's own code (see header comment above). UPPERCASE (§8.1.a).
 INSERT INTO processing (processing_id, processing_name, processing_type, processing_category, created_at, modified_at, ended_at) VALUES
-  (1, 'Cart Management',          'NECESSARY', 'CONSENT_CONTRACT', CURDATE(), CURDATE(), NULL),
-  (2, 'Product Recommendations',  'OPTIONAL',  'CONSENT_CONTRACT', CURDATE(), CURDATE(), NULL);
+  (1, 'Authentication',        'DEFAULT',   'LEGITIMATE_INTEREST', CURDATE(), CURDATE(), NULL),
+  (2, 'Portfolio Management',  'NECESSARY', 'CONSENT_CONTRACT',    CURDATE(), CURDATE(), NULL),
+  (3, 'Usage Analytics',       'OPTIONAL',  'CONSENT_CONTRACT',    CURDATE(), CURDATE(), NULL);
 
 INSERT INTO purpose (purpose_description, purpose_type, processing_id) VALUES
-  ('Store and retrieve the items a shopper has added to their cart so checkout can proceed (frontend/rpc.go insertCart/getCart, cartservice RedisCartStore)', 'MAIN', 1),
-  ('Personalize which other products are suggested to the shopper based on their current cart contents (frontend/rpc.go getRecommendations, recommendationservice.ListRecommendations)', 'MAIN', 2);
+  ('Authenticate the data subject via JWT bearer tokens / OAuth so they can access their own portfolio (JwtStrategy.validate, AuthService.validateOAuthLogin)', 'MAIN', 1),
+  ('Manage the subject''s investment accounts and record their buy/sell/fee activities (UserService.createUser default Account, AccountService.createAccount, ActivitiesService.createActivity)', 'MAIN', 2),
+  ('Track feature usage (activity count, country, last request) to inform product decisions - only performed when ENABLE_FEATURE_SUBSCRIPTION is on (JwtStrategy.validate / ApiKeyStrategy.validate)', 'MAIN', 3);
 
 -- data_usage: link data to the processing(s) that actually touch it.
--- Cart Management can create/read/update(rectify a quantity)/delete
--- (erase a cart row) both columns. Product Recommendations only READS
--- product_id (it never creates/modifies/deletes cart rows itself - it
--- merely consumes them to compute a recommendation).
+-- c/r/u/d mirrors provider-bridge.controller.ts's MUTABLE whitelist exactly -
+-- id/provider/type/date/createdAt/lastRequestAt stay read-only (r=1 only).
 INSERT INTO data_usage (personal_status, c, r, u, d, data_id, processing_id) VALUES
-  (1, 1, 1, 1, 1, 1, 1), -- product_id (Cart Management)
-  (1, 1, 1, 1, 1, 2, 1), -- quantity   (Cart Management)
-  (1, 0, 1, 0, 0, 1, 2); -- product_id (Product Recommendations, read-only)
+  (1, 0, 1, 0, 0, 1,  1), -- User.id            (Authentication, read-only)
+  (1, 0, 1, 0, 0, 2,  1), -- User.provider      (Authentication, read-only)
+  (1, 1, 1, 1, 1, 3,  1), -- User.thirdPartyId  (Authentication)
+  (1, 0, 1, 0, 0, 4,  1), -- User.createdAt     (Authentication, read-only)
+  (1, 0, 1, 0, 0, 5,  2), -- Account.id         (Portfolio Management, read-only)
+  (1, 1, 1, 1, 1, 6,  2), -- Account.name       (Portfolio Management)
+  (1, 1, 1, 1, 1, 7,  2), -- Account.currency   (Portfolio Management)
+  (1, 1, 1, 1, 1, 8,  2), -- Account.balance    (Portfolio Management)
+  (1, 0, 1, 0, 0, 9,  2), -- Order.id           (Portfolio Management, read-only)
+  (1, 0, 1, 0, 0, 10, 2), -- Order.type         (Portfolio Management, read-only)
+  (1, 1, 1, 1, 1, 11, 2), -- Order.currency     (Portfolio Management)
+  (1, 1, 1, 1, 1, 12, 2), -- Order.quantity     (Portfolio Management)
+  (1, 1, 1, 1, 1, 13, 2), -- Order.unitPrice    (Portfolio Management)
+  (1, 1, 1, 1, 1, 14, 2), -- Order.fee          (Portfolio Management)
+  (1, 0, 1, 0, 0, 15, 2), -- Order.date         (Portfolio Management, read-only)
+  (1, 1, 1, 1, 1, 16, 2), -- Order.comment      (Portfolio Management)
+  (1, 1, 1, 1, 1, 17, 3), -- Analytics.country        (Usage Analytics)
+  (1, 1, 1, 1, 1, 18, 3), -- Analytics.activityCount  (Usage Analytics)
+  (1, 0, 1, 0, 0, 19, 3); -- Analytics.lastRequestAt  (Usage Analytics, read-only)
 
--- No personal_data_transfer/secondary_actor (§1 point 12): neither
--- processing above sends any of this data to an external third party -
--- both cartservice and recommendationservice are internal microservices of
--- this same application. Conditional annotation, correctly left empty here.
+-- No personal_data_transfer/secondary_actor (§1 point 12): see header
+-- comment - conditional annotation, correctly left empty here.
 
 -- ----------------------------------------------------------------------------
--- Seed data subject: a real session_id captured by curling the running
--- frontend once (see priam-integration/ETAPES-FAITES.md, "Seed session
--- capture"), then used to add one real product to cart through the
--- application's own /cart endpoint so the processed_data/consent rows below
--- mirror exactly what register_data_subject()/report_processed_data() do at
--- runtime for any real visitor (playbook §1 point 8-9-11, §8.1.b).
+-- Seed data subject: a real account created through the running
+-- application's own POST /api/v1/user (anonymous sign-up), so the
+-- processed_data rows below mirror exactly what register_data_subject()/
+-- report_processed_data() do at runtime for any real visitor (playbook §1
+-- point 8-9-11, §8.1.b) - see priam-integration/ETAPES-FAITES.md, "Seed
+-- account capture" for the exact commands/responses.
 -- ----------------------------------------------------------------------------
--- Real session_id captured via `curl -i http://localhost:8080/` against the
--- running frontend container (see priam-integration/ETAPES-FAITES.md,
--- "Seed session capture" for the exact command/response), then used to add
--- one real product to cart (OLJCESPC7Z x2) through the application's own
--- POST /cart endpoint before this script was finalized.
 USE `priam-actor`;
 INSERT INTO data_subject (data_subject_id, id_ref, data_subject_category_id) VALUES
-  (1, '207acaaf-a999-4ede-9ca6-7e1eeaaedda5', 1);
-
-USE `priam-consent`;
-INSERT INTO contract (contract_id, signature_date, expiration_date, data_subject_id) VALUES
-  (1, CURDATE(), NULL, 1);
-
--- Pre-granted OPTIONAL consent (end_date NULL) so the withdraw/re-grant
--- cycle (§3) can be tested immediately without first exercising the runtime
--- consent-grant path.
-INSERT INTO consent (start_date, end_date, processing_id, contract_id) VALUES
-  (NOW(), NULL, 2, 1); -- Product Recommendations granted for the seed subject
+  (1, 'b4f64a6c-8681-4444-be31-7a1ebc93bb97', 1);
 
 USE `priam-data`;
--- processed_data bookkeeping (§8.1.b): required for the first consent
--- withdrawal against this pre-seeded row to succeed, and for the seed
--- subject's Cart fields to show up in the Access Request list at all.
+-- processed_data bookkeeping (§8.1.b): required for the seed subject's
+-- User/Account fields to show up in the Access Request list at all. Mirrors
+-- exactly the data_ids PriamService.onUserRegistered() reports at runtime
+-- for this same subject (one sign-up = one User row + one default Account).
+-- No Order/Analytics rows here - see header comment (tested live instead).
 INSERT INTO processed_data (data_id, data_subject_id) VALUES
-  (1, 1), -- product_id
-  (2, 1); -- quantity
+  (1, 1), -- User.id
+  (2, 1), -- User.provider
+  (3, 1), -- User.thirdPartyId
+  (4, 1), -- User.createdAt
+  (5, 1), -- Account.id
+  (6, 1), -- Account.name
+  (7, 1), -- Account.currency
+  (8, 1); -- Account.balance
 
 -- HOW TO ACTIVATE: this file is baked into the `mysqldb` image at build time
 -- (see Databases/Dockerfile) and only runs on a virgin MySQL volume
@@ -174,8 +201,10 @@ INSERT INTO processed_data (data_id, data_subject_id) VALUES
 -- (`docker compose build mysqldb`) and clear the volume (db-volume/) after
 -- editing this file for changes to apply.
 --
--- Dynamically registered subjects (any real visitor whose session_id is
--- minted after this integration's hooks are wired) are NOT seeded here -
--- register_data_subject()/report_processed_data() (playbook §4bis,
--- case-studies/OnlineBoutique/src/frontend/priam.go) create their
+-- Any other, pre-existing account created before this integration's hooks
+-- were wired (there were none for this application - see priam-integration/
+-- INTEGRATION-REPORT.md, "Backfill") or any dynamically registered subject
+-- (any real visitor who signs up after this integration's hooks are wired) is
+-- NOT seeded here - PriamService.onUserRegistered()/reportProcessedData()
+-- (playbook §4bis, apps/api/src/services/priam/priam.service.ts) create their
 -- data_subject/processed_data rows at runtime instead.

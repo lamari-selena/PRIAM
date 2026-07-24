@@ -96,13 +96,17 @@ func (fe *frontendServer) getShippingQuote(ctx context.Context, items []*pb.Cart
 	return localized, errors.Wrap(err, "failed to convert currency for shipping cost")
 }
 
-func (fe *frontendServer) getRecommendations(ctx context.Context, userID string, productIDs []string) ([]*pb.Product, error) {
-	// PRIAM CEP (playbook §4): Product Recommendations is the one genuinely
-	// OPTIONAL processing in this application (personalizes suggestions
-	// from cart contents, never required for shopping/checkout to work) -
-	// gate only this optional side effect, never the mandatory Cart
-	// Management processing.
-	if !getConsent(userID, priamRecommendationsProcessing) {
+// priamIDRef is the signed-in account's PRIAM idRef ("" for a guest visitor)
+// - distinct from userID below, which recommendationservice's own algorithm
+// keys on (the anonymous session, unrelated to PRIAM/login state) and must
+// keep working unchanged for guests. PRIAM CEP (playbook §4): Product
+// Recommendations is the one genuinely OPTIONAL processing in this
+// application - gate only this optional side effect, never the mandatory
+// checkout/account flows. Guests have no idRef to check consent for, so
+// recommendations stay unrestricted for them (no personal data of an
+// identifiable subject is involved in that case).
+func (fe *frontendServer) getRecommendations(ctx context.Context, userID string, productIDs []string, priamIDRef string) ([]*pb.Product, error) {
+	if priamIDRef != "" && !getConsent(priamIDRef, priamRecommendationsProcessing) {
 		return nil, nil
 	}
 	resp, err := pb.NewRecommendationServiceClient(fe.recommendationSvcConn).ListRecommendations(ctx,

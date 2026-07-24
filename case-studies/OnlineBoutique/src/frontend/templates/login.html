@@ -1,0 +1,75 @@
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+{{ define "login" }}
+    {{ template "header" . }}
+
+    <div {{ with $.platform_css }} class="{{.}}" {{ end }}>
+        <span class="platform-flag">
+            {{$.platform_name}}
+        </span>
+    </div>
+
+    <main role="main" class="cart-sections">
+        <section class="container">
+            <div class="row">
+                <div class="col-lg-5 offset-lg-3">
+
+                    <div class="row">
+                        <div class="col">
+                            <h3>Log in</h3>
+                        </div>
+                    </div>
+
+                    <form class="cart-checkout-form" action="{{ $.baseUrl }}/accounts/login" method="POST">
+
+                        <div class="form-row">
+                            <div class="col cymbal-form-field">
+                                <label for="email">E-mail Address</label>
+                                <input type="email" id="email" name="email" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="col cymbal-form-field">
+                                <label for="password">Password</label>
+                                <input type="password" id="password" name="password" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row justify-content-center">
+                            <div class="col text-center">
+                                <button class="cymbal-button-primary" type="submit">
+                                    Log In
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-row justify-content-center">
+                            <div class="col text-center">
+                                No account yet? <a href="{{ $.baseUrl }}/accounts/signup">Sign up</a>
+                            </div>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    {{ template "footer" . }}
+{{ end }}

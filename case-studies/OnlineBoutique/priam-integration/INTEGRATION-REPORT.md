@@ -1,248 +1,335 @@
-# PRIAM ↔ OnlineBoutique — Integration Report
+# PRIAM × OnlineBoutique — Integration Report
+
+## 0. Context: this replaces a previous, weaker integration
+
+A first PRIAM integration for OnlineBoutique already existed (commit
+`76ab7a6`), using the anonymous `shop_session-id` cookie as `idRef` and
+annotating only the Redis-backed Cart (the one durable data type upstream
+OnlineBoutique has). Before this session, a separate preparatory change
+("`changes for data persistence.md`", not itself a PRIAM change) added a
+real account system (email/password, bcrypt-hashed) and a durable SQLite
+order history to the frontend service, specifically to give this
+application a realistic GDPR surface. This session **replaces** the old
+Cart-based integration with one built on that richer model: real accounts
+(`User`) and real order history (`Order`), and re-verifies every workflow
+end-to-end against a live stack.
 
 ## 1. Mechanism, in one page
 
-OnlineBoutique (`case-studies/OnlineBoutique`) is Google's microservices-demo:
-11 polyglot services (Go frontend/checkout/shipping/productcatalog, C#
-cartservice, Node currency/payment, Python email/recommendation/
-shoppingassistant), no relational database of its own, no
-`docker-compose.yml` upstream (targets GKE via kubernetes-manifests). **This
-application has no sign-up, login, or account of any kind** — confirmed by
-grepping the whole `src/` tree (zero hits for signup/login/register/
-account/auth in application code) and by reading every service's storage
-layer: the only durable identity concept is `session_id` (frontend/
-middleware.go:85-110, an anonymous UUID cookie, `shop_session-id`), and the
-only durably-stored personal data anywhere is the shopping cart
-(cartservice's Redis-backed store, keyed by `session_id`, holding
-`product_id`+`quantity` pairs). Checkout PII (email, address, credit card,
-collected in `placeOrderHandler`) is purely transient — traced through
-`checkoutservice/main.go`'s `PlaceOrder`, `paymentservice/charge.js`,
-`shippingservice`, and `emailservice`'s dummy mode — never persisted
-anywhere, only logged in fragments (email address, last-4 card digits).
+- **idRef** = `users.id` (a `github.com/google/uuid` string minted at
+  sign-up, `store.go createUser`) — non-numeric by construction, so every
+  test in this session naturally satisfies the playbook §7 "non-numeric
+  idRef" requirement, not just a specially-crafted one. Guest checkouts
+  (`user_id = NULL`) have no idRef and are never reported to PRIAM.
+- **Annotation** (`Databases/db_insertion_script.sql`): two `DataType`s,
+  `User` (one row per subject: `email`) and `Order` (several rows per
+  subject: `order_id` [primary key], `email`, `street_address`, `city`,
+  `state`, `zip_code`, `country`). Two `NECESSARY` processings (`Account
+  Management`, `Order Fulfillment`) and one `OPTIONAL` processing (`Product
+  Recommendations`, deliberately zero `data_usage` rows — see §2 below).
+- **Provider bridge** (`src/frontend/priam_provider.go`, new file): the 4
+  endpoints on bare `/api`, reading/writing the exact same SQLite tables
+  `store.go` already manages (no separate access path). `dataValue`
+  disambiguates `User.email` vs `Order.email` by the presence of
+  `primaryKeys["order_id"]`, per the playbook §2/§8.2.f contract.
+- **CEP** (`src/frontend/priam.go`, new file — `getConsent`): wraps only
+  `rpc.go`'s `getRecommendations`, gated on the signed-in idRef (guests
+  always see recommendations — no identifiable subject involved for them).
+- **Registration + forced consent + processed-data reporting**
+  (`priam.go`'s `registerDataSubject`/`hasPendingConsentDecision`/
+  `reportProcessedData`, wired into `accounts_handlers.go`): `signupHandler`
+  synchronously calls `registerDataSubject` before firing
+  `reportProcessedData` (fire-and-forget) for `User.email` — this ordering
+  is what avoids the §8.6 race. `handlers.go`'s `placeOrderHandler` reports
+  `Order`'s data ids after every real order, not just at sign-up. Both
+  `signupHandler` and `loginHandler` redirect to `{PRIAM_FRONTEND_URL}/consent`
+  exactly once via `priamPostAuthRedirect` if a decision is still pending.
+- **Round-trip navigation** (§4ter): `header.html` shows "Manage on PRIAM"
+  next to "Log Out" for a signed-in user; the root `.env`'s
+  `TARGET_APP_URL=http://localhost:9090/` drives PRIAM-Frontend's own "back
+  to the app" link (OnlineBoutique's own root is a real product-catalog
+  page, not a placeholder).
+- **Docker wiring**: `case-studies/OnlineBoutique/docker-compose.yml` (new)
+  reproduces upstream's 10 microservices as plain containers (no
+  Kubernetes), attaches `frontend` to `common_network`, and bind-mounts
+  `../../onlineboutique-db-volume` at `/data` so the SQLite file — and the
+  one-off backfill script's read access to it — survive container
+  recreation. Root `.env`: `CUSTOM_PROVIDER_URL=http://frontend:8080`,
+  `TARGET_APP_URL=http://localhost:9090/`. Root `docker-compose.yml`:
+  `name: priam-onlineboutique`.
 
-- **idRef = `session_id`** — a real, stable (48h cookie), non-numeric UUID
-  by construction, satisfying the playbook §7 "non-numeric idRef"
-  requirement for every single test in this session, not a special case.
-- **1 DataType annotated: `Cart`** (`product_id` is_primary_key=1,
-  `quantity`) — the only data this application genuinely persists. Checkout
-  PII is deliberately NOT annotated (see §2, Scope decisions) since nothing
-  backs it after the HTTP response returns.
-- **Provider bridge** (`case-studies/OnlineBoutique/src/frontend/
-  priam_provider.go`, new) — a plain Go/gorilla-mux handler set, bare
-  `/api/{dataAccessRight,rectification,erasure,dataValue}`, no auth. Reads/
-  writes go **directly at cartservice's Redis store** (not through
-  cartservice's gRPC surface, which only exposes `AddItem`
-  (increment-only), `GetCart`, `EmptyCart` — none of which can set an exact
-  quantity or erase a single product row while leaving the rest of the cart
-  intact). Confirmed empirically (this session) that
-  `Microsoft.Extensions.Caching.StackExchangeRedis` stores the cart's
-  protobuf bytes in a Redis **hash**, field `data` — the Go bridge reads/
-  writes that same field using the same protobuf wire format
-  (`google.golang.org/protobuf`), reusing the real schema rather than
-  inventing one.
-- **CEP**: `frontend/rpc.go`'s `getRecommendations()` — the one genuinely
-  optional processing found in this application's own code (personalizes
-  suggested products from the cart's contents; every call site tolerates
-  its absence, never required for checkout). Gated by
-  `getConsent(idRef, "Product Recommendations")`.
-- **Registration**: `ensureSessionID` (middleware.go) calls
-  `registerDataSubject(sessionID)` **synchronously** (not a goroutine) the
-  one time a session cookie is minted — this single hook covers every
-  "user-creation point" there is, since `session_id` minting *is* this
-  application's only such point. `homeHandler` (the equivalent of a
-  "current user" route — there being no login, the root page is the first
-  thing every new session hits) calls `hasPendingConsentDecision` and
-  redirects to `{PRIAM_FRONTEND_URL}/consent` on a true flag.
-  `addToCartHandler` reports `Cart`'s data_ids on every real cart mutation
-  (§4bis, "the most frequently forgotten point") — not just at session
-  creation.
-- **Bidirectional navigation** (§4ter): "Manage on PRIAM" added to
-  `header.html`'s navbar (visible on every page, matching the Habitica
-  regression noted in the playbook), gated on `PRIAM_FRONTEND_URL`.
-  PRIAM-Frontend's "Back to the app" points at
-  `http://localhost:8080/` — OnlineBoutique's root **is** its real
-  storefront/home page (no auth wall unlike Mastodon's SPA shell), so bare
-  root is the correct, real, working target here — not a cop-out.
-- **OAuth2 / Keycloak**: **out of scope**, documented, not silently
-  skipped — see §2.
+## 2. Deliberate scope decisions
 
-## 2. Scope decisions (documented, not silent)
+- **`Product Recommendations` has zero `data_usage` rows.** It genuinely
+  doesn't touch any of the annotated `User`/`Order` fields — it only reads
+  the shopping cart's product ids, which are not modeled as personal data
+  in this annotation (same treatment TeaStore gave its `OrderItem`
+  equivalent). Fabricating a `data_usage` link to make the category table
+  below look fuller would contradict every other annotation decision in
+  this repository, which is built specifically on verifying against real
+  code rather than assuming/inventing.
+- **No pre-seeded consent.** The seed subject's `OPTIONAL` consent is
+  granted/withdrawn/re-granted for real during testing (§5), not
+  pre-inserted — since it has no `data_usage` rows, pre-seeding it would
+  exercise none of the §8.1.b bookkeeping anyway.
+- **Automatic Keycloak provisioning at sign-up was NOT implemented in this
+  session** (see §5, Known limitations, at the time) — a real, deliberate
+  scope cut given the time already spent proving the core rights/consent
+  workflows, not an oversight. One Keycloak account was provisioned
+  **manually** via the Admin API, bound to the real seed `idRef`, purely so
+  this session could obtain a real JWT and exercise the authenticated
+  `/right`/`/cdp` Gateway routes exactly as a browser session would. **This
+  gap was closed in a follow-up, after this session — see §7.**
+- **No lines changed in PRIAM's own microservices/frontends** — confirmed
+  (`git status --porcelain -- PRIAM-Services PRIAM-Frontend
+  PRIAM-Frontend-Provider` returns empty). No generic PRIAM bug was found
+  this session, so `Docs/PRIAM-INTEGRATION-PLAYBOOK.md` §8 was not touched.
 
-- **Checkout PII (email, street address, credit card) is not annotated.**
-  Traced through every hop of the checkout call chain
-  (`checkoutservice/main.go:230-280` → `paymentservice/charge.js` →
-  `shippingservice` → `emailservice`'s `DummyEmailService`): none of it is
-  persisted anywhere after the response returns. Annotating it would force
-  the Provider bridge to fabricate a backing store that doesn't exist,
-  which would fail the "never assume something works without testing
-  against real state" constraint of this session. This is a genuine
-  architectural property of this demo app, not an oversight.
-- **No MANDATORY/DEFAULT processing.** Nothing in this application's own
-  code is processed under a distinct legal obligation, and there is no
-  login/authentication processing to mark DEFAULT (there is no login).
-  Only `NECESSARY` (`Cart Management`) and `OPTIONAL`
-  (`Product Recommendations`) are used — not invented for the sake of
-  covering all 4 `processing_type` values (playbook §1 point 6 lists them
-  as available, not mandatory to use all — same precedent as Mastodon).
-- **No `personal_data_transfer`/`secondary_actor`.** Both processings stay
-  entirely internal to this application (cartservice, recommendationservice
-  are internal microservices, not third parties) — conditional annotation,
-  correctly left empty.
-- **Keycloak provisioning (§4bis "Automatic Keycloak identity
-  provisioning") does not apply and was not built.** That mechanism's
-  documented trigger condition is "the target application has its own local
-  sign-up (email/password)" — OnlineBoutique has neither a password nor any
-  concept of an account a human would recognize. There is no plaintext
-  credential to ever capture and synchronize into Keycloak. Per the task's
-  own instruction, this is documented here as a known limitation rather
-  than silently ignored: **`CUSTOM_OIDC_ISSUER_URI`/`CUSTOM_OIDC_JWK_SET_URI`
-  are left blank in the root `.env`** (Gateway auth fails open, §6), and no
-  `provision_keycloak_user()`-equivalent function was written for this
-  case study. A secondary, purely operational reason this session did not
-  exercise Keycloak at all: **Keycloak's fixed host port (8080) collides
-  with OnlineBoutique's own frontend** (also 8080 by upstream convention,
-  kubernetes-manifests/frontend.yaml) — starting `keycloak` alongside a
-  running OnlineBoutique stack fails with `port is already allocated`.
-  Since OAuth2 is already out of scope for this case study, this was not
-  worked around (e.g. remapping Keycloak's host port) — noted here for
-  transparency rather than silently left unexplained.
-- **No real-browser test performed.** No Playwright/browser-automation tool
-  is available in this environment (confirmed via `ToolSearch` — only
-  `WebFetch`, which does not render JavaScript/SPAs or click through forms).
-  Every workflow below was instead verified via curl against the real
-  `PRIAM-Right-service`/`PRIAM-Consent-Service` endpoints, with real backend
-  state read directly (Redis, MySQL) after each step — the same
-  substitution documented in the Mastodon integration report. `PRIAM-Frontend`
-  and `PRIAM-Frontend-Provider` were built and started, and confirmed to
-  serve HTTP 200 (Angular compiled successfully, no crash) — but no DOM
-  interaction was performed. Per playbook §7 point 14: frontend visual
-  validation is not claimed.
+## 3. Bugs found and fixed, this session
 
-## 3. Bugs found this session
+| # | Root cause | Symptom | Fix | Proof of verification |
+|---|---|---|---|---|
+| 1 | `accounts_handlers.go`'s `signupHandler`/`loginHandler` set the `shop_user-id` cookie with no explicit `Path` — RFC 6265 default-path then scopes it to `/accounts` (the setting request's own directory), not site-wide. | A signed-in user looked signed-out (`currentUserID(r) == ""`) on every page outside `/accounts/*` — cart, checkout, home. This would have silently broken `placeOrderHandler`'s user↔order linkage and the entire PRIAM registration/report pipeline in any real browser session, since real navigation always crosses out of `/accounts` right after sign-up. | Added `Path: "/"` to both cookie-setting calls (`accounts_handlers.go`). | Reproduced with curl (cookie jar showed `Path=/accounts`, cart page showed `Log In`/`Sign Up` instead of `Log Out` for a just-signed-up account); after the fix, a fresh login→cart flow correctly showed `Log Out`/`Manage on PRIAM`, and `placeOrderHandler`'s `currentUserID(r)` correctly resolved outside `/accounts` — see ETAPES-FAITES.md. |
+| 2 | `priam_provider.go`'s `priamEraseOrder` deleted `orders` **before** `order_items`, but `order_items.order_id REFERENCES orders(order_id)` and `store.go` sets `PRAGMA foreign_keys = ON`. | Any real erasure request approved (`answer=true`) for an `Order` field failed with a `500` from `PRIAM-Right-service` and the order was **not** actually deleted — exactly the "a 200/FULL proves nothing" pitfall the playbook (§7) warns about, caught only by reading the target application's real database after the call. | Reordered the transaction: delete `order_items` first, then `orders`. | `POST /api/erasure` directly returned `{"error":"constraint failed: FOREIGN KEY constraint failed (787)"}` before the fix; after rebuilding and redeploying, a full `answer=false`→`answer=true` cycle through the real `PRIAM-Right-service` (`dataRequestId` 6→7) deleted both the `orders` and `order_items` rows for real — see ETAPES-FAITES.md. |
+| 3 | `frontuser` (PRIAM-Frontend) has no fixed Docker `image:` tag by design (its build genuinely differs per case study via the `TARGET_APP_URL` build arg) — but `docker compose up -d frontuser` without `--build` silently reused a 2-day-old cached image tagged from the very first OnlineBoutique session, baked with a stale/absent `targetAppUrl`. | PRIAM-Frontend's "back to the app" link would have pointed at a stale or empty target, exactly the playbook §5/§8.9 "stale image" pitfall. | `docker compose build frontuser` explicitly, then `up -d --force-recreate frontuser`. | `curl http://localhost:4200/main.js \| grep 9090` returned nothing before the rebuild, `targetAppUrl: 'http://localhost:9090/'` was visible in the rebuilt bundle afterward. |
+| 4 | Environment, not application code: OnlineBoutique's natural port (8080) collides with PRIAM's fixed Keycloak port, and the next candidate (8081) collides with `PRIAM-Data-service`. | `docker compose up` failed with `port is already allocated`. | Published OnlineBoutique's `frontend` on host port **9090** instead (container-internal port, and `CUSTOM_PROVIDER_URL`'s Docker-internal address, are unaffected). Documented in `docker-compose.yml`/`.env` comments. | Full stack came up cleanly on the next attempt; `TARGET_APP_URL`/browser tests below all use `:9090`. |
+| 5 | `case-studies/OnlineBoutique/priam-integration/backfill-data-subjects.sh`'s `set -eu`, combined with `docker run` calls inside the loop, aborted the script silently after the very first command of the first iteration — reproduced repeatedly under this session's Windows/Cygwin `sh`, never fully root-caused (every individual command exits 0 in isolation). Not a PRIAM bug — the script's own shell portability issue. | The backfill script appeared to do nothing beyond registering the first subject, with no error message. | Dropped `-e` (kept `-u`); switched the `echo … \| while read` loop to a `for` loop (a smaller, independently-worthwhile portability fix, though not what actually resolved the `-e` issue). | Full re-run (`sh backfill-data-subjects.sh`) completed both real subjects, printing every step and exiting 0; real `nb_occurrences` bookkeeping confirmed in MySQL afterward — see ETAPES-FAITES.md. |
 
-**Zero bugs found in PRIAM's own code** this session
-(`git diff --stat -- PRIAM-Services/ Docs/PRIAM-INTEGRATION-PLAYBOOK.md` is
-empty) — nothing was added to §8 of the playbook, per the non-negotiable
-constraint. The issues below all live in this session's own environment/
-process, not in PRIAM or in OnlineBoutique's application code:
+## 4. Workflows verified against real state
 
-| # | Root cause | Fix | Proof |
-|---|---|---|---|
-| 1 | Transient Go module-proxy network failures (`unexpected EOF` fetching `proxy.golang.org` zips) during `go mod download`/`docker compose build frontend|paymentservice|currencyservice` — the exact "unstable Docker Desktop DNS" class of pitfall already documented in playbook §8.9, encountered fresh on 3 separate builds this session. | Retried the same `docker compose build <service>` command unchanged — succeeded on the 2nd attempt every time. | Full build logs for `frontend` (background task `bgrcag4jq` failed with `unexpected EOF`; retry `btpzz27ld` succeeded, confirmed via `docker images | grep onlineboutique-frontend`) and `paymentservice`/`currencyservice` (same pattern). |
-| 2 | Host port 8080 collision between PRIAM's `keycloak` service and OnlineBoutique's own `frontend` (both default to 8080 — kubernetes-manifests/frontend.yaml and PRIAM's root docker-compose.yml). | Not fixed — Keycloak is out of scope for this case study (§2), so left unstarted rather than remapping ports. | `docker compose up -d keycloak` → `Error response from daemon: ... Bind for 0.0.0.0:8080 failed: port is already allocated`. |
-| 3 | `go mod tidy` run inside the Docker build (to resolve the new `github.com/redis/go-redis/v9` dependency) never persisted its resolved `go.mod`/`go.sum` back to the host — the committed files would have stayed inconsistent with what was actually built. | Built the `builder` stage alone (`docker build --target builder`), `docker cp`'d the resolved `go.mod`/`go.sum` back onto the host, then simplified the Dockerfile back to a plain `go mod download` (net zero diff on `Dockerfile` — confirmed via `git diff`, not part of the final changeset). | `grep redis go.mod go.sum` before the fix: empty. After: `github.com/redis/go-redis/v9 v9.21.0` pinned in both, and a subsequent `docker compose build frontend` succeeds using only `go mod download`. |
-| 4 | `docker images` showed no `onlineboutique-currencyservice` image despite an earlier background build reporting "completed (exit code 0)" — the background task wrapper's exit code reflected the shell pipeline (`... \| tail -N`), not the actual `docker compose build` exit status, silently masking a real build failure. | Rebuilt explicitly and confirmed success via the log text ("Image ... Built") and `docker images`, not the task-notification status alone. | First `docker compose up` attempt failed with `No such image: onlineboutique-currencyservice:latest`; rebuild produced the image, confirmed present. |
+| Workflow | Real proof captured |
+|---|---|
+| Access request (`answer=true`) | `isAccepted` flipped `false→true`; `GET personalDataValues/accessRight` returned the real `users.email` value from SQLite. |
+| Rectification, `answer=false` | SQLite `orders.street_address` unchanged after refusal. |
+| Rectification, `answer=true` | SQLite `orders.street_address` changed from `42 Rue de la Paix` to `99 Avenue du Test` — the real Provider bridge call, triggered automatically by `PRIAM-Right-service`, not by curling the bridge directly. |
+| Erasure, `answer=false` | Order row still present in SQLite (`orders`/`order_items`) after refusal. |
+| Erasure, `answer=true` | Order row and its items both gone from SQLite after approval (bug #2 above found and fixed in the course of this exact test). |
+| Consent grant | Real `consent` row (`end_date=NULL`) in `priam-consent`; CDP decision flipped to `true`; the app's own `/cart` page started rendering the "You May Also Like" block for the signed-in subject — a genuine observable side effect, not just an API response. |
+| Consent withdrawal | `consent.end_date` set; CDP decision flipped to `false`; "You May Also Like" disappeared from `/cart`. |
+| Consent re-grant | A **new** `consent` row created (`ConsentServiceImpl.create`'s documented case-1b behavior); decision flipped back to `true`; block reappeared. |
+| Registration + forced redirect (real-time, not backfill) | A brand-new `/accounts/signup` call for a never-seen idRef created a real `data_subject` row (id `2`), reported `processed_data` for `User.email`, and the signup response `302`'d straight to `http://localhost:4200/consent` — no manual step involved. |
+| One-off backfill | Ran successfully against real state (see bug #5); in this integration both real accounts had already been registered in real time by the signup hook before the script ran, so it is a correctness demonstration/idempotency check rather than a gap-filling run — there were no genuinely pre-hook accounts to catch up on. |
 
-## 4. Workflows verified against real state (this session)
+All of the above were driven through the real `PRIAM-Right-service`/
+`PRIAM-Consent-Service` HTTP contract (never the Provider bridge directly,
+except the one intentional direct call used to confirm bug #2's fix before
+re-running the full workflow), using a real, authenticated JWT
+(`idReference` claim decoded and matched against the seed idRef) obtained
+from a Keycloak account provisioned specifically for this test — see
+ETAPES-FAITES.md for every request/response and every `SELECT`.
 
-All curl commands and exact real-state proofs are in `ETAPES-FAITES.md`.
-Summary:
+**Real browser interaction**: this session's own testing was curl-driven —
+no browser-automation tool was available, so rendering, CORS, and the
+`OPTIONS` preflight were not directly exercised by this agent. Separately,
+real traffic was observed in the database from what appears to be a genuine
+browser session (a third `data_subject` row, `id_ref` resolving to a real
+account `lam@gmail.com` in `onlineboutique.db`, created outside of any
+command run in this session) — consistent with, but not a substitute for,
+an explicit browser test. **Do not treat this integration as having been
+validated from a real browser by this agent**; the curl-based proof above
+is real end-to-end state verification, but rendering/CORS/preflight
+specifically remain unverified by this agent.
 
-| Workflow | Method | Real state checked | Result |
-|---|---|---|---|
-| Registration (new anonymous session) | `curl -i http://localhost:8080/` (no cookie) | `priam-actor.data_subject` via `GET /actor/api/DataSubject/ref/{idRef}` | Row created synchronously before the response returned; 13 distinct real sessions registered over the course of this session's testing, none duplicated |
-| Forced-consent redirect | Same curl, undecided idRef | HTTP response `Location` header | `302` to `http://localhost:4200/consent` for every undecided subject; `200` (no redirect) once a decision exists — no redirect loop confirmed |
-| `report_processed_data` on cart mutation | `curl -X POST /cart` (add item) | `priam-data.processed_data` rows for data_id 1/2 | Created with `nb_occurrences=1` immediately after the first add; incremented on a second add |
-| Provider bridge `dataAccessRight` (direct + via Gateway) | `curl .../api/dataAccessRight` and `curl localhost:8090/provider/api/dataAccessRight` | JSON array vs. raw `HGET <idRef> data` (protobuf, hand-decoded) | Identical values both ways; array format, string-valued `quantity`, confirmed against raw Redis bytes independent of the bridge's own code |
-| Access request, `answer=false` then real approval (`data:[...]` matching all requested ids → `FULL`) | `POST /right/api/right/accessRequest` + `/right/api/right/answer` | `isAccepted` via `GET /right/api/isAccepted` | `REFUSED` when `data` omits ids; `FULL` + `isAccepted=true` once all requested ids are included — always-open read (`personalDataValues/accessRight`) unaffected by the answer either way, as documented in playbook §3 |
-| Rectification (`quantity` 2→5), `answer=false` then `true` | `POST /right/api/right/rectificationRequest` + `/answer` | Raw `HGET` protobuf bytes (hand-decoded varint) | Unchanged after refusal; changed to `5` after approval, confirmed in the raw Redis bytes, not just the Provider bridge's own read |
-| Erasure of one Cart row (2 items in cart), `answer=false` then `true` | `POST /right/api/right/erasureRequest` + `/answer`, `primaryKeys:{"product_id":"OLJCESPC7Z"}` | Raw `HGET` protobuf bytes | Both items survive refusal; only the targeted row removed on approval, the other (`66VCHSJNUP`) intact — the §8.1.c composite/primary-key precision scenario |
-| `dataValue` (4th Provider endpoint, §8.2.f) | `curl .../provider/api/dataValue`, both `product_id` and `quantity`, no `dataTypeName` in body | Provider bridge response | Correct value for both fields, type inferred from `dataName` alone |
-| Consent grant (pre-seeded) → observable side effect | Real cart page render | Recommended-product `<a href="/product/...">` links in the rendered HTML | 4 real product links present |
-| Consent withdrawal | `POST /cdp/api/consent/create/{idRef}` | `priam-consent.consent.end_date`, `priam-data.processed_data.nb_occurrences`, `GET /cdp/api/decision/...` | `end_date` set; `nb_occurrences` for `product_id` decremented; CEP now returns `false`; recommendation links absent from the rendered page |
-| Consent re-grant | Same endpoint, 2nd toggle | New `consent` row (`end_date=NULL`) | CEP returns `true` again; recommendation links reappear (different products, confirming a live call, not cached) |
-| Backfill script | `sh priam-integration/backfill-data-subjects.sh` | `priam-actor.data_subject` (no duplicate row), `processed_data.nb_occurrences` (incremented, idempotent) | Found the one real cart key in Redis, re-registered it without creating a duplicate `data_subject` row |
+## 5. Known limitations
 
-## 5. LOC breakdown
+- **~~No automatic Keycloak provisioning at sign-up~~ — implemented in a
+  follow-up, see §7.** OnlineBoutique now has local sign-up and Keycloak is
+  wired up globally (§6), so per the playbook's own guidance this would
+  normally be implemented (`provision_keycloak_user`, playbook §4bis). It
+  was deliberately not built in this session — the "Manage on PRIAM" link
+  led to a Keycloak identity that had no relation to a user's real
+  OnlineBoutique account unless that account happened to match the one
+  manually provisioned for testing (`priam-seed@example.com`). This was
+  the single largest remaining gap versus a fully "production-ready"
+  integration at the time this section was written; §7 closes it, but has
+  **not** been verified against a live stack the way the rest of this
+  report was (no Docker/Go toolchain was available in the follow-up
+  session that wrote it) — treat §7 as unverified until someone runs it.
+- **Guest checkouts are entirely outside PRIAM's view.** By design (no
+  idRef to register), matching the fact that upstream OnlineBoutique's
+  guest flow needs no account at all.
+- **`order_items` (product_id/quantity/cost) is not annotated** — it
+  carries no personal data of its own, only a product reference and a
+  price/quantity.
+- **Real browser rendering not exercised by this agent** (see §4).
+- **`priam-databases`/`priam-api-gateway` etc. were previously running a
+  different case study (TeaStore)** in this same shared repository
+  checkout; that stack's uncommitted work (SQL annotation, `.env`,
+  MySQL data) was preserved (`case-studies/TeaStore/priam-integration/`,
+  `db-volume-teastore-backup/`) rather than discarded, per explicit user
+  direction, but was not re-verified after this session's changes.
 
-**Method**: `git diff --numstat` (per-file table below) gives raw +/-
-counts only — it does not classify code vs. comment vs. blank. That
-classification was done with a small `awk` script
-(`classify.sh`, scratch, not committed) applying a fixed rule: after
-stripping leading whitespace, an empty line = blank; a line starting with
-`--` (SQL), `#` (shell), `//` or `*` (Go) = comment; everything else = code.
-For **new** files, every line of the final file was classified. For
-**modified** files, only lines actually added this session were classified
-(`git diff --unified=0`, lines starting with a single `+`, `+++` excluded).
-The root `.env` (not git-tracked) was classified manually from the exact
-before/after content of the 3 edits made (both blocks piped through the
-same script). `go.mod`/`go.sum` are lock/manifest files, not hand-written
-source — every added line was still counted as "code" (declarative content,
-no comment syntax applies), 0 comment/blank, and assigned to the Rights-API
-category since they exist solely to support the Provider bridge's Redis
-client. `go.sum`'s 92 deleted vs. 36 added lines is `go mod tidy`
-re-resolving the whole dependency graph as a side effect of adding one new
-direct dependency (pruning now-unneeded transitive-dependency checksum
-entries) — normal `go mod tidy` behavior, not a sign of a larger change
-than it appears; only 1 new direct dependency
-(`github.com/redis/go-redis/v9`) and 1 new transitive one
-(`go.uber.org/atomic`) were actually added, per `go.mod`'s own diff.
+## 6. LOC breakdown
 
-`case-studies/OnlineBoutique/src/frontend/Dockerfile` was edited twice this
-session (added `go mod tidy` to resolve the new dependency, then reverted
-to a plain `go mod download` once `go.mod`/`go.sum` were pinned via
-`docker cp` from the builder stage) — **net diff is zero**
-(`git diff` on this file is empty), so it does not appear in the table
-below.
+**Method**: per-file line counts via `wc -l` / direct read; code vs.
+comment vs. blank classified with a small Python script
+(`scratchpad/loc_count.py`, single-line-prefix heuristic — `//` for Go,
+`--` for SQL, `#` for shell/YAML; HTML/Go-template files have no
+comment-syntax applied, so every non-blank line counts as code) applied to
+files authored entirely in this session. For files that mix this session's
+PRIAM-integration hunks with pre-existing "account persistence" groundwork
+(added in a prior, separate session — see §0), the hunks I personally wrote
+this session were counted by hand from the exact edits applied (not by
+running the classifier over the whole mixed file) — `git diff --numstat`
+against `HEAD` is also shown per tracked file for raw transparency, but
+note it is **not** the same number as "this session's contribution" for
+those mixed files, since `HEAD` predates the account-persistence groundwork
+too.
 
-### Per-file
+### Per-file table
 
-| File | Status | +lines | -lines |
-|---|---|---|---|
-| `Databases/db_insertion_script.sql` | modified (full rewrite for OnlineBoutique) | 150 | 184 |
-| `case-studies/OnlineBoutique/docker-compose.yml` | **new** | 182 | 0 |
-| `case-studies/OnlineBoutique/priam-integration/backfill-data-subjects.sh` | **new** | 57 | 0 |
-| `case-studies/OnlineBoutique/src/frontend/priam.go` | **new** | 139 | 0 |
-| `case-studies/OnlineBoutique/src/frontend/priam_provider.go` | **new** | 267 | 0 |
-| `case-studies/OnlineBoutique/src/frontend/go.mod` | modified | 2 | 0 |
-| `case-studies/OnlineBoutique/src/frontend/go.sum` | modified | 36 | 92 |
-| `case-studies/OnlineBoutique/src/frontend/handlers.go` | modified | 24 | 0 |
-| `case-studies/OnlineBoutique/src/frontend/main.go` | modified | 8 | 0 |
-| `case-studies/OnlineBoutique/src/frontend/middleware.go` | modified | 9 | 0 |
-| `case-studies/OnlineBoutique/src/frontend/rpc.go` | modified | 8 | 0 |
-| `case-studies/OnlineBoutique/src/frontend/templates/header.html` | modified | 4 | 0 |
-| `docker-compose.yml` (PRIAM root, `name:` field) | modified | 1 | 1 |
-| `.env` (PRIAM root, not git-tracked — `CUSTOM_PROVIDER_URL`, `CUSTOM_OIDC_*`, `TARGET_APP_URL`) | modified | 23 | 15 |
+| File | Status | +lines (session) | -lines (session) | vs. `HEAD` (`git diff --numstat`, includes pre-existing groundwork) |
+|---|---|---|---|---|
+| `Databases/db_insertion_script.sql` | modified (full rewrite) | 207 (full file, this session) | 133 (old Cart annotation removed) | +159 / -133 |
+| `case-studies/OnlineBoutique/src/frontend/priam.go` | new | 143 | 0 | *(untracked until now)* |
+| `case-studies/OnlineBoutique/src/frontend/priam_provider.go` | new | 380 | 0 | *(untracked until now)* |
+| `case-studies/OnlineBoutique/docker-compose.yml` | new (recreated, previous version deleted) | 202 | 0 | *(untracked until now)* |
+| `case-studies/OnlineBoutique/priam-integration/backfill-data-subjects.sh` | new (recreated, previous version deleted) | 91 | 0 | *(untracked until now)* |
+| `case-studies/OnlineBoutique/src/frontend/main.go` | modified | 0 (see correction below) | 0 | +10 / -0 |
+| `case-studies/OnlineBoutique/src/frontend/rpc.go` | modified | 13 | 0 (+3 lines touched in-place at call sites, not net new) | +11 / -7 |
+| `case-studies/OnlineBoutique/src/frontend/handlers.go` | modified | 15 | 0 (+3 lines touched in-place) | +26 / -27 |
+| `case-studies/OnlineBoutique/src/frontend/accounts_handlers.go` | modified (file itself new this repo state, but its base signup/login/orders logic predates this session) | 48 | 0 | *(untracked until now — whole file is 210 lines, ~44% mine)* |
+| `case-studies/OnlineBoutique/src/frontend/templates/header.html` | modified | 3 | 0 | +7 / -0 |
+| `.env` (root, gitignored — not tracked) | modified | 9 (current size of the two sections touched) | n/a (not version-controlled) | n/a |
+| `docker-compose.yml` (root) | touched, reverted to `HEAD` | 0 | 0 | 0 / 0 |
+| `case-studies/OnlineBoutique/src/frontend/go.mod` | modified (dependency fix: added missing `modernc.org/sqlite`) | *(excluded from LOC classification — see method)* | | +11 / -5 |
+| `case-studies/OnlineBoutique/src/frontend/go.sum` | modified (generated lockfile) | *(excluded from LOC classification — see method)* | | +47 / -16 |
 
-`case-studies/OnlineBoutique/priam-integration/INTEGRATION-REPORT.md` and
-`ETAPES-FAITES.md` themselves are excluded from this table (documentation
-about the session, not integration code — same convention as the Mastodon
-report).
+Not counted as this integration's LOC (pre-existing groundwork from the
+separate "changes for data persistence" session, predating this
+integration): `store.go` (253 lines, new), the base signup/login/orders
+logic in `accounts_handlers.go` (~162 of its 210 lines),
+`templates/login.html` (75), `templates/signup.html` (82),
+`templates/orders.html` (63), `validator.go`'s `SignupPayload`/
+`LoginPayload` (19 lines), and — **correction below** — `main.go`'s
+entire diff (10 lines).
 
-### By functional category × line nature
+**Correction to an earlier draft of this table**: `main.go`'s diff
+(`cookieUserID` constant, the `initStore()` call, and the 5
+`/accounts/*` route registrations) was initially counted as 8 lines of
+this session's own Rights-API work. Re-checked against `git diff --
+case-studies/OnlineBoutique/src/frontend/main.go`: every one of those 10
+lines is unchanged from the "changes for data persistence" session — this
+integration added zero lines to `main.go` (the 4 real Provider-bridge
+routes, `/api/dataAccessRight` etc., were already present at `HEAD` from
+the original `76ab7a6` integration and were not touched this session
+either). `main.go` is moved to the pre-existing-groundwork list above, and
+the **Rights-API** row in the category table below is corrected from
+`318 | 46 | 24 | 388` to `310 | 46 | 24 | 380` (`380` now equals
+`priam_provider.go`'s own line count exactly, with nothing double-counted
+from `main.go`); the **Total (classified)** row is corrected accordingly
+from `693 | 355 | 71 | 1119` to `685 | 355 | 71 | 1111`.
+
+### By functional category × by line nature
 
 | Category | Code | Comment | Blank | Total |
-|---|---|---|---|---|
-| **Annotation** (`db_insertion_script.sql`) | 18 | 126 | 6 | 150 |
-| **Rights-API** (`priam_provider.go` + `main.go` route registration + `go.mod`/`go.sum`) | 254 | 39 | 20 | 313 |
-| **Consent** (`priam.go` + `middleware.go`/`handlers.go`/`rpc.go` diffs + `header.html` + backfill script) | 145 | 74 | 22 | 241 |
-| **OAuth2** | 0 | 0 | 0 | 0 |
-| **Docker-network** (OnlineBoutique `docker-compose.yml` + root `docker-compose.yml` + `.env`) | 146 | 49 | 11 | 206 |
-| **Total** | **563** | **288** | **59** | **910** |
+|---|--:|--:|--:|--:|
+| **Annotation** (SQL script) | 48 | 146 | 13 | 207 |
+| **Rights-API** (`priam_provider.go`; the 4 real Provider-bridge routes in `main.go` are unchanged from the prior `76ab7a6` integration, not this session's work) | 310 | 46 | 24 | 380 |
+| **Consent** (`priam.go`, CEP gate in `rpc.go`, registration/redirect/report hooks in `accounts_handlers.go`+`handlers.go`, "Manage on PRIAM" link, backfill script) | 182 | 108 | 23 | 313 |
+| **OAuth2** (§7 follow-up: `provisionKeycloakUser`/`fetchKeycloakAdminToken` in `priam.go`, the `signupHandler` call site, `docker-compose.yml`'s `KEYCLOAK_*` env vars — **added after this session, unverified**, see §5/§7) | 76 | 37 | 9 | 122 |
+| **Docker-network** (`docker-compose.yml` new + `.env` sections + root `docker-compose.yml`) | 145 | 55 | 11 | 211 |
+| **Total (classified)** | **761** | **392** | **80** | **1233** |
 
-**OAuth2 = 0 across the board, deliberately** — see §2. This is the
-documented outcome of a real scope decision (no local sign-up to hook into,
-no plaintext password ever available), not an omission.
+**OAuth2**: 0 during this session itself (§5, deliberate scope decision at
+the time) — the Keycloak Admin API calls used for testing (§7 of
+ETAPES-FAITES.md) were one-off `curl` commands, not committed code. The 122
+lines now in this row were added in a **separate follow-up after this
+session** (§7 below) — counted here so the category table reflects the
+current state of the repository, not left permanently at 0 once the gap
+this same section flagged was actually closed.
 
-**Rights-API category, file-by-file** (254/39/20): `priam_provider.go` (new,
-full file) 212/36/19 · `main.go` diff (route registration) 4/3/1 ·
-`go.mod` diff 2/0/0 · `go.sum` diff 36/0/0.
+### PRIAM's own LOC (for this case study)
 
-**Consent category, file-by-file** (145/74/22): `priam.go` (new, full file)
-104/25/10 · `backfill-data-subjects.sh` (new, full file) 26/22/9 ·
-`handlers.go` diff (redirect + `reportProcessedData` call +
-`priamFrontendUrl` template var) 8/14/2 · `middleware.go` diff
-(`registerDataSubject` call) 1/8/0 · `rpc.go` diff (CEP gate) 3/5/0 ·
-`header.html` diff ("Manage on PRIAM" link) 3/0/1.
+**0** across every category and every line-nature bucket — confirmed via
+`git status --porcelain -- PRIAM-Services PRIAM-Frontend
+PRIAM-Frontend-Provider` (empty output). No PRIAM microservice or frontend
+source file was modified in this session, per the non-negotiable
+constraint (§0/§2 above).
 
-**Docker-network category, file-by-file** (146/49/11): OnlineBoutique
-`docker-compose.yml` (new, full file) 141/30/11 · root `docker-compose.yml`
-`name:` field 1/0/0 · root `.env` (`CUSTOM_PROVIDER_URL`, `CUSTOM_OIDC_*`,
-`TARGET_APP_URL` values + comments) 4/19/0.
+## 7. Follow-up: automatic Keycloak provisioning at sign-up
 
-### PRIAM's own LOC (this session)
+Added after the session described in §1-§6 above, in direct response to
+§5's "single largest remaining gap." **Written without a Go toolchain or a
+running Docker daemon available** (same constraint disclosed in
+"changes for data persistence.md") — unlike every workflow in §4, **nothing
+below has been run against a live stack**. Treat it as a plausible,
+carefully-cross-checked-against-the-playbook implementation, not as a
+verified one, until someone with a working Docker environment runs it.
 
-**Zero.** `git diff --stat -- PRIAM-Services/ Docs/PRIAM-INTEGRATION-PLAYBOOK.md`
-is empty for this session — no generic PRIAM bug was found (§3 lists only
-environment/process issues, none in PRIAM's own code), so nothing was added
-to playbook §8, per the non-negotiable constraint.
+### What was added
+
+- `priam.go`: `provisionKeycloakUser(idRef, email, password)` and
+  `fetchKeycloakAdminToken()`, following the playbook §4bis pattern
+  exactly: fail-open (no-op) if `KEYCLOAK_ADMIN_URL` is unset, obtains an
+  admin token via Direct Grant against Keycloak's built-in `admin-cli`
+  client (the same flow ETAPES-FAITES.md §1.7 already exercised manually
+  with curl), `POST`s the new user with `username`/`email`/`firstName`/
+  `lastName` all set to the account's email (§4bis's two documented
+  pitfalls: usernames under Keycloak's minimum length, and missing
+  required User Profile attributes both silently break Direct Grant login
+  later, not creation itself), and the `idReference` custom attribute set
+  to the same `idRef` `registerDataSubject` already uses — the realm
+  already declares this attribute (confirmed working in ETAPES-FAITES.md
+  §1.7's `GET .../users/profile` output), so no realm change was needed
+  here. A `409 Conflict` (already provisioned) is treated as success, per
+  §4bis "idempotent by construction." Never blocks or fails sign-up: every
+  error path only logs.
+- `accounts_handlers.go`'s `signupHandler`: `go provisionKeycloakUser(id,
+  payload.Email, payload.Password)`, right after the existing
+  `registerDataSubject`/`reportProcessedData` calls — a goroutine is safe
+  here (unlike those two, which have the documented §8.6 ordering
+  constraint against each other) since nothing downstream depends on
+  Keycloak provisioning completing first. `payload.Password` is the
+  plaintext form value — the only point in the whole request where it is
+  available; `store.go`'s `createUser` (called earlier in the same
+  handler) has already bcrypt-hashed it for local storage by this point.
+- `docker-compose.yml` (this case study's, not PRIAM's root one):
+  `KEYCLOAK_ADMIN_URL: http://keycloak:8080` (the Docker-internal address
+  on `common_network` — `frontend` is already attached to it, confirmed by
+  reading this same file's `frontend.networks:` list — not the
+  host-mapped `localhost:8080` a browser uses), `KEYCLOAK_REALM:
+  priam-realm`, `KEYCLOAK_ADMIN_USERNAME`/`KEYCLOAK_ADMIN_PASSWORD: admin`
+  (PRIAM root `docker-compose.yml`'s own `keycloak` service bootstrap
+  admin — reused per §4bis's own documented dev/test tradeoff; a
+  dedicated `manage-users` client is preferable before any real exposure).
+
+### What was deliberately not (re-)done
+
+- **The realm's `idReference` User Profile declaration was not touched.**
+  ETAPES-FAITES.md §1.7 already confirmed it exists on `priam-realm` (left
+  over from an earlier case study) — re-declaring it would be redundant,
+  and this integration has no code that manages realm configuration in the
+  first place (out of scope, same as every other case study).
+- **No dedicated Keycloak client with a `manage-users` role was created.**
+  The playbook itself flags the shared super-admin bootstrap account as a
+  "development/testing" tradeoff, not a production one; swapping it for a
+  scoped client is a follow-up of its own, not bundled into this one to
+  keep the change reviewable.
+- **Social-provider sign-up remains uncovered**, per the playbook's own
+  stated limit of this exact pattern (§4bis) — moot here since
+  OnlineBoutique has no social sign-up at all.
+
+### What still needs to happen before this can be trusted
+
+1. **A real build.** `docker compose build frontend` has not been run
+   against this addition — `priam.go`'s two new functions reuse only
+   symbols already imported by the rest of that file
+   (`net/http`, `net/url`, `encoding/json`, `bytes`, `io`, `fmt`, `os`), so
+   no new Go dependency was introduced, but that is not a substitute for
+   an actual compile.
+2. **A real sign-up against a live stack**, checking:
+   - `docker logs ob-frontend` for `priam: provisionKeycloakUser(...)`
+     failure lines (wrong admin credentials, realm typo, network reachability).
+   - `GET /admin/realms/priam-realm/users?email=...` (with a fresh admin
+     token) actually returns the new user, with `idReference` present
+     (not silently stripped — §4bis's own documented pitfall class).
+   - A real Direct Grant login (`grant_type=password`) against the
+     newly-provisioned account succeeds (catches the "Account is not
+     fully set up" failure mode §4bis warns is otherwise silent).
+   - Clicking "Manage on PRIAM" right after a fresh sign-up lands on a
+     Keycloak login that accepts the same email/password just chosen.
+3. Once verified, update §5's "unverified" caveat and this section's
+   opening paragraph to reflect a real pass/fail, with the same kind of
+   real-state proof (`curl` + DB/API state) as §4/ETAPES-FAITES.md — not
+   just "it compiled."

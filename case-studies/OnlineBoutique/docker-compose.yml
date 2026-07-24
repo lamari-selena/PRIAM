@@ -11,18 +11,22 @@
 # shoppingassistantservice/loadgenerator are intentionally NOT included:
 # neither is reachable from any of the flows this integration exercises
 # (frontend only dials shoppingassistantservice from /bot and /assistant,
-# neither used by the Cart/Recommendations PRIAM annotation; loadgenerator
-# is a Locust traffic generator, not part of the app itself). frontend's
+# neither used by the PRIAM annotation; loadgenerator is a Locust traffic
+# generator, not part of the app itself). frontend's
 # SHOPPING_ASSISTANT_SERVICE_ADDR below is set to a non-resolvable
 # placeholder - mustMapEnv only requires it to be non-empty at startup, the
 # service itself is never dialed unless /bot is called.
+#
+# redis-cart is still required (cartservice/checkoutservice still need it
+# for the ordinary shopping cart flow - PRIAM no longer annotates Cart data
+# in this integration, see Databases/db_insertion_script.sql's header
+# comment for why account/order data is the more interesting durable target
+# now that the application has real accounts).
 name: onlineboutique
 services:
   redis-cart:
     image: redis:7-alpine
     container_name: ob-redis-cart
-    # No volume (matches kubernetes-manifests/cartservice.yaml's
-    # `emptyDir: {}` - ephemeral by design upstream too).
     networks:
       - ob_internal
 
@@ -149,16 +153,28 @@ services:
       # unless /bot is called.
       SHOPPING_ASSISTANT_SERVICE_ADDR: shoppingassistantservice:80
       ENV_PLATFORM: local
-      # PRIAM wiring (playbook §4/§4bis/§4ter). REDIS_ADDR: reused directly
-      # by the Provider bridge (priam_provider.go) to read/write the exact
-      # same Cart records cartservice itself manages - see that file's
-      # header comment for why (no gRPC primitive exists for a precise
-      # single-row erasure/rectification).
-      REDIS_ADDR: redis-cart:6379
+      # Durable account/order store (accounts_handlers.go/store.go) - see
+      # "changes for data persistence.md". Points inside the volume mounted
+      # below so the SQLite file survives container recreation, unlike the
+      # image's default /src/onlineboutique.db (which would live only in
+      # the container's writable layer).
+      ACCOUNT_DB_PATH: /data/onlineboutique.db
+      # PRIAM wiring (playbook §4/§4bis/§4ter).
       PRIAM_ACTOR_URL: http://actor:8082
       PRIAM_CDP_URL: http://consent:8089
       PRIAM_DATA_URL: http://data:8081
       PRIAM_FRONTEND_URL: http://localhost:4200
+      # Automatic Keycloak provisioning at sign-up (playbook §4bis). Reuses
+      # PRIAM root docker-compose.yml's `keycloak` service admin bootstrap
+      # (KEYCLOAK_ADMIN/KEYCLOAK_ADMIN_PASSWORD, both "admin") - fine for
+      # dev/test per that section's own documented tradeoff; a dedicated
+      # manage-users client is preferable before any real exposure.
+      # keycloak:8080 is the Docker-internal address on common_network, not
+      # the host-mapped localhost:8080 a browser uses.
+      KEYCLOAK_ADMIN_URL: http://keycloak:8080
+      KEYCLOAK_REALM: priam-realm
+      KEYCLOAK_ADMIN_USERNAME: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
     depends_on:
       - productcatalogservice
       - currencyservice
@@ -168,7 +184,22 @@ services:
       - checkoutservice
       - adservice
     ports:
-      - "8080:8080"
+      # Host port 9090, not 8080: PRIAM's own docker-compose.yml fixes
+      # Keycloak on host port 8080 (shared/generic across every case
+      # study, playbook §0 - not something this integration should change)
+      # - OnlineBoutique's natural default of 8080 collides with it on the
+      # same Docker host, and 8081 is also already taken by PRIAM-Data-
+      # service. The container's own internal port (8080) is unaffected -
+      # CUSTOM_PROVIDER_URL (root .env) reaches this service over
+      # common_network by its Docker-internal service name/port
+      # (http://frontend:8080), not through this host mapping.
+      - "9090:8080"
+    volumes:
+      # Bind mount (not a named volume) so the one-off backfill script
+      # (priam-integration/backfill-data-subjects.sh) can read the same
+      # SQLite file directly from the host with a plain, throwaway
+      # container - same rationale as PRIAM's own ./db-volume.
+      - ../../onlineboutique-db-volume:/data
     networks:
       - ob_internal
       - common_network

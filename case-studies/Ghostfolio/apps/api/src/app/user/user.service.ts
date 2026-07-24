@@ -21,6 +21,10 @@ import { RegionalMarketClusterRiskJapan } from '@ghostfolio/api/models/rules/reg
 import { RegionalMarketClusterRiskNorthAmerica } from '@ghostfolio/api/models/rules/regional-market-cluster-risk/north-america';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { I18nService } from '@ghostfolio/api/services/i18n/i18n.service';
+import {
+  PriamService,
+  USAGE_ANALYTICS_PROCESSING
+} from '@ghostfolio/api/services/priam/priam.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { PropertyService } from '@ghostfolio/api/services/property/property.service';
 import { TagService } from '@ghostfolio/api/services/tag/tag.service';
@@ -64,6 +68,7 @@ export class UserService {
     private readonly configurationService: ConfigurationService,
     private readonly eventEmitter: EventEmitter2,
     private readonly i18nService: I18nService,
+    private readonly priamService: PriamService,
     private readonly prismaService: PrismaService,
     private readonly propertyService: PropertyService,
     private readonly subscriptionService: SubscriptionService,
@@ -189,10 +194,21 @@ export class UserService {
       tags = [];
     }
 
+    // §4bis "Flag insertion point": exposed on the already-existing "current
+    // user" response: true only while no consent decision (granted or
+    // refused) has ever been recorded for the OPTIONAL processing - becomes
+    // false as soon as one exists, so the client-side redirect (§4bis/§8.7)
+    // fires at most once.
+    const priamConsentRequired = await this.priamService.hasPendingConsentDecision(
+      id,
+      USAGE_ANALYTICS_PROCESSING
+    );
+
     return {
       activitiesCount,
       id,
       permissions,
+      priamConsentRequired,
       referralPartners,
       subscription,
       systemMessage,
@@ -668,8 +684,18 @@ export class UserService {
         where: { id: user.id }
       });
 
+      // PRIAM registration (Docs/PRIAM-INTEGRATION-PLAYBOOK.md §4bis) - the
+      // only place every user-creation path (anonymous sign-up, Google/OIDC
+      // sign-in via AuthService.validateOAuthLogin) funnels through. The
+      // plaintext accessToken is only available here, right before it is
+      // hashed - reused as the Keycloak password (§4bis "Automatic Keycloak
+      // identity provisioning", local sign-up only).
+      this.priamService.onUserRegistered(user.id, accessToken);
+
       return { ...user, accessToken };
     }
+
+    this.priamService.onUserRegistered(user.id);
 
     return user;
   }

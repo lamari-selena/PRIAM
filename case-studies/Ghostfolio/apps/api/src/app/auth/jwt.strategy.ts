@@ -1,5 +1,10 @@
 import { UserService } from '@ghostfolio/api/app/user/user.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
+import {
+  ANALYTICS_DATA_IDS,
+  PriamService,
+  USAGE_ANALYTICS_PROCESSING
+} from '@ghostfolio/api/services/priam/priam.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import {
   DEFAULT_CURRENCY,
@@ -18,6 +23,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   public constructor(
     private readonly configurationService: ConfigurationService,
+    private readonly priamService: PriamService,
     private readonly prismaService: PrismaService,
     private readonly userService: UserService
   ) {
@@ -45,15 +51,33 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
           const country =
             countriesAndTimezones.getCountryForTimezone(timezone)?.id;
 
-          await this.prismaService.analytics.upsert({
-            create: { country, user: { connect: { id: user.id } } },
-            update: {
-              country,
-              activityCount: { increment: 1 },
-              lastRequestAt: new Date()
-            },
-            where: { userId: user.id }
-          });
+          // CEP (Docs/PRIAM-INTEGRATION-PLAYBOOK.md §4) - Usage Analytics is
+          // the OPTIONAL processing annotated in db_insertion_script.sql;
+          // only this optional side effect is gated, never authentication
+          // itself.
+          if (
+            await this.priamService.getConsent(
+              user.id,
+              USAGE_ANALYTICS_PROCESSING
+            )
+          ) {
+            await this.prismaService.analytics.upsert({
+              create: { country, user: { connect: { id: user.id } } },
+              update: {
+                country,
+                activityCount: { increment: 1 },
+                lastRequestAt: new Date()
+              },
+              where: { userId: user.id }
+            });
+
+            // §4bis bookkeeping for this OPTIONAL data_type - the Data
+            // service dedupes repeat reports via nb_occurrences.
+            this.priamService.reportProcessedData(
+              user.id,
+              ANALYTICS_DATA_IDS
+            );
+          }
         }
 
         if (!user.settings.settings.baseCurrency) {

@@ -83,6 +83,8 @@ export class GfUserAccountSettingsComponent implements OnInit {
   protected hasPermissionToUpdateViewMode: boolean;
   protected hasPermissionToUpdateUserSettings: boolean;
   protected isAccessTokenHidden = true;
+  // §4ter round-trip navigation - undefined (button hidden) unless PRIAM is wired up.
+  protected priamFrontendUrl: string | undefined;
   protected readonly isFingerprintSupported = this.doesBrowserSupportAuthn();
   protected isWebAuthnEnabled: boolean;
   protected readonly language = document.documentElement.lang;
@@ -116,10 +118,12 @@ export class GfUserAccountSettingsComponent implements OnInit {
   private readonly webAuthnService = inject(WebAuthnService);
 
   public constructor() {
-    const { baseCurrency, currencies } = this.dataService.fetchInfo();
+    const { baseCurrency, currencies, priamFrontendUrl } =
+      this.dataService.fetchInfo();
 
     this.baseCurrency = baseCurrency;
     this.currencies = currencies;
+    this.priamFrontendUrl = priamFrontendUrl;
 
     this.userService.stateChanged
       .pipe(takeUntilDestroyed(this.destroyRef))

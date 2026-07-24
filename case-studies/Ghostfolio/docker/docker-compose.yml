@@ -23,6 +23,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Docs/PRIAM-INTEGRATION-PLAYBOOK.md §5: attached to PRIAM's shared
+    # external network (created by PRIAM's own root docker-compose.yml) in
+    # addition to this stack's own default network, so it can reach
+    # PRIAM-Consent-Service/PRIAM-Actor-service/PRIAM-Data-service directly
+    # by Docker service name (PRIAM_CDP_URL/PRIAM_ACTOR_URL/PRIAM_DATA_URL,
+    # ../.env below) - and so PRIAM's Provider bridge calls
+    # (CUSTOM_PROVIDER_URL=http://ghostfolio:3333) can reach it back.
+    networks:
+      - default
+      - common_network
 
   postgres:
     image: docker.io/library/postgres:15-alpine
@@ -73,3 +83,8 @@ services:
 
 volumes:
   postgres:
+
+networks:
+  default:
+  common_network:
+    external: true

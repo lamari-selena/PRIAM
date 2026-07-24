@@ -21,3 +21,11 @@ services:
 
 volumes:
   postgres:
+
+# extends (above) only merges service-level fields - top-level networks:
+# must be redeclared in this file too for the common_network reference to
+# resolve (same reason volumes: is redeclared above).
+networks:
+  default:
+  common_network:
+    external: true

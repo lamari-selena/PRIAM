@@ -32,6 +32,7 @@ import tools.descartes.teastore.registryclient.rest.LoadBalancedCRUDOperations;
 import tools.descartes.teastore.registryclient.rest.LoadBalancedImageOperations;
 import tools.descartes.teastore.registryclient.rest.LoadBalancedRecommenderOperations;
 import tools.descartes.teastore.registryclient.rest.LoadBalancedStoreOperations;
+import tools.descartes.teastore.webui.priam.PriamClient;
 import tools.descartes.teastore.entities.Category;
 import tools.descartes.teastore.entities.ImageSizePreset;
 import tools.descartes.teastore.entities.OrderItem;
@@ -85,12 +86,20 @@ public class CartServlet extends AbstractUIServlet {
     request.setAttribute("Products", products);
     request.setAttribute("login", LoadBalancedStoreOperations.isLoggedIn(getSessionBlob(request)));
 
-    List<Long> productIds = LoadBalancedRecommenderOperations
-        .getRecommendations(blob.getOrderItems(), blob.getUID());
     List<Product> ads = new LinkedList<Product>();
-    for (Long productId : productIds) {
-      ads.add(LoadBalancedCRUDOperations.getEntity(Service.PERSISTENCE, "products", Product.class,
-          productId));
+    // CEP (playbook 4): personalized recommendations are the one genuinely
+    // OPTIONAL processing in TeaStore (the cart/checkout flow works
+    // perfectly without them). Only gated for an identified subject - an
+    // anonymous shopper has no PRIAM data_subject/idRef to check consent
+    // for, so behavior is unchanged for them.
+    if (blob.getUserName() == null
+        || PriamClient.getConsent(blob.getUserName(), PriamClient.OPTIONAL_PROCESSING)) {
+      List<Long> productIds = LoadBalancedRecommenderOperations
+          .getRecommendations(blob.getOrderItems(), blob.getUID());
+      for (Long productId : productIds) {
+        ads.add(LoadBalancedCRUDOperations.getEntity(Service.PERSISTENCE, "products", Product.class,
+            productId));
+      }
     }
 
     if (ads.size() > 3) {

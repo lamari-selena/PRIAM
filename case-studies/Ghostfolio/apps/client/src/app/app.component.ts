@@ -128,6 +128,18 @@ export class GfAppComponent implements OnInit {
         this.currentRoute = urlSegments[0].path;
         this.currentSubRoute = urlSegments[1]?.path;
 
+        // Forced-consent redirect (playbook §4bis/§8.7): triggered from
+        // route-change events, not from the userService.stateChanged event
+        // itself, so it never fires mid-registration-wizard, before the
+        // one-time security token has been shown/copied (§8.7).
+        if (
+          this.currentRoute !== publicRoutes.register.path &&
+          this.user?.priamConsentRequired &&
+          this.info?.priamFrontendUrl
+        ) {
+          window.location.href = `${this.info.priamFrontendUrl}/consent`;
+        }
+
         if (
           ((this.currentRoute === internalRoutes.home.path &&
             !this.currentSubRoute) ||

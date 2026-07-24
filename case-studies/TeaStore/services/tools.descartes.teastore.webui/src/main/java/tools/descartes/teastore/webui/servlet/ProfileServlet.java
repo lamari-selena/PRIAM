@@ -43,6 +43,12 @@ public class ProfileServlet extends AbstractUIServlet {
   private static final long serialVersionUID = 1L;
 
   /**
+   * PRIAM-Frontend's own URL (playbook 4ter "Manage on PRIAM" round-trip
+   * link) - empty = link hidden.
+   */
+  private static final String PRIAM_FRONTEND_URL = System.getenv("PRIAM_FRONTEND_URL");
+
+  /**
    * @see HttpServlet#HttpServlet()
    */
   public ProfileServlet() {
@@ -72,6 +78,7 @@ public class ProfileServlet extends AbstractUIServlet {
       request.setAttribute("login",
           LoadBalancedStoreOperations.isLoggedIn(getSessionBlob(request)));
       request.setAttribute("helper", ELHelperUtils.UTILS);
+      request.setAttribute("priamFrontendUrl", PRIAM_FRONTEND_URL);
 
       request.getRequestDispatcher("WEB-INF/pages/profile.jsp").forward(request, response);
     }

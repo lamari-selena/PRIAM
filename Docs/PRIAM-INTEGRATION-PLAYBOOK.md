@@ -957,7 +957,23 @@ Gateway from source, the BuildKit heredoc issue.)
   <service>` can trigger a rebuild of every buildable service in the file at
   once — prefer `COMPOSE_BAKE=false docker compose build <service>` alone,
   then `docker compose up -d --no-build <service>`, to target exactly one
-  service.
+  service. **Concrete data point (TeaStore integration)**: on a 16GB-RAM
+  Windows host with Docker Desktop's WSL2 VM capped at its default ~7.5GB,
+  running PRIAM's 8 microservices + a Java/Tomcat target application's 6
+  services + 2 Angular frontends (~17-23 containers, worse if another case
+  study's stack is also left running) repeatedly crashed the whole Docker
+  Desktop backend (containers silently disappearing from `docker ps`, or
+  every `docker` command returning `500`/`no such host` on the named pipe)
+  even with the `networkingMode=mirrored`/`dnsTunneling=true` fix above
+  already applied — that fix addresses DNS flakiness, not memory pressure,
+  and does not help here. Fix: raise the WSL2 memory cap explicitly
+  (`%USERPROFILE%\.wslconfig`, `[wsl2]` section, `memory=10GB` or similar,
+  leaving enough headroom for the Windows host itself), then `wsl --shutdown`
+  and restart Docker Desktop. If the host's total RAM is itself constrained
+  (e.g. 16GB), also stop any other unrelated case-study stack running at the
+  same time (`docker compose stop` in its own directory - a plain `stop`,
+  not `down`, keeps its containers easy to bring back) rather than running
+  three stacks concurrently.
 - **A frontend container in dev mode (`vite`/`webpack-dev-server` with hot
   reload) does not always detect file changes made on the host side over a
   Windows bind mount.** Encountered under real conditions (Habitica

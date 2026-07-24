@@ -285,6 +285,30 @@
           </button>
         </div>
       </div>
+      @if (priamFrontendUrl) {
+        <div class="align-items-center d-flex py-1">
+          <div class="pr-1 w-50" i18n>Data Privacy (PRIAM)</div>
+          <div class="pl-1 w-50">
+            <a
+              color="primary"
+              i18n
+              mat-flat-button
+              [href]="priamFrontendUrl"
+              >Manage on PRIAM</a
+            >
+          </div>
+        </div>
+        <div class="align-items-center d-flex py-1">
+          <div class="pr-1 w-50" i18n>PRIAM Login</div>
+          <div class="pl-1 w-50">
+            <gf-value
+              class="text-monospace"
+              [enableCopyToClipboardButton]="true"
+              [value]="user?.id + '@ghostfolio.local'"
+            />
+          </div>
+        </div>
+      }
       @if (
         hasPermissionToDeleteOwnUser || hasPermissionToRequestOwnUserDeletion
       ) {
