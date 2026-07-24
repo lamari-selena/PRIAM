@@ -1,0 +1,45 @@
+-- ============================================================================
+-- PRIAM annotation template — this file is executed automatically by MySQL
+-- on first startup (/docker-entrypoint-initdb.d/), on a VIRGIN volume only
+-- (see Docs/PRIAM-INTEGRATION-PLAYBOOK.md §1).
+--
+-- This is a per-target-application file: it is intentionally EMPTY in this
+-- generic package. Bringing the stack up as-is with this empty file is a
+-- valid, safe state (PRIAM starts with zero data_subject/data/processing
+-- rows — every service comes up healthy, there is simply nothing to serve
+-- yet), useful to verify the stack itself works before integrating a real
+-- target application.
+--
+-- To annotate a real target application, replace the content of this file
+-- following the playbook §1 steps, in order:
+--   1. Identify the target application's real schema (ORM models/tables),
+--      never invent one.
+--   2. INSERT INTO data_subject_category (`priam-actor` schema) BEFORE
+--      INSERT INTO data (`priam-data` schema) — cross-schema FK ordering
+--      is mandatory.
+--   3. Add any missing personal_data_category rows the target application
+--      genuinely needs (only 10 default rows ship with db_creation_script.sql).
+--   4. `data_type.data_type_name` must match literally what the target
+--      application's own Provider bridge code compares against.
+--   5. One `data` row per rectifiable/erasable personal column, citing the
+--      real table.column in `source_details`. `is_primary_key=1` on the id
+--      column of any table with several rows per subject (composite keys:
+--      mark every column that makes up the key).
+--   6. `processing`: DEFAULT / NECESSARY / MANDATORY / OPTIONAL (§1 point 6)
+--      — `processing_type`/`purpose_type` values must be exact UPPERCASE
+--      Java enum constants (§8.1.a of the playbook).
+--   7. `data_usage`: link `data` to the `processing`(s) that touch it.
+--   8. `data_subject.id_ref`: a real, stable id from the target application
+--      (not an invented placeholder) — register at least one real test
+--      subject before writing this script.
+--   9. `contract`/`consent`: seed a pre-granted consent (end_date = NULL)
+--      for every OPTIONAL processing you want testable immediately.
+--  10. If a consent is pre-granted directly here (point 9), add the
+--      matching `processed_data` row too (§8.1.b) — otherwise the first
+--      withdrawal through the API fails.
+--  11. `personal_data_transfer`/`secondary_actor`: only if a processing
+--      genuinely transfers data to an external third party.
+--
+-- See Docs/PRIAM-INTEGRATION-PLAYBOOK.md §1 and §8.1 for the full detail
+-- and the pitfalls already documented for this exact step.
+-- ============================================================================

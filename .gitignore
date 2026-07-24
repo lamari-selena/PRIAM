@@ -1,0 +1,12 @@
+# Real secrets/config - copy .env.example to .env, never commit .env itself
+.env
+
+# Live database volume - never commit binary MySQL data
+db-volume/
+
+# Build artifacts
+target/
+node_modules/
+dist/
+.angular/
+build/
